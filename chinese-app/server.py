@@ -26,6 +26,7 @@ import secrets
 import time
 import threading
 import urllib.parse
+import urllib.request
 import csv
 import io
 import sys
@@ -890,6 +891,43 @@ class Handler(http.server.BaseHTTPRequestHandler):
             conn.commit()
             conn.close()
             return send_json(self, 200, {"ok": True})
+
+        # --- внутренний ИИ-репетитор ---
+
+        if path == "/api/tutor/chat":
+            conn.close()
+            msg = (body.get("message") or "").strip()[:1000]
+            history = body.get("history") or []
+            ctx = body.get("context") or ""
+            api_key = os.environ.get("AI_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+            if not api_key or not msg:
+                return send_json(self, 200, {"ok": True, "mode": "local"})
+            base_url = (os.environ.get("AI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+            model = os.environ.get("AI_MODEL") or "gpt-4o-mini"
+            sys_prompt = (
+                "Ты — Сяо Мин (小明), дружелюбный ИИ-репетитор китайского языка на русскоязычной учебной платформе. "
+                "Отвечай по-русски, обязательно приводи китайские иероглифы, пиньинь с тонами и перевод. "
+                "Будь кратким, ясным и поддерживающим. Контекст ученика: " + str(ctx)[:400]
+            )
+            messages = [{"role": "system", "content": sys_prompt}]
+            for h in history[-6:]:
+                if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
+                    messages.append({"role": h["role"], "content": str(h["content"])[:600]})
+            messages.append({"role": "user", "content": msg})
+            try:
+                req = urllib.request.Request(
+                    base_url + "/chat/completions",
+                    data=json.dumps({"model": model, "messages": messages, "temperature": 0.6, "max_tokens": 500}).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=18) as resp:
+                    res_data = json.loads(resp.read().decode("utf-8"))
+                reply = res_data["choices"][0]["message"]["content"].strip()
+                return send_json(self, 200, {"ok": True, "mode": "ai", "reply": reply})
+            except Exception as exc:
+                record_error("server", f"tutor AI fallback: {exc}")
+                return send_json(self, 200, {"ok": True, "mode": "local"})
 
         conn.close()
         return send_json(self, 404, {"error": "not_found"})
