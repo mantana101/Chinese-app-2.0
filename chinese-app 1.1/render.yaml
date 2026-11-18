@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: chinese-learning-app
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/auth/status
+    envVars:
+      - key: DB_PATH
+        value: /app/data/app.db
+    disk:
+      name: chinese-app-data
+      mountPath: /app/data
+      sizeGB: 1
