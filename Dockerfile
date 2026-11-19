@@ -8,28 +8,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY build.py server.py docker-entrypoint.sh ./
+COPY build.py server.py ./
 COPY src ./src
 
-# Собираем index.html на этапе образа и готовим каталог для базы.
+# Собираем index.html на этапе образа и сразу готовим каталог для базы.
 RUN python3 build.py \
  && mkdir -p /app/data \
- && useradd --system --uid 10001 --gid 0 --home-dir /app --shell /usr/sbin/nologin appuser \
- && chown -R appuser:0 /app \
- && chmod 0775 /app/data \
- && chmod +x /app/docker-entrypoint.sh
+ && useradd --system --uid 10001 --home-dir /app --shell /usr/sbin/nologin appuser \
+ && chown -R appuser:appuser /app
 
 # Не работаем от root: сервер не должен иметь прав на всю файловую систему.
-#
-# ВАЖНО: примонтированный в /app/data диск (Render Disk / Railway Volume)
-# перекрывает каталог из образа, и владельцем становится root. Процесс под
-# appuser тогда не может ни создать app.db, ни открыть базу на запись —
-# отсюда «sqlite3.OperationalError: attempt to write a readonly database».
-# Поэтому точку входа делаем root'ом: она выдаёт appuser права на диск
-# и только потом запускает сервер уже от непривилегированного пользователя.
-USER root
-
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+USER appuser
 
 EXPOSE 8080
 
