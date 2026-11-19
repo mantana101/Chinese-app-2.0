@@ -52,12 +52,8 @@ else:
     BUILD_TIME = time.strftime("%d.%m.%Y %H:%M", time.localtime())
     _built_ts = int(time.time())
 
-BUILD_META = json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME}, ensure_ascii=False)
-
 out = (
-    tpl.replace("{{BUILD_META}}", BUILD_META)
-    .replace("{{BUILD_ID}}", BUILD_ID)
-    .replace("{{BUILD_TIME}}", BUILD_TIME)
+    tpl.replace("{{BUILD_ID}}", BUILD_ID)
     .replace("{{STYLES}}", styles)
     .replace("{{DATA}}", safe(data))
     .replace("{{AUTH}}", safe(auth))
@@ -66,8 +62,7 @@ out = (
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_META}}", "{{BUILD_ID}}", "{{BUILD_TIME}}",
-                "{{STYLES}}", "{{DATA}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
