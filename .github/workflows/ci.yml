@@ -47,5 +47,8 @@ jobs:
 
       - name: index.html должен собираться из src без расхождений
         run: |
+          # Сборка воспроизводима: время берём из коммита, а не из часов
+          # раннера, иначе файл расходится на каждой минуте.
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
           python build.py
           git diff --exit-code index.html
