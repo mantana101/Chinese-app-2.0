@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+import os
 import pathlib
 import sys
 import time
@@ -37,7 +38,20 @@ for name in SOURCE_FILES:
     digest.update((src / name).read_bytes())
     digest.update(b"\0")
 BUILD_ID = digest.hexdigest()[:12]
-BUILD_TIME = time.strftime("%d.%m.%Y %H:%M", time.localtime())
+
+# Время сборки берём из SOURCE_DATE_EPOCH, если он задан. Так сборка
+# воспроизводима: CI может собрать тот же index.html байт в байт, и
+# проверка «index.html не расходится с src/» не падает из-за минут.
+# Если переменная не задана, используем текущее время.
+_epoch = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
+if _epoch.isdigit():
+    _when = time.gmtime(int(_epoch))
+    BUILD_TIME = time.strftime("%d.%m.%Y %H:%M", _when) + " UTC"
+    _built_ts = int(_epoch)
+else:
+    BUILD_TIME = time.strftime("%d.%m.%Y %H:%M", time.localtime())
+    _built_ts = int(time.time())
+
 BUILD_META = json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME}, ensure_ascii=False)
 
 out = (
@@ -69,7 +83,7 @@ target.write_bytes(out.encode("utf-8"))
 # Рядом кладём метку сборки: сервер пересобирает index.html, если исходники
 # в src/ новее этой метки. Так забытый build.py больше не выдаёт старую версию.
 (base / "build-info.json").write_text(
-    json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME, "built_ts": int(time.time())},
+    json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME, "built_ts": _built_ts},
                ensure_ascii=False, indent=2),
     encoding="utf-8",
 )
