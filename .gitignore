@@ -1,0 +1,17 @@
+# База данных содержит аккаунты и хеши паролей — не коммитим никогда.
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Сборка/мусор
+.DS_Store
+.env
+*.log

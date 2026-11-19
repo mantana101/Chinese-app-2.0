@@ -4,11 +4,14 @@
 
 const Auth = (() => {
   let user = null;          // {id, username, display_name, role}
+  let myGrade = null;       // {grade, comment, updated_at}
   let online = false;       // доступен ли сервер
   let hasUsers = false;     // есть ли аккаунты на сервере
   let syncTimer = null;
   let pending = null;
   let lastSync = 0;
+  let serverUpdated = 0;   // версия прогресса на сервере (для защиты от затирания)
+  let conflictRetries = 0;
 
   const ROLE_RU = { owner: 'Владелец', teacher: 'Учитель', student: 'Ученик' };
   const TOKEN_KEY = 'zh_token';
@@ -39,9 +42,54 @@ const Auth = (() => {
       const err = new Error(data.error || res.status);
       err.status = res.status;
       err.data = data;
+      if (res.status === 401) onSessionLost();
       throw err;
     }
     return data;
+  }
+
+  /* Сессия истекла или отозвана. Раньше это проходило незаметно: интерфейс
+     продолжал показывать «вы вошли», а каждое сохранение тихо проваливалось.
+     Локальный прогресс при этом не теряется — он остаётся в браузере. */
+  function onSessionLost() {
+    if (!getToken() && !user) return;
+    setToken('');
+    user = null;
+    myGrade = null;
+    serverUpdated = 0;
+    conflictRetries = 0;
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('auth:expired'));
+      }
+    } catch (e) { }
+  }
+
+  /* ---------- перехват ошибок браузера ---------- */
+  let errCountWindow = 0;
+  setInterval(() => { errCountWindow = 0; }, 60000);
+  function reportClientError(message, detail) {
+    if (!online || !message || errCountWindow >= 6) return;
+    errCountWindow++;
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const t = getToken();
+      if (t) headers.Authorization = 'Bearer ' + t;
+      fetch('/api/system/client-error', {
+        method: 'POST', credentials: 'omit', headers,
+        body: JSON.stringify({ message: String(message).slice(0, 350), detail: String(detail || '').slice(0, 1500) })
+      }).catch(() => { });
+    } catch (e) { }
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('error', (ev) => {
+      if (ev && ev.message) reportClientError(ev.message, `${ev.filename || ''}:${ev.lineno || ''}:${ev.colno || ''}`);
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+      const r = ev && ev.reason;
+      const msg = (r && (r.message || String(r))) || 'Unhandled rejection';
+      reportClientError(msg, r && r.stack ? r.stack : '');
+    });
   }
 
   /* ---------- запуск ---------- */
@@ -58,8 +106,9 @@ const Auth = (() => {
       try {
         const me = await api('/api/auth/me');
         user = me.user;
+        myGrade = me.grade || null;
         await pullProgress();
-      } catch (e) { user = null; }
+      } catch (e) { user = null; myGrade = null; }
     }
     return { user, online, hasUsers };
   }
@@ -72,6 +121,8 @@ const Auth = (() => {
     user = r.user;
     hasUsers = true;
     if (r.token) setToken(r.token);
+    serverUpdated = 0; conflictRetries = 0;
+    try { const me = await api('/api/auth/me'); myGrade = me.grade || null; } catch (e) { myGrade = null; }
     await pullProgress();
     return user;
   }
@@ -79,16 +130,23 @@ const Auth = (() => {
   async function register({ code, display_name, username, password }) {
     const r = await api('/api/auth/register', { method: 'POST', body: { code, display_name, username, password } });
     user = r.user;
+    myGrade = null;
     hasUsers = true;
     if (r.token) setToken(r.token);
+    serverUpdated = 0; conflictRetries = 0;
     await pullProgress();
     return user;
+  }
+
+  async function changePassword(current, next) {
+    return api('/api/auth/password', { method: 'POST', body: { current, new: next } });
   }
 
   async function logout() {
     try { await api('/api/auth/logout', { method: 'POST' }); } catch (e) { }
     setToken('');
     user = null;
+    myGrade = null;
   }
 
   /* ---------- синхронизация прогресса ---------- */
@@ -96,14 +154,24 @@ const Auth = (() => {
     if (!user) return;
     try {
       const r = await api('/api/progress');
-      if (r.payload && Object.keys(r.payload).length) {
-        const local = window.__state ? window.__state() : null;
-        const serverHas = Object.keys(r.payload.lessons || {}).length > 0;
-        const localHas = local && Object.keys(local.lessons || {}).length > 0;
-        if (serverHas || !localHas) {
-          window.__setState(Object.assign({}, local || {}, r.payload));
-          if (local && localHas && !serverHas) persist(true);
-        }
+      serverUpdated = Number(r.updated_at) || 0;
+      const server = (r.payload && typeof r.payload === 'object' && !Array.isArray(r.payload))
+        ? r.payload : {};
+      const local = window.__state ? window.__state() : null;
+      const serverHas = Object.keys(server.lessons || {}).length > 0;
+      const localHas = !!local && Object.keys(local.lessons || {}).length > 0;
+
+      if (!serverHas && localHas) {
+        // Локально есть, на сервере пусто — отправляем локальное.
+        persist(true);
+      } else if (serverHas && !localHas) {
+        window.__setState(Object.assign({}, local || {}, server));
+      } else if (serverHas && localHas) {
+        // Оба непустые: объединяем, а не перезаписываем — иначе занятия
+        // на телефоне и компьютере стирали бы друг друга.
+        const before = JSON.stringify(local);
+        if (window.__mergeProgress) window.__mergeProgress(server);
+        if (window.__state && JSON.stringify(window.__state()) !== before) persist(true);
       }
     } catch (e) { /* останется локально */ }
   }
@@ -115,9 +183,31 @@ const Auth = (() => {
       const payload = window.__state ? window.__state() : null;
       if (!payload) return;
       pending = payload;
-      api('/api/progress', { method: 'PUT', body: { payload } })
-        .then(() => { lastSync = Date.now(); pending = null; })
-        .catch(() => { });
+      api('/api/progress', { method: 'PUT', body: { payload, base_updated: serverUpdated } })
+        .then((r) => {
+          lastSync = Date.now();
+          pending = null;
+          conflictRetries = 0;
+          serverUpdated = Number(r && r.updated_at) || serverUpdated;
+        })
+        .catch((err) => {
+          // 401 уже обработан в api().
+          if (err && err.status === 401) return;
+          if (err && err.status === 409 && err.data && err.data.payload) {
+            // Другое устройство сохранило новее: объединяем и повторяем.
+            if (window.__mergeProgress) window.__mergeProgress(err.data.payload);
+            serverUpdated = Number(err.data.updated_at) || serverUpdated;
+            if (++conflictRetries <= 3) {
+              clearTimeout(syncTimer);
+              syncTimer = setTimeout(send, 300);
+            }
+            return;
+          }
+          // Сеть или сервер: повторяем позже, чтобы прогресс не осел
+          // только в браузере.
+          clearTimeout(syncTimer);
+          syncTimer = setTimeout(send, 5000);
+        });
     };
     if (immediate) send(); else syncTimer = setTimeout(send, 1200);
   }
@@ -198,7 +288,8 @@ const Auth = (() => {
           : field('Код от учителя (не нужен — вы первый)', 'code', 'text', 'оставьте пустым');
         fName = field('Ваше имя', 'display_name', 'text', 'Али');
         fUser = field('Логин (необязательно)', 'username', 'text', 'придумайте или оставьте пустым');
-        fPass = field('Пароль (мин. 4 символа)', 'password', 'password', '••••••');
+        fPass = field('Пароль (минимум 8 символов)', 'password', 'password', '••••••');
+        fPass.inp.minLength = 8;
         if (!hasUsers) {
           const tip = document.createElement('div');
           tip.className = 'auth-warn';
@@ -240,6 +331,9 @@ const Auth = (() => {
           if (mode === 'login') {
             await login(fUser.inp.value.trim(), fPass.inp.value);
           } else {
+            if (fPass.inp.value.length < 8) {
+              throw new Error('weak_password');
+            }
             await register({
               code: fCode.inp.value.trim(),
               display_name: fName.inp.value.trim(),
@@ -253,7 +347,10 @@ const Auth = (() => {
             bad_credentials: 'Неверный логин или пароль',
             bad_invite: 'Код не найден или уже использован',
             name_required: 'Введите имя (минимум 2 символа)',
-            weak_password: 'Пароль слишком короткий (минимум 4 символа)',
+            weak_password: 'Пароль слишком короткий (минимум 8 символов)',
+            bad_password: 'Текущий пароль указан неверно',
+            password_too_long: 'Пароль слишком длинный (максимум 256 символов)',
+            cannot_touch_owner: 'Владельца аккаунта изменить нельзя',
             too_many: 'Слишком много попыток. Подождите 5 минут.',
             not_authenticated: 'Сессия истекла — войдите заново'
           };
@@ -281,14 +378,18 @@ const Auth = (() => {
     wrap.innerHTML = '<h1 class="page-title">👨‍🏫 Класс</h1><p class="page-sub">Загрузка…</p>';
     root.appendChild(wrap);
 
-    let data, invites = [];
+    let tab = 'class'; // 'class' | 'system'
+    let data, invites = [], sys = null;
     async function loadData() {
-      const [ov, iv] = await Promise.all([
+      const reqs = [
         api('/api/class/overview'),
         api('/api/class/invites').catch(() => ({ invites: [] }))
-      ]);
+      ];
+      if (user?.role === 'owner') reqs.push(api('/api/system/status').catch(() => null));
+      const [ov, iv, sy] = await Promise.all(reqs);
       data = ov;
       invites = (iv.invites || []).filter(i => !i.used_by);
+      if (sy !== undefined) sys = sy;
     }
     try {
       await loadData();
@@ -306,6 +407,22 @@ const Auth = (() => {
       wrap.appendChild(el2('h1', 'page-title', `👨‍🏫 Класс — ${ROLE_RU[user?.role] || 'Учитель'}`));
       wrap.appendChild(el2('p', 'page-sub',
         `Учеников: ${data.count} · средний балл класса: ${data.avg_score}% · средняя точность: ${data.avg_accuracy}% · активны сегодня: ${data.active_today}`));
+
+      if (user?.role === 'owner') {
+        const tabs = el2('div', 'tabs');
+        const errN = sys?.counts?.errors || 0;
+        [['class', '📋 Ученики и коды'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
+          const b = el2('button', 'tab' + (tab === id ? ' active' : ''), label);
+          b.onclick = () => { tab = id; paint(); };
+          tabs.appendChild(b);
+        });
+        wrap.appendChild(tabs);
+      }
+
+      if (tab === 'system' && user?.role === 'owner') {
+        paintSystem();
+        return;
+      }
 
       /* --- приглашения --- */
       const inv = el2('div', 'panel');
@@ -388,7 +505,116 @@ const Auth = (() => {
       wrap.appendChild(t);
     };
 
+    function fmtDur(sec) {
+      sec = Math.max(0, Number(sec || 0));
+      if (sec < 60) return sec + ' сек';
+      if (sec < 3600) return Math.floor(sec / 60) + ' мин';
+      const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+      return h + ' ч ' + m + ' мин';
+    }
+    function fmtBytes(b) {
+      b = Number(b || 0);
+      if (b < 1024) return b + ' Б';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' КБ';
+      return (b / (1024 * 1024)).toFixed(2) + ' МБ';
+    }
+
+    function paintSystem() {
+      const sp = el2('div', 'panel');
+      sp.appendChild(el2('h3', '', '🖥 Состояние сервера и базы данных'));
+      if (!sys) {
+        sp.appendChild(el2('div', 'empty', 'Не удалось получить статус сервера.'));
+        wrap.appendChild(sp);
+        return;
+      }
+      const c = sys.counts || {};
+      const grid = el2('div', 'stat-grid');
+      grid.innerHTML = `
+        <div><b class="ok">Работает ✓</b><span>сервер (Python ${esc(sys.python_version)})</span></div>
+        <div><b>${fmtDur(sys.uptime_sec)}</b><span>время работы</span></div>
+        <div><b>${fmtBytes(sys.db_size_bytes)}</b><span>размер базы app.db</span></div>
+        <div><b>${c.users || 0}</b><span>пользователей (${c.students || 0} уч.)</span></div>
+        <div><b>${c.sessions_active || 0}</b><span>активных сессий</span></div>
+        <div><b class="${(c.errors || 0) ? 'bad' : 'ok'}">${c.errors || 0}</b><span>ошибок в журнале</span></div>`;
+      sp.appendChild(grid);
+
+      const act = el2('div', 'btn-row');
+      const bk = el2('button', 'btn btn-primary', '💾 Скачать резервную копию (app.db)');
+      bk.onclick = async () => {
+        try {
+          const headers = {};
+          const t = getToken();
+          if (t) headers.Authorization = 'Bearer ' + t;
+          const res = await fetch('/api/system/backup', { credentials: 'omit', headers });
+          if (!res.ok) throw new Error(res.status);
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'chinese-app-backup.db';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          toast('Резервная копия скачана');
+        } catch (e) { toast('Ошибка скачивания копии'); }
+      };
+      const rf = el2('button', 'btn btn-ghost', '🔄 Обновить');
+      rf.onclick = () => reload();
+      const cp = el2('button', 'btn btn-ghost', '📋 Скопировать отчёт');
+      cp.onclick = () => {
+        const lines = [
+          `汉语学习 — Отчёт системы (${new Date().toLocaleString('ru-RU')})`,
+          `Python: ${sys.python_version} | Uptime: ${fmtDur(sys.uptime_sec)} | DB: ${fmtBytes(sys.db_size_bytes)}`,
+          `Users: ${c.users} (students: ${c.students}) | Sessions: ${c.sessions_active} | Errors: ${c.errors}`,
+          ...(sys.errors || []).slice(0, 20).map(e =>
+            `[${new Date(e.created_at * 1000).toISOString()}] (${e.source}${e.username ? ' @' + e.username : ''}) ${e.message}${e.detail ? '\n  ' + e.detail.replace(/\n/g, ' | ') : ''}`)
+        ].join('\n');
+        navigator.clipboard?.writeText(lines);
+        toast('Отчёт скопирован — можно вставить в чат');
+      };
+      const cl = el2('button', 'btn btn-ghost', '🧹 Очистить журнал');
+      cl.onclick = async () => {
+        await api('/api/system/errors/clear', { method: 'POST', body: {} });
+        toast('Журнал очищен');
+        reload();
+      };
+      act.appendChild(bk); act.appendChild(rf); act.appendChild(cp); act.appendChild(cl);
+      sp.appendChild(act);
+      wrap.appendChild(sp);
+
+      const ep = el2('div', 'panel');
+      ep.appendChild(el2('h3', '', `🪵 Журнал ошибок (${(sys.errors || []).length})`));
+      if (!(sys.errors || []).length) {
+        ep.appendChild(el2('div', 'empty', 'Ошибок нет ✓'));
+      } else {
+        const list = el2('div', 'sys-errors');
+        (sys.errors || []).forEach(e => {
+          const item = el2('div', 'sys-err');
+          item.innerHTML = `
+            <div class="se-head">
+              <span class="se-badge ${e.source === 'server' ? 'se-srv' : 'se-cli'}">${e.source === 'server' ? 'Сервер' : 'Браузер'}</span>
+              <b>${esc(e.message)}</b>
+              <i>${e.username ? '@' + esc(e.username) + ' · ' : ''}${timeAgo(e.created_at)}</i>
+            </div>
+            ${e.detail ? `<pre class="se-det">${esc(e.detail)}</pre>` : ''}`;
+          list.appendChild(item);
+        });
+        ep.appendChild(list);
+      }
+      wrap.appendChild(ep);
+    }
+
     /* --- карточка ученика --- */
+    /* Временный пароль: без похожих символов (0/O, 1/l/I), чтобы его
+       можно было продиктовать ученику без ошибок. */
+    function genTempPassword(len = 10) {
+      const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+      let out = '';
+      const buf = new Uint32Array(len);
+      if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+      else for (let i = 0; i < len; i++) buf[i] = Math.floor(Math.random() * 1e9);
+      for (let i = 0; i < len; i++) out += abc[buf[i] % abc.length];
+      return out;
+    }
+
     async function openStudent(id, refresh, focusGrade = false) {
       let d;
       try { d = await api('/api/class/students/' + id); } catch (e) { toast('Не удалось загрузить'); return; }
@@ -423,6 +649,7 @@ const Auth = (() => {
         <div class="events">${(d.events || []).slice(0, 12).map(e =>
           `<div class="ev"><span>${esc(e.kind)}</span><span>${esc(e.detail || '')}</span><i>${timeAgo(e.created_at)}</i></div>`).join('') || '<span class="empty">Пока пусто</span>'}</div>
         <div class="modal-foot">
+          <button class="btn btn-ghost m-pass">🔑 Сбросить пароль</button>
           <button class="btn btn-ghost m-reset">Сбросить прогресс</button>
           <button class="btn btn-danger m-del">Удалить ученика</button>
           ${user?.role === 'owner' ? '<button class="btn btn-ghost m-role">Сделать учителем</button>' : ''}
@@ -439,6 +666,14 @@ const Auth = (() => {
         await api('/api/class/grade', { method: 'POST', body: { student_id: id, grade: g, comment: c } });
         toast('Оценка сохранена');
         close(); refresh();
+      };
+      modal.querySelector('.m-pass').onclick = async () => {
+        const temp = genTempPassword();
+        if (!confirm(`Сбросить пароль ученика?\n\nНовый пароль: ${temp}\n\nПередайте его ученику — старый пароль и все его сессии перестанут работать.`)) return;
+        try {
+          await api('/api/class/password', { method: 'POST', body: { student_id: id, new_password: temp } });
+          toast('Пароль сброшен: ' + temp);
+        } catch (e) { toast('Не удалось сбросить пароль'); }
       };
       modal.querySelector('.m-reset').onclick = async () => {
         if (!confirm('Сбросить весь прогресс ученика?')) return;
@@ -484,8 +719,9 @@ const Auth = (() => {
 
   return {
     boot, needsAuth, renderAuth, renderClass, persist,
-    login, logout, register,
+    login, logout, register, changePassword,
     get user() { return user; },
+    get grade() { return myGrade; },
     get online() { return online; },
     get hasUsers() { return hasUsers; },
     ROLE_RU

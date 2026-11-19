@@ -1,0 +1,13 @@
+.git
+.github
+data
+tests
+__pycache__
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+.venv
+venv
+.DS_Store
+*.log
