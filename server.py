@@ -101,13 +101,31 @@ def close_all_conns():
     _local.conns = []
 
 
+DB_WRITE_HINT = (
+    "Не удалось открыть базу на запись: {path}.\n"
+    "Обычная причина — примонтированный диск (Render Disk / Railway Volume) "
+    "принадлежит root, а процесс работает от другого пользователя.\n"
+    "В Docker это решает docker-entrypoint.sh (выдаёт права и понижает "
+    "привилегии). Вне Docker выполните:\n"
+    "  sudo chown -R $(id -u):$(id -g) {dir}\n"
+    "и проверьте, что диск смонтирован не в режиме read-only."
+)
+
+
 def db():
     d = os.path.dirname(os.path.abspath(DB_PATH))
     if d:
         os.makedirs(d, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=30)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError as exc:
+        if "readonly" in str(exc) or "unable to open" in str(exc):
+            raise SystemExit(
+                f"ОШИБКА: {exc}\n" + DB_WRITE_HINT.format(path=DB_PATH, dir=d or DB_PATH)
+            ) from None
+        raise
     conn.execute("PRAGMA foreign_keys=ON")
     # busy_timeout заставляет SQLite самому ждать освобождения блокировки
     # вместо мгновенной ошибки «database is locked».
