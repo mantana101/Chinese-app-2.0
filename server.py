@@ -565,25 +565,102 @@ def summarize(payload: dict) -> dict:
 
 # ---------------- статика ----------------
 
-_index_state = {"mtime": None, "body": None}
+SRC_DIR = os.path.join(BASE, "src")
+_index_state = {"mtime": None, "body": None, "build": None}
 _index_lock = threading.Lock()
+
+# Собирать index.html прямо на сервере, если исходники в src/ новее сборки.
+# Так «забыл выполнить build.py» больше не приводит к показу старой версии.
+AUTO_BUILD = os.environ.get("AUTO_BUILD", "1").strip().lower() not in ("0", "false", "no")
+
+_BUILD_ID_RE = re.compile(r'<meta name="app-build" content="([^"]*)"')
+_build_check = {"at": 0.0}
+
+
+def _sources_mtime():
+    """Самое свежее время правки среди исходников src/."""
+    newest = 0.0
+    try:
+        entries = os.listdir(SRC_DIR)
+    except OSError:
+        return 0.0
+    for name in entries:
+        if not name.endswith((".js", ".css", ".html")):
+            continue
+        try:
+            newest = max(newest, os.path.getmtime(os.path.join(SRC_DIR, name)))
+        except OSError:
+            pass
+    return newest
+
+
+def _run_build():
+    """Пересобирает index.html из src/. Возвращает True при успехе."""
+    build_py = os.path.join(BASE, "build.py")
+    if not os.path.exists(build_py):
+        return False
+    try:
+        import subprocess
+        res = subprocess.run(
+            [sys.executable, build_py],
+            cwd=BASE, capture_output=True, timeout=120,
+        )
+    except Exception as exc:
+        record_error("build", f"автосборка не запустилась: {exc}")
+        return False
+    if res.returncode != 0:
+        tail = (res.stderr or res.stdout or b"").decode("utf-8", "replace")[-800:]
+        record_error("build", f"автосборка упала (код {res.returncode})", tail)
+        return False
+    print("[build] index.html пересобран из src/ автоматически", flush=True)
+    return True
 
 
 def _index_cache():
-    """Читает index.html один раз и переиспользует, пока файл не изменился."""
+    """Читает index.html один раз и переиспользует, пока файл не изменился.
+
+    Перед чтением проверяет, не новее ли исходники в src/ самой страницы:
+    тогда страница пересобирается, чтобы никто не увидел старую версию.
+    """
     try:
         mtime = os.path.getmtime(INDEX)
     except OSError:
-        return None
+        if AUTO_BUILD and _run_build():
+            try:
+                mtime = os.path.getmtime(INDEX)
+            except OSError:
+                return None
+        else:
+            return None
+
+    # Проверка «не устарела ли сборка» — не чаще раза в 2 секунды,
+    # чтобы не читать каталог src/ на каждый запрос страницы.
+    if AUTO_BUILD and now() - _build_check["at"] >= 2:
+        _build_check["at"] = now()
+        if _sources_mtime() > mtime + 0.001 and _run_build():
+            try:
+                mtime = os.path.getmtime(INDEX)
+            except OSError:
+                pass
+
     with _index_lock:
-        if _index_state["mtime"] != mtime:
+        if _index_state["mtime"] != mtime or _index_state["body"] is None:
             try:
                 with open(INDEX, "rb") as f:
-                    _index_state["body"] = f.read()
+                    body = f.read()
+                _index_state["body"] = body
                 _index_state["mtime"] = mtime
+                found = _BUILD_ID_RE.search(body.decode("utf-8", "replace"))
+                _index_state["build"] = found.group(1) if found else ""
             except OSError:
                 return None
         return _index_state["body"]
+
+
+def build_id():
+    """Идентификатор текущей сборки (для проверки «не устарел ли браузер»)."""
+    _index_cache()
+    return _index_state.get("build") or ""
 
 
 # ---------------- обработчик ----------------
@@ -608,11 +685,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return parts[-1][:64]
         return self.client_address[0]
 
-    def send_html(self, code, body: bytes):
+    def send_html(self, code, body: bytes, build: str = ""):
         self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache")
+        # Страница обновляется часто, а внутри неё вся логика приложения:
+        # браузер и прокси не должны отдавать старую копию из кэша.
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        if build:
+            self.send_header("ETag", f'"{build}"')
+            self.send_header("X-App-Build", build)
         send_common_headers(self)
         self.end_headers()
         _safe_write(self, body)
@@ -666,7 +750,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
         body = _index_cache()
         if body is None:
             body = b"<h1>index.html not found - run build.py</h1>"
-        self.send_html(200, body)
+            return self.send_html(503, body)
+        build = build_id()
+        # Если браузер пришёл со старой меткой сборки — отдаём страницу заново.
+        etag = (self.headers.get("If-None-Match") or "").strip().strip('"')
+        if build and etag and etag == build:
+            self.send_response(304)
+            self.send_header("ETag", f'"{build}"')
+            self.send_header("X-App-Build", build)
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+            self.send_header("Content-Length", "0")
+            send_common_headers(self)
+            self.end_headers()
+            return
+        self.send_html(200, body, build)
 
     # ---------- API: GET ----------
 
@@ -677,7 +774,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             has = conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
             codes = conn.execute("SELECT COUNT(*) c FROM invites WHERE used_by IS NULL").fetchone()["c"]
             conn.close()
-            return send_json(self, 200, {"has_users": has > 0, "open_invites": codes})
+            return send_json(self, 200, {
+                "has_users": has > 0,
+                "open_invites": codes,
+                "build": build_id(),
+            })
 
         if path == "/api/auth/me":
             row = get_session(self)
@@ -853,6 +954,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             conn.close()
             return send_json(self, 200, {
                 "ok": True,
+                "build": build_id(),
                 "uptime_sec": max(0, now() - STARTED_AT),
                 "server_time": now(),
                 "python_version": sys.version.split()[0],
