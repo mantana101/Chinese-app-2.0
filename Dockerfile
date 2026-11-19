@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY build.py server.py docker-entrypoint.sh ./
+COPY build.py server.py docker-entrypoint.py ./
 COPY src ./src
 
 # Собираем index.html на этапе образа и готовим каталог для базы.
@@ -17,7 +17,7 @@ RUN python3 build.py \
  && useradd --system --uid 10001 --gid 0 --home-dir /app --shell /usr/sbin/nologin appuser \
  && chown -R appuser:0 /app \
  && chmod 0775 /app/data \
- && chmod +x /app/docker-entrypoint.sh
+ && chmod +x /app/docker-entrypoint.py
 
 # Не работаем от root: сервер не должен иметь прав на всю файловую систему.
 #
@@ -25,11 +25,13 @@ RUN python3 build.py \
 # перекрывает каталог из образа, и владельцем становится root. Процесс под
 # appuser тогда не может ни создать app.db, ни открыть базу на запись —
 # отсюда «sqlite3.OperationalError: attempt to write a readonly database».
-# Поэтому точку входа делаем root'ом: она выдаёт appuser права на диск
+# Поэтому точка входа стартует root'ом: она выдаёт appuser права на диск
 # и только потом запускает сервер уже от непривилегированного пользователя.
+# Это Питон-скрипт, а не su: в slim-образе может не оказаться su, а
+# os.setuid/os.chown работают всегда и одинаково.
 USER root
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT ["python3", "/app/docker-entrypoint.py"]
 
 EXPOSE 8080
 
