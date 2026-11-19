@@ -1254,6 +1254,173 @@ const STORY_CHAPTERS = [
   }
 ];
 
+/* ============================================================
+   汉语学习 · Анимированная сцена для видео-уроков
+   ============================================================
+   Вместо статичной карточки со текстом рисуем настоящий «кадр фильма»:
+
+     • фон, свой для каждой локации (аэропорт, улица, отель, кафе);
+     • героев слева и справа — тот, кто говорит, «оживает»;
+     • облачко с репликой, которое выезжает и падает по словам;
+     • плавную смену кадров (fade + наезд камеры);
+     • прогресс сцены по таймлайну.
+
+   Всё на CSS/SVG и без внешних файлов: работает офлайн и на телефоне.
+   Анимации отключаются при prefers-reduced-motion.
+*/
+
+const VIDEO_SCENES = {
+  /* Локации: цвет неба, земля, дальний план и «декорации» */
+  airport: { label: 'Аэропорт', sky: 'linear-gradient(180deg,#1b2a3d 0%,#2c4257 55%,#3a5266 100%)', ground: '#243444', set: 'airport' },
+  taxi:    { label: 'Улица Сианя', sky: 'linear-gradient(180deg,#221a2e 0%,#3a2740 50%,#5c3a3f 100%)', ground: '#2b2027', set: 'city' },
+  hotel:   { label: 'Отель', sky: 'linear-gradient(180deg,#1d1a26 0%,#2a2436 60%,#352c40 100%)', ground: '#241f2e', set: 'hotel' },
+  cafe:    { label: 'Кафе', sky: 'linear-gradient(180deg,#2a1f18 0%,#3d2b1f 58%,#4d3626 100%)', ground: '#2b2018', set: 'cafe' },
+  studio:  { label: 'Студия', sky: 'linear-gradient(180deg,#181822 0%,#252334 60%,#2f2b40 100%)', ground: '#1e1c28', set: 'studio' }
+};
+
+/* Кто есть кто: имя, иероглиф-аватар, цвет, сторона кадра */
+const VIDEO_CAST = {
+  'Рассказчик':      { glyph: '语', color: '#e0b354', side: 'left' },
+  'Али':             { glyph: '阿', color: '#5aa88f', side: 'left' },
+  'Служащая':        { glyph: '服', color: '#6a9fd4', side: 'right' },
+  'Служащая аэропорта': { glyph: '服', color: '#6a9fd4', side: 'right' },
+  'Водитель':        { glyph: '车', color: '#d0453a', side: 'right' },
+  'Администратор':   { glyph: '店', color: '#c98cd6', side: 'right' },
+  'Девушка за столом': { glyph: '友', color: '#f0a06a', side: 'right' },
+  'Девушка':         { glyph: '友', color: '#f0a06a', side: 'right' },
+  'Учитель':         { glyph: '师', color: '#8bb8e8', side: 'right' }
+};
+
+function sceneLocation(scene, lesson) {
+  if (scene.loc && VIDEO_SCENES[scene.loc]) return scene.loc;
+  const t = ((lesson && lesson.level) || '') + ' ' + ((lesson && lesson.title) || '');
+  if (/аэропорт|Прилёт/i.test(t)) return 'airport';
+  if (/такси|Такси|дорог/i.test(t)) return 'taxi';
+  if (/отел|Отель/i.test(t)) return 'hotel';
+  if (/кафе|Кафе/i.test(t)) return 'cafe';
+  return 'studio';
+}
+
+/* Декорации рисуем SVG — они масштабируются без потерь и не требуют картинок */
+function sceneDecor(set) {
+  const sets = {
+    airport: `
+      <g opacity=".55">
+        <rect x="120" y="150" width="16" height="120" fill="#16222f"/>
+        <rect x="640" y="140" width="18" height="130" fill="#16222f"/>
+        <rect x="132" y="160" width="160" height="8" fill="#1d2c3a" rx="3"/>
+        <rect x="560" y="150" width="170" height="8" fill="#1d2c3a" rx="3"/>
+      </g>
+      <g opacity=".35" fill="#7fb0d8">
+        <rect x="300" y="240" width="90" height="52" rx="6"/>
+        <rect x="420" y="255" width="120" height="42" rx="6"/>
+      </g>
+      <g opacity=".22" fill="#cfe6ff">
+        <circle cx="240" cy="90" r="3"/><circle cx="480" cy="70" r="2.5"/>
+        <circle cx="700" cy="110" r="2"/><circle cx="60" cy="130" r="2"/>
+      </g>`,
+    city: `
+      <g opacity=".5">
+        <rect x="40" y="120" width="70" height="160" fill="#1c1520"/>
+        <rect x="130" y="90" width="54" height="190" fill="#241a26"/>
+        <rect x="600" y="105" width="66" height="175" fill="#1c1520"/>
+        <rect x="690" y="140" width="58" height="140" fill="#241a26"/>
+      </g>
+      <g fill="#ffd98a" opacity=".5">
+        <rect x="54" y="140" width="10" height="12"/><rect x="76" y="140" width="10" height="12"/>
+        <rect x="54" y="172" width="10" height="12"/><rect x="144" y="112" width="9" height="11"/>
+        <rect x="164" y="112" width="9" height="11"/><rect x="614" y="130" width="9" height="11"/>
+        <rect x="636" y="158" width="9" height="11"/><rect x="704" y="164" width="9" height="11"/>
+      </g>
+      <rect x="0" y="262" width="800" height="6" fill="#3a2b33" opacity=".8"/>`,
+    hotel: `
+      <g opacity=".6">
+        <rect x="250" y="120" width="300" height="14" rx="4" fill="#3b3348"/>
+        <rect x="270" y="134" width="260" height="90" fill="#241f33"/>
+        <rect x="300" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
+        <rect x="378" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
+        <rect x="456" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
+      </g>
+      <g opacity=".3" fill="#e0b354">
+        <circle cx="400" cy="96" r="26"/>
+        <rect x="392" y="96" width="16" height="24" rx="4"/>
+      </g>`,
+    cafe: `
+      <g opacity=".55">
+        <rect x="90" y="170" width="150" height="10" rx="4" fill="#4a3728"/>
+        <rect x="560" y="176" width="160" height="10" rx="4" fill="#4a3728"/>
+        <rect x="150" y="180" width="10" height="80" fill="#3a2b20"/>
+        <rect x="620" y="186" width="10" height="80" fill="#3a2b20"/>
+      </g>
+      <g opacity=".4" fill="#ffb968">
+        <circle cx="200" cy="86" r="14"/><circle cx="620" cy="94" r="11"/>
+      </g>
+      <g stroke="#ffb968" stroke-width="2" opacity=".18" fill="none">
+        <path d="M200 66 v-14 M618 74 v-10"/>
+      </g>`,
+    studio: `
+      <g opacity=".4">
+        <circle cx="400" cy="150" r="110" fill="none" stroke="#4b4560" stroke-width="2"/>
+        <circle cx="400" cy="150" r="150" fill="none" stroke="#3a3550" stroke-width="1.5"/>
+      </g>`
+  };
+  return sets[set] || sets.studio;
+}
+
+/* Кадр сцены: фон + герои + облачко с репликой */
+function buildSceneStage(scene, lesson, state) {
+  const locKey = sceneLocation(scene, lesson);
+  const loc = VIDEO_SCENES[locKey];
+  const who = scene.who || 'Рассказчик';
+  const cast = VIDEO_CAST[who] || { glyph: '语', color: '#e0b354', side: 'left' };
+
+  /* Герой слева и герой справа. Если в сцене есть собеседник (other) —
+     показываем двоих. Говорит всегда `who`, поэтому подсвечиваем именно его
+     сторону, а не «левый по умолчанию». */
+  let left, right;
+  if (scene.other) {
+    const other = VIDEO_CAST[scene.other] || { glyph: '汉', color: '#8b7cf6', side: 'right' };
+    if (cast.side === 'left') { left = { ...cast, name: who, active: true };
+                                right = { ...other, name: scene.other, active: false }; }
+    else                       { left = { ...other, name: scene.other, active: false };
+                                 right = { ...cast, name: who, active: true }; }
+  } else if (cast.side === 'right') {
+    left = { glyph: '学', color: '#6a9fd4', name: '汉语学习', active: false, ghost: true };
+    right = { ...cast, name: who, active: true };
+  } else {
+    left = { ...cast, name: who, active: true };
+    right = { glyph: '汉', color: '#8b7cf6', name: '汉语', active: false, ghost: true };
+  }
+
+  const heroHTML = (h, side) => `
+    <div class="vs-hero vs-${side}${h.active ? ' is-speaking' : ''}${h.ghost ? ' vs-ghost' : ''}" style="--hc:${h.color}">
+      <div class="vs-ava">${esc(h.glyph)}</div>
+      <div class="vs-name">${esc(h.name)}</div>
+    </div>`;
+
+  return `
+    <div class="vs-scene" style="--sky:${loc.sky};--ground:${loc.ground}">
+      <div class="vs-sky"></div>
+      <div class="vs-depth">
+        <svg class="vs-decor" viewBox="0 0 800 320" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+          ${sceneDecor(loc.set)}
+        </svg>
+      </div>
+      <div class="vs-ground"></div>
+      ${heroHTML(left, 'left')}
+      ${heroHTML(right, 'right')}
+      <div class="vs-bubble">
+        <div class="vs-who">${esc(who)}</div>
+        <div class="vs-hanzi">${esc(scene.hanzi)}</div>
+        <div class="vs-pinyin">${esc(scene.pinyin)}</div>
+        <div class="vs-ru">${esc(scene.ru)}</div>
+        ${scene.sub && state.subs ? `<div class="vs-sub">${esc(scene.sub)}</div>` : ''}
+        ${scene.tip ? `<div class="vs-tip">💡 ${esc(scene.tip)}</div>` : ''}
+      </div>
+      <div class="vs-loc">${esc(loc.label)}</div>
+    </div>`;
+}
+
 const EXTERNAL_VIDEOS = [
   {
     title: 'Китайский язык с нуля — Урок 1 (Введение, пиньинь, тоны)',
