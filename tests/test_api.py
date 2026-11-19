@@ -613,3 +613,23 @@ class TestProgressConflict(ApiTestCase):
         self.assertEqual(status, 200)
         self.assertGreater(data["updated_at"], 0)
         self.assertIn("a", data["payload"])
+
+
+class BuildVersionTestCase(ApiTestCase):
+    """Версия сборки должна быть видна клиенту — иначе он не отличит
+    старую страницу из кэша от новой."""
+
+    def test_status_reports_build(self):
+        status, data, _ = self.json("GET", "/api/auth/status")
+        self.assertEqual(status, 200)
+        self.assertIn("build", data)
+
+    def test_index_is_not_cached(self):
+        import urllib.request
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}/")
+        with urllib.request.urlopen(req) as res:
+            self.assertEqual(res.status, 200)
+            cache = res.headers.get("Cache-Control", "")
+            self.assertIn("no-store", cache,
+                          "страница не должна кэшироваться: иначе обновления не доезжают")
+            self.assertTrue(res.headers.get("ETag"), "нужен ETag для проверки версии")
