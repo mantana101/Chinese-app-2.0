@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12100e">
-<meta name="app-build" content="2c1034bfac09">
+<meta name="app-build" content="8a8e8825b356">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -814,6 +814,45 @@ button { font-family: inherit; cursor: pointer; }
 /* Плашка «нет связи» — холодный тон, чтобы отличать от новостей о версии. */
 .offline-bar { background: rgba(208,69,58,.16); border-bottom-color: rgba(208,69,58,.45); color: #ffd9d3; }
 
+/* ---------- Чтение: построчный перевод ---------- */
+.text-line { display: block; }
+.tl-hanzi { display: flex; flex-wrap: wrap; align-items: flex-end; }
+.tl-ru {
+  margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,.08);
+  color: var(--txt2); font-size: 13.5px; line-height: 1.5;
+}
+.text-body.hide-pinyin .w-p { display: none; }
+.text-body.hide-ru .tl-ru { display: none; }
+.read-hint {
+  margin-top: 14px; padding: 10px 13px; border-radius: 9px;
+  background: rgba(106,159,212,.09); border: 1px solid rgba(106,159,212,.22);
+  color: var(--txt2); font-size: 12.5px; line-height: 1.5;
+}
+:root[data-theme="light"] .tl-ru { border-top-color: rgba(0,0,0,.09); }
+/* на телефоне перевод удобнее читать с чуть большим межстрочным */
+@media (max-width: 900px) {
+  .tl-ru { font-size: 14px; line-height: 1.55; }
+  .text-line { padding: 12px 12px; }
+}
+
+/* ---------- Сюжетный фильм: роль героя и подсказка ---------- */
+.vid-who {
+  display: inline-block; margin-bottom: 10px; padding: 3px 12px; border-radius: 20px;
+  background: rgba(224,179,84,.13); border: 1px solid rgba(224,179,84,.3);
+  color: var(--gold); font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase;
+  font-weight: 700;
+}
+.vid-tip {
+  margin: 12px auto 0; max-width: 560px; padding: 9px 14px; border-radius: 10px;
+  background: rgba(90,168,143,.10); border: 1px solid rgba(90,168,143,.26);
+  color: #a8dcc9; font-size: 12.5px; line-height: 1.5; text-align: left;
+}
+:root[data-theme="light"] .vid-tip { background: rgba(43,123,99,.08); color: #2b6b57; }
+@media (max-width: 900px) {
+  .vid-tip { font-size: 12px; margin-top: 10px; }
+  .vid-who { font-size: 11px; }
+}
+
 </style>
 </head>
 <body>
@@ -1535,12 +1574,12 @@ const TEXTS = [
     level: 'Начальный',
     ru: 'Молодой человек представляется и рассказывает о себе.',
     lines: [
-      { h: '大家好，我叫阿里。', p: 'dà jiā hǎo, wǒ jiào ā lǐ.' },
-      { h: '我来自塔吉克斯坦。', p: 'wǒ lái zì tǎ jí kè sī tǎn.' },
-      { h: '我是杜尚别人，今年二十五岁。', p: 'wǒ shì dù shàng bié rén, jīn nián èr shí wǔ suì.' },
-      { h: '我在一家公司工作。', p: 'wǒ zài yī jiā gōng sī gōng zuò.' },
-      { h: '我现在学中文，因为我喜欢中国文化。', p: 'wǒ xiàn zài xué Zhōng wén, yīn wèi wǒ xǐ huan Zhōng guó wén huà.' },
-      { h: '我每天晚上学习两个小时。', p: 'wǒ měi tiān wǎn shang xué xí liǎng ge xiǎo shí.' }
+      { h: '大家好，我叫阿里。', p: 'dà jiā hǎo, wǒ jiào ā lǐ.', ru: 'Всем привет, меня зовут Али.' },
+      { h: '我来自塔吉克斯坦。', p: 'wǒ lái zì tǎ jí kè sī tǎn.', ru: 'Я из Таджикистана.' },
+      { h: '我是杜尚别人，今年二十五岁。', p: 'wǒ shì dù shàng bié rén, jīn nián èr shí wǔ suì.', ru: 'Я из Душанбе, мне в этом году 25 лет.' },
+      { h: '我在一家公司工作。', p: 'wǒ zài yī jiā gōng sī gōng zuò.', ru: 'Я работаю в одной компании.' },
+      { h: '我现在学中文，因为我喜欢中国文化。', p: 'wǒ xiàn zài xué Zhōng wén, yīn wèi wǒ xǐ huan Zhōng guó wén huà.', ru: 'Сейчас я учу китайский, потому что мне нравится китайская культура.' },
+      { h: '我每天晚上学习两个小时。', p: 'wǒ měi tiān wǎn shang xué xí liǎng ge xiǎo shí.', ru: 'Каждый вечер я занимаюсь два часа.' }
     ],
     glossary: [
       { h: '来自', p: 'lái zì', r: 'прибывать из' },
@@ -1555,13 +1594,13 @@ const TEXTS = [
     level: 'Начальный',
     ru: 'Разговор с официантом при заказе еды.',
     lines: [
-      { h: '服务员，我看一下菜单。', p: 'fú wù yuán, wǒ kàn yī xià cài dān.' },
-      { h: '好的，请稍等。', p: 'hǎo de, qǐng shāo děng.' },
-      { h: '我想要一份牛肉面，不要葱。', p: 'wǒ xiǎng yào yī fèn niú ròu miàn, bú yào cōng.' },
-      { h: '好的。还要别的吗？', p: 'hǎo de. hái yào bié de ma?' },
-      { h: '再来一杯茶。', p: 'zài lái yì bēi chá.' },
-      { h: '您要凉茶还是热茶？', p: 'nín yào liáng chá hái shì rè chá?' },
-      { h: '热茶，谢谢。', p: 'rè chá, xiè xie.' }
+      { h: '服务员，我看一下菜单。', p: 'fú wù yuán, wǒ kàn yī xià cài dān.', ru: 'Официант, можно посмотреть меню?' },
+      { h: '好的，请稍等。', p: 'hǎo de, qǐng shāo děng.', ru: 'Хорошо, подождите минуточку.' },
+      { h: '我想要一份牛肉面，不要葱。', p: 'wǒ xiǎng yào yī fèn niú ròu miàn, bú yào cōng.', ru: 'Я хочу лапшу с говядиной, без зелёного лука.' },
+      { h: '好的。还要别的吗？', p: 'hǎo de. hái yào bié de ma?', ru: 'Хорошо. Что-нибудь ещё?' },
+      { h: '再来一杯茶。', p: 'zài lái yì bēi chá.', ru: 'И ещё чашку чая.' },
+      { h: '您要凉茶还是热茶？', p: 'nín yào liáng chá hái shì rè chá?', ru: 'Вам холодный чай или горячий?' },
+      { h: '热茶，谢谢。', p: 'rè chá, xiè xie.', ru: 'Горячий, спасибо.' }
     ],
     glossary: [
       { h: '菜单', p: 'cài dān', r: 'меню' },
@@ -1576,18 +1615,18 @@ const TEXTS = [
     level: 'Средний',
     ru: 'Рассказ о распорядке дня.',
     lines: [
-      { h: '我每天早上七点起床。', p: 'wǒ měi tiān zǎo shang qī diǎn qǐ chuáng.' },
-      { h: '然后我吃早饭，喝一杯咖啡。', p: 'rán hòu wǒ chī zǎo fàn, hē yì bēi kā fēi.' },
-      { h: '八点半我开始工作。', p: 'bā diǎn bàn wǒ kāi shǐ gōng zuò.' },
-      { h: '中午我和同事一起吃饭。', p: 'zhōng wǔ wǒ hé tóng shì yì qǐ chī fàn.' },
-      { h: '下午有时候我去开会。', p: 'xià wǔ yǒu shí hou wǒ qù kāi huì.' },
-      { h: '晚上七点我回家，做饭，然后学习中文。', p: 'wǎn shang qī diǎn wǒ huí jiā, zuò fàn, rán hòu xué xí Zhōng wén.' },
-      { h: '虽然有点累，但是很开心。', p: 'suī rán yǒu diǎn lèi, dàn shì hěn kāi xīn.' }
+      { h: '我每天早上七点起床。', p: 'wǒ měi tiān zǎo shang qī diǎn qǐ chuáng.', ru: 'Каждое утро я встаю в семь часов.' },
+      { h: '然后我吃早饭，喝一杯咖啡。', p: 'rán hòu wǒ chī zǎo fàn, hē yì bēi kā fēi.', ru: 'Потом завтракаю и выпиваю чашку кофе.' },
+      { h: '八点半我开始工作。', p: 'bā diǎn bàn wǒ kāi shǐ gōng zuò.', ru: 'В половине девятого я начинаю работать.' },
+      { h: '中午我和同事一起吃饭。', p: 'zhōng wǔ wǒ hé tóng shì yì qǐ chī fàn.', ru: 'В обед я обедаю вместе с коллегами.' },
+      { h: '下午有时候我去开会。', p: 'xià wǔ yǒu shí hou wǒ qù kāi huì.', ru: 'После обеда иногда хожу на совещания.' },
+      { h: '晚上七点我回家，做饭，然后学习中文。', p: 'wǎn shang qī diǎn wǒ huí jiā, zuò fàn, rán hòu xué xí Zhōng wén.', ru: 'В семь вечера я иду домой, готовлю ужин, а потом учу китайский.' },
+      { h: '虽然有点累，但是很开心。', p: 'suī rán yǒu diǎn lèi, dàn shì hěn kāi xīn.', ru: 'Хотя немного устаю, но очень рад.' }
     ],
     glossary: [
       { h: '起床', p: 'qǐ chuáng', r: 'вставать' },
       { h: '然后', p: 'rán hòu', r: 'потом, затем' },
-      {h: '有时候', p: 'yǒu shí hou', r: 'иногда' },
+        { h: '有时候', p: 'yǒu shí hou', r: 'иногда' },
       { h: '虽然', p: 'suī rán', r: 'хотя' },
       { h: '开心', p: 'kāi xīn', r: 'радостный' }
     ]
@@ -1818,6 +1857,275 @@ const VIDEO_LESSONS = [
       { hanzi: '木 · 林 · 森', pinyin: 'mù · lín · sēn', ru: 'Дерево → роща (два) → густой лес (три)!', sub: 'Логика рисунка работает моментально', tone: 4, speak: '木，林，森', dur: 4800 },
       { hanzi: '山 · 水', pinyin: 'shān · shuǐ', ru: 'Гора (три вершины) и вода (поток реки)', sub: 'Одни из древнейших пиктограмм Китая', tone: 1, speak: '山，水', dur: 4500 },
       { hanzi: '好 = 女 + 子', pinyin: 'hǎo = nǚ + zǐ', ru: 'Женщина + ребёнок = «Хорошо»!', sub: 'Когда видите сложный иероглиф, ищите знакомые части', tone: 3, speak: '好', dur: 4800 }
+    ]
+  }
+];
+
+/* ============================================================
+   汉语学习 · Сюжетный обучающий фильм «Первая поездка в Китай»
+   ============================================================
+   История студента из Душанбе, который впервые приезжает в Китай.
+   Каждая сцена: реплика на китайском, пиньинь, перевод, подсказка
+   по грамматике и озвучка. Сюжет ведёт от аэропорта до новых друзей.
+
+   Формат сцены совпадает с VIDEO_LESSONS, поэтому плеер работает
+   без изменений. Дополнительные поля:
+     who   — кто говорит (для субтитров-ролей)
+     extra — вторая реплика в диалоге (собеседник)
+     tip   — короткая заметка «почему так говорят»
+*/
+
+const STORY_CHAPTERS = [
+  {
+    id: 's1',
+    title: 'Прилёт: первое «нихао»',
+    level: 'Серия 1 · Аэропорт',
+    duration: '1:30',
+    desc: 'Али прилетает в Сиань. Первые слова в аэропорту: приветствие, благодарность, вежливая просьба.',
+    scenes: [
+      {
+        who: 'Рассказчик',
+        hanzi: '阿里第一次来中国。',
+        pinyin: 'Ā lǐ dì yī cì lái Zhōng guó.',
+        ru: 'Али впервые приехал в Китай.',
+        sub: '第一次 — «в первый раз». Порядок: кто + когда + действие.',
+        tip: '第 + число + 次 = «в который раз». 第一次 — впервые, 第二次 — во второй раз.',
+        tone: 0, speak: '阿里第一次来中国。', dur: 5200
+      },
+      {
+        who: 'Служащая аэропорта',
+        hanzi: '欢迎来到西安！',
+        pinyin: 'Huān yíng lái dào Xī ān!',
+        ru: 'Добро пожаловать в Сиань!',
+        sub: '欢迎 — «добро пожаловать», 来到 — «прибыть»',
+        tip: '欢迎 всегда идёт первым словом: 欢迎来中国, 欢迎来我家.',
+        tone: 0, speak: '欢迎来到西安！', dur: 5000
+      },
+      {
+        who: 'Али',
+        hanzi: '你好！我叫阿里。',
+        pinyin: 'Nǐ hǎo! Wǒ jiào Ā lǐ.',
+        ru: 'Здравствуйте! Меня зовут Али.',
+        sub: '叫 здесь — «зваться», а не «кричать»',
+        tip: '我叫 + имя — самый простой способ представиться. 我姓 — «моя фамилия».',
+        tone: 3, speak: '你好！我叫阿里。', dur: 5000
+      },
+      {
+        who: 'Служащая',
+        hanzi: '你的行李在那边。',
+        pinyin: 'Nǐ de xíng li zài nà biān.',
+        ru: 'Ваш багаж вон там.',
+        sub: '在 — «находиться в», 那边 — «там, по ту сторону»',
+        tip: '在 связывает предмет и место: 行李在那边 = багаж + там. Глагола «есть» не нужно.',
+        tone: 0, speak: '你的行李在那边。', dur: 5200
+      },
+      {
+        who: 'Али',
+        hanzi: '谢谢您！',
+        pinyin: 'Xiè xie nín!',
+        ru: 'Спасибо вам!',
+        sub: '您 — вежливое «вы» для старших и незнакомых',
+        tip: 'Выбирайте 您 в аэропорту, отеле, у врача — это сразу располагает.',
+        tone: 4, speak: '谢谢您！', dur: 4500
+      },
+      {
+        who: 'Служащая',
+        hanzi: '不客气，一路顺利！',
+        pinyin: 'Bú kè qi, yí lù shùn lì!',
+        ru: 'Не за что, доброго пути!',
+        sub: '一路顺利 — «удачной дороги»',
+        tip: '不 превращается в bú перед 4-м тоном: bú kè qi.',
+        tone: 2, speak: '不客气，一路顺利！', dur: 5200
+      }
+    ]
+  },
+  {
+    id: 's2',
+    title: 'Такси: город и цена',
+    level: 'Серия 2 · Дорога в город',
+    duration: '1:35',
+    desc: 'Али едет в гостиницу. Учимся называть адрес, спрашивать цену и торговаться вежливо.',
+    scenes: [
+      {
+        who: 'Али',
+        hanzi: '师傅，请去这个酒店。',
+        pinyin: 'Shī fu, qǐng qù zhè ge jiǔ diàn.',
+        ru: 'Мастер (водитель), пожалуйста, в этот отель.',
+        sub: '师傅 — уважительное обращение к водителю, мастеру',
+        tip: 'К таксисту в Китае обращаются 师傅 (shīfu) — «мастер». Это вежливо и привычно.',
+        tone: 0, speak: '师傅，请去这个酒店。', dur: 5200
+      },
+      {
+        who: 'Водитель',
+        hanzi: '好的，大概二十分钟。',
+        pinyin: 'Hǎo de, dà gài èr shí fēn zhōng.',
+        ru: 'Хорошо, примерно двадцать минут.',
+        sub: '大概 — «примерно», 分钟 — «минута»',
+        tip: '二十分钟 = 20 минут. 两点 = 2 часа (время), но 二十分钟 = 20 минут. Числа 2: 二 / 两.',
+        tone: 0, speak: '好的，大概二十分钟。', dur: 5200
+      },
+      {
+        who: 'Али',
+        hanzi: '这里很漂亮！',
+        pinyin: 'Zhè lǐ hěn piào liang!',
+        ru: 'Здесь очень красиво!',
+        sub: '很 перед прилагательным обязательна в утверждении',
+        tip: 'Не говорите просто 这里漂亮 — звучит как сравнение. 很 делает фразу обычным утверждением.',
+        tone: 3, speak: '这里很漂亮！', dur: 4800
+      },
+      {
+        who: 'Водитель',
+        hanzi: '你要看古城墙吗？',
+        pinyin: 'Nǐ yào kàn gǔ chéng qiáng ma?',
+        ru: 'Хочешь посмотреть древнюю городскую стену?',
+        sub: '吗 в конце превращает утверждение в вопрос',
+        tip: 'Вопрос можно задать без 吗 — повтором: 你要不要看? Но 吗 проще.',
+        tone: 0, speak: '你要看古城墙吗？', dur: 5200
+      },
+      {
+        who: 'Али',
+        hanzi: '要！多少钱？',
+        pinyin: 'Yào! Duō shao qián?',
+        ru: 'Да! Сколько стоит?',
+        sub: '多少钱 — универсальный вопрос о цене',
+        tip: '多少钱 = «сколько денег». Можно спросить и 几块钱 (разговорно).',
+        tone: 0, speak: '要！多少钱？', dur: 4500
+      },
+      {
+        who: 'Водитель',
+        hanzi: '一共四十块。',
+        pinyin: 'Yí gòng sì shí kuài.',
+        ru: 'Всего сорок юаней.',
+        sub: '一共 — «всего, итого», 块 — разговорное «юань»',
+        tip: '四十 = 4 + 10. 块 — самое частое слово для юаня в речи. В кассе скажут 元.',
+        tone: 0, speak: '一共四十块。', dur: 4800
+      }
+    ]
+  },
+  {
+    id: 's3',
+    title: 'Отель: заселение',
+    level: 'Серия 3 · Стойка регистрации',
+    duration: '1:25',
+    desc: 'Паспорт, бронь, номер. Вежливые формулы, без которых не обойтись в поездке.',
+    scenes: [
+      {
+        who: 'Али',
+        hanzi: '你好，我订了一个房间。',
+        pinyin: 'Nǐ hǎo, wǒ dìng le yī ge fáng jiān.',
+        ru: 'Здравствуйте, я забронировал номер.',
+        sub: '了 показывает, что действие уже выполнено',
+        tip: '了 после глагола = действие завершено: 订了 = забронировал. Без 了 это «бронирую».',
+        tone: 3, speak: '你好，我订了一个房间。', dur: 5200
+      },
+      {
+        who: 'Администратор',
+        hanzi: '请出示护照。',
+        pinyin: 'Qǐng chū shì hù zhào.',
+        ru: 'Пожалуйста, покажите паспорт.',
+        sub: '请 + глагол — вежливая просьба',
+        tip: '请 в начале = «пожалуйста». 请进 (входите), 请坐 (садитесь), 请稍等 (подождите).',
+        tone: 0, speak: '请出示护照。', dur: 4800
+      },
+      {
+        who: 'Администратор',
+        hanzi: '你的房间在三楼。',
+        pinyin: 'Nǐ de fáng jiān zài sān lóu.',
+        ru: 'Ваш номер на третьем этаже.',
+        sub: '楼 — «этаж». В Китае первый этаж —一楼',
+        tip: 'Внимание: китайский 一楼 — это первый этаж, а не «второй». Сдвига нет.',
+        tone: 0, speak: '你的房间在三楼。', dur: 5000
+      },
+      {
+        who: 'Али',
+        hanzi: '有 wifi 吗？',
+        pinyin: 'Yǒu wifi ma?',
+        ru: 'Есть вайфай?',
+        sub: '有 — «есть/иметь», вопрос через 吗',
+        tip: '有 — ключевой глагол: 有时间 (есть время), 有问题 (есть вопрос, есть проблема).',
+        tone: 0, speak: '有 wifi 吗？', dur: 4500
+      },
+      {
+        who: 'Администратор',
+        hanzi: '有，密码在房卡上。',
+        pinyin: 'Yǒu, mì mǎ zài fáng kǎ shàng.',
+        ru: 'Есть, пароль на ключ-карте.',
+        sub: '密码 — «пароль», 房卡 — «ключ-карта»',
+        tip: '上 в конце = «на поверхности». 在桌子上 — на столе, 在卡上 — на карте.',
+        tone: 0, speak: '有，密码在房卡上。', dur: 5200
+      },
+      {
+        who: 'Али',
+        hanzi: '太好了，谢谢你！',
+        pinyin: 'Tài hǎo le, xiè xie nǐ!',
+        ru: 'Отлично, спасибо тебе!',
+        sub: '太好了 — «как здорово», буквально «слишком хорошо»',
+        tip: '太…了 — сильная эмоция: 太贵了 (слишком дорого), 太好了 (как отлично).',
+        tone: 0, speak: '太好了，谢谢你！', dur: 4800
+      }
+    ]
+  },
+  {
+    id: 's4',
+    title: 'Кафе: заказ и разговор',
+    level: 'Серия 4 · Знакомство',
+    duration: '1:40',
+    desc: 'Али знакомится с местной студенткой. Как заказать еду, спросить «почему» и обменяться контактами.',
+    scenes: [
+      {
+        who: 'Али',
+        hanzi: '我要一碗牛肉面。',
+        pinyin: 'Wǒ yào yì wǎn niú ròu miàn.',
+        ru: 'Я хочу одну порцию лапши с говядиной.',
+        sub: '碗 — счётное слово для порций в чашке/пиале',
+        tip: 'Счётные слова: 一碗面 (пиала), 一杯茶 (чашка), 一份饭 (порция), 一个包子 (штука).',
+        tone: 0, speak: '我要一碗牛肉面。', dur: 5200
+      },
+      {
+        who: 'Девушка за столом',
+        hanzi: '你也是学生吗？',
+        pinyin: 'Nǐ yě shì xué sheng ma?',
+        ru: 'Ты тоже студент?',
+        sub: '也 — «тоже», всегда перед глаголом',
+        tip: '也 стоит перед 是, а не после: 我也是学生. Ошибка «我是也» — типичная.',
+        tone: 3, speak: '你也是学生吗？', dur: 5000
+      },
+      {
+        who: 'Али',
+        hanzi: '是，我是塔吉克斯坦人。',
+        pinyin: 'Shì, wǒ shì tǎ jí kè sī tǎn rén.',
+        ru: 'Да, я из Таджикистана (таджик).',
+        sub: 'название страны + 人 = человек из этой страны',
+        tip: '中国 → 中国人, 俄罗斯 → 俄罗斯人. Универсальная схема для национальностей.',
+        tone: 2, speak: '是，我是塔吉克斯坦人。', dur: 5200
+      },
+      {
+        who: 'Девушка',
+        hanzi: '你为什么学中文？',
+        pinyin: 'Nǐ wèi shén me xué Zhōng wén?',
+        ru: 'Почему ты учишь китайский?',
+        sub: '为什么 — «почему», ответ через 因为',
+        tip: 'Вопрос 为什么 → ответ 因为 (потому что). Пара всегда идёт вместе.',
+        tone: 0, speak: '你为什么学中文？', dur: 5200
+      },
+      {
+        who: 'Али',
+        hanzi: '因为我想在中国工作。',
+        pinyin: 'Yīn wèi wǒ xiǎng zài Zhōng guó gōng zuò.',
+        ru: 'Потому что я хочу работать в Китае.',
+        sub: '想 + глагол = «хотеть что-то сделать»',
+        tip: '想 — «хочу». Не путайте с 要 (более настойчиво «намерен»).',
+        tone: 0, speak: '因为我想在中国工作。', dur: 5200
+      },
+      {
+        who: 'Девушка',
+        hanzi: '加油！我们可以做朋友。',
+        pinyin: 'Jiā yóu! Wǒ men kě yǐ zuò péng you.',
+        ru: 'Удачи (давай, ты сможешь)! Мы можем дружить.',
+        sub: '加油 — буквально «добавь масла», значит «не сдавайся!»',
+        tip: '加油 — самое китайское слово поддержки. Болельщики кричат его на стадионах.',
+        tone: 1, speak: '加油！我们可以做朋友。', dur: 5500
+      }
     ]
   }
 ];
@@ -3937,7 +4245,7 @@ function renderWriteCard(host) {
 /* ============================================================
    ЧТЕНИЕ
    ============================================================ */
-let readState = { idx: 0, showPinyin: true };
+let readState = { idx: 0, showPinyin: true, showRu: true };
 function renderRead(root) {
   const wrap = el('div');
   wrap.appendChild(el('h1', 'page-title', 'Чтение с пиньинь'));
@@ -3962,20 +4270,33 @@ function renderText(host) {
     <div><h3>${esc(t.title)}</h3><span class="level-chip">${esc(t.level)}</span></div>
     <div class="btn-row">
       <button class="btn btn-sm" id="togglePy">${readState.showPinyin ? 'Скрыть пиньинь' : 'Показать пиньинь'}</button>
+      <button class="btn btn-sm" id="toggleRu">${readState.showRu ? 'Скрыть перевод' : 'Показать перевод'}</button>
       <button class="btn btn-sm" id="readAloud">🔊 Всё вслух</button>
     </div>`));
+  p.appendChild(el('div', 'note', 'О чём текст: ' + esc(t.ru)));
+
   const body = el('div', 'text-body');
   t.lines.forEach(ln => {
     const line = el('div', 'text-line');
+    const row = el('div', 'tl-hanzi');
     buildLine(ln.h, ln.p).forEach(part => {
-      if (part.punct) { line.appendChild(el('span', 'punct', esc(part.ch))); return; }
-      line.appendChild(el('span', 'w', `<span class="w-h">${esc(part.ch)}</span><span class="w-p">${esc(part.py)}</span>`));
+      if (part.punct) { row.appendChild(el('span', 'punct', esc(part.ch))); return; }
+      row.appendChild(el('span', 'w', `<span class="w-h">${esc(part.ch)}</span><span class="w-p">${esc(part.py)}</span>`));
     });
+    line.appendChild(row);
+    // Перевод строки — виден сразу: без него непонятно, о чём речь.
+    if (ln.ru) line.appendChild(el('div', 'tl-ru', esc(ln.ru)));
     line.onclick = () => speak(ln.h);
+    line.title = 'Нажмите, чтобы услышать';
     body.appendChild(line);
   });
   p.appendChild(body);
-  p.appendChild(el('div', 'note', 'Перевод: ' + esc(t.ru)));
+  body.classList.toggle('hide-pinyin', !readState.showPinyin);
+  body.classList.toggle('hide-ru', !readState.showRu);
+
+  const hint = el('div', 'read-hint',
+    '💡 Нажмите на любую строку — услышите её. Наведите на иероглиф, чтобы увидеть пиньинь и перевод.');
+  p.appendChild(hint);
   const gl = el('div', 'gloss');
   t.glossary.forEach(g => gl.appendChild(el('div', 'gl-row', `<b>${esc(g.h)}</b><span class="gl-p">${esc(g.p)}</span><span>${esc(g.r)}</span>`)));
   p.appendChild(el('h3', '', 'Словарь к тексту'));
@@ -3983,6 +4304,7 @@ function renderText(host) {
   host.appendChild(p);
 
   $('#togglePy').onclick = () => { readState.showPinyin = !readState.showPinyin; renderText(host); };
+  $('#toggleRu').onclick = () => { readState.showRu = !readState.showRu; renderText(host); };
   $('#readAloud').onclick = () => speak(t.lines.map(l => l.h).join(' '));
 }
 /* Разбор строки на символы: каждому иероглифу — свой слог пиньинь */
@@ -4147,7 +4469,14 @@ function renderVideos(root) {
   wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
   wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
 
-  const lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
+  let lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
+
+  /* Сюжетный фильм «Первая поездка в Китай» — ставим первым: это не набор
+     разрозненных сцен, а история с героем, которую интересно смотреть. */
+  if (typeof STORY_CHAPTERS !== 'undefined' && STORY_CHAPTERS.length) {
+    const story = STORY_CHAPTERS.map(c => ({ ...c, story: true }));
+    lessons = story.concat(lessons);
+  }
   if (lessons.length) {
     const player = el('div', 'panel vid-player');
     const stage = el('div', 'vid-stage');
@@ -4191,8 +4520,10 @@ function renderVideos(root) {
           <div class="vid-hanzi">${esc(sc.hanzi)}</div>
           <div class="vid-pinyin">${esc(sc.pinyin)}</div>
           ${drawToneCurve(sc.tone)}
+          ${sc.who ? `<div class="vid-who">${esc(sc.who)}</div>` : ''}
           <div class="vid-ru">${esc(sc.ru)}</div>
           ${vidState.subs ? `<div class="vid-sub">${esc(sc.sub)}</div>` : ''}
+          ${sc.tip ? `<div class="vid-tip">💡 ${esc(sc.tip)}</div>` : ''}
         </div>
         <div class="vid-bar"><i style="width:${pct}%"></i></div>`;
 
@@ -4222,7 +4553,7 @@ function renderVideos(root) {
         const card = el('button', 'vid-item' + (i === vidState.lessonIdx ? ' active' : ''), `
           <div class="vi-num">${i + 1}</div>
           <div class="vi-txt">
-            <b>${esc(v.title)}</b>
+            <b>${v.story ? '🎬 ' : ''}${esc(v.title)}</b>
             <span>${esc(v.level)} · ${esc(v.duration)} — ${esc(v.desc)}</span>
           </div>`);
         card.onclick = () => {

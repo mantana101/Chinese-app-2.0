@@ -1280,7 +1280,7 @@ function renderWriteCard(host) {
 /* ============================================================
    ЧТЕНИЕ
    ============================================================ */
-let readState = { idx: 0, showPinyin: true };
+let readState = { idx: 0, showPinyin: true, showRu: true };
 function renderRead(root) {
   const wrap = el('div');
   wrap.appendChild(el('h1', 'page-title', 'Чтение с пиньинь'));
@@ -1305,20 +1305,33 @@ function renderText(host) {
     <div><h3>${esc(t.title)}</h3><span class="level-chip">${esc(t.level)}</span></div>
     <div class="btn-row">
       <button class="btn btn-sm" id="togglePy">${readState.showPinyin ? 'Скрыть пиньинь' : 'Показать пиньинь'}</button>
+      <button class="btn btn-sm" id="toggleRu">${readState.showRu ? 'Скрыть перевод' : 'Показать перевод'}</button>
       <button class="btn btn-sm" id="readAloud">🔊 Всё вслух</button>
     </div>`));
+  p.appendChild(el('div', 'note', 'О чём текст: ' + esc(t.ru)));
+
   const body = el('div', 'text-body');
   t.lines.forEach(ln => {
     const line = el('div', 'text-line');
+    const row = el('div', 'tl-hanzi');
     buildLine(ln.h, ln.p).forEach(part => {
-      if (part.punct) { line.appendChild(el('span', 'punct', esc(part.ch))); return; }
-      line.appendChild(el('span', 'w', `<span class="w-h">${esc(part.ch)}</span><span class="w-p">${esc(part.py)}</span>`));
+      if (part.punct) { row.appendChild(el('span', 'punct', esc(part.ch))); return; }
+      row.appendChild(el('span', 'w', `<span class="w-h">${esc(part.ch)}</span><span class="w-p">${esc(part.py)}</span>`));
     });
+    line.appendChild(row);
+    // Перевод строки — виден сразу: без него непонятно, о чём речь.
+    if (ln.ru) line.appendChild(el('div', 'tl-ru', esc(ln.ru)));
     line.onclick = () => speak(ln.h);
+    line.title = 'Нажмите, чтобы услышать';
     body.appendChild(line);
   });
   p.appendChild(body);
-  p.appendChild(el('div', 'note', 'Перевод: ' + esc(t.ru)));
+  body.classList.toggle('hide-pinyin', !readState.showPinyin);
+  body.classList.toggle('hide-ru', !readState.showRu);
+
+  const hint = el('div', 'read-hint',
+    '💡 Нажмите на любую строку — услышите её. Наведите на иероглиф, чтобы увидеть пиньинь и перевод.');
+  p.appendChild(hint);
   const gl = el('div', 'gloss');
   t.glossary.forEach(g => gl.appendChild(el('div', 'gl-row', `<b>${esc(g.h)}</b><span class="gl-p">${esc(g.p)}</span><span>${esc(g.r)}</span>`)));
   p.appendChild(el('h3', '', 'Словарь к тексту'));
@@ -1326,6 +1339,7 @@ function renderText(host) {
   host.appendChild(p);
 
   $('#togglePy').onclick = () => { readState.showPinyin = !readState.showPinyin; renderText(host); };
+  $('#toggleRu').onclick = () => { readState.showRu = !readState.showRu; renderText(host); };
   $('#readAloud').onclick = () => speak(t.lines.map(l => l.h).join(' '));
 }
 /* Разбор строки на символы: каждому иероглифу — свой слог пиньинь */
@@ -1490,7 +1504,14 @@ function renderVideos(root) {
   wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
   wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
 
-  const lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
+  let lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
+
+  /* Сюжетный фильм «Первая поездка в Китай» — ставим первым: это не набор
+     разрозненных сцен, а история с героем, которую интересно смотреть. */
+  if (typeof STORY_CHAPTERS !== 'undefined' && STORY_CHAPTERS.length) {
+    const story = STORY_CHAPTERS.map(c => ({ ...c, story: true }));
+    lessons = story.concat(lessons);
+  }
   if (lessons.length) {
     const player = el('div', 'panel vid-player');
     const stage = el('div', 'vid-stage');
@@ -1534,8 +1555,10 @@ function renderVideos(root) {
           <div class="vid-hanzi">${esc(sc.hanzi)}</div>
           <div class="vid-pinyin">${esc(sc.pinyin)}</div>
           ${drawToneCurve(sc.tone)}
+          ${sc.who ? `<div class="vid-who">${esc(sc.who)}</div>` : ''}
           <div class="vid-ru">${esc(sc.ru)}</div>
           ${vidState.subs ? `<div class="vid-sub">${esc(sc.sub)}</div>` : ''}
+          ${sc.tip ? `<div class="vid-tip">💡 ${esc(sc.tip)}</div>` : ''}
         </div>
         <div class="vid-bar"><i style="width:${pct}%"></i></div>`;
 
@@ -1565,7 +1588,7 @@ function renderVideos(root) {
         const card = el('button', 'vid-item' + (i === vidState.lessonIdx ? ' active' : ''), `
           <div class="vi-num">${i + 1}</div>
           <div class="vi-txt">
-            <b>${esc(v.title)}</b>
+            <b>${v.story ? '🎬 ' : ''}${esc(v.title)}</b>
             <span>${esc(v.level)} · ${esc(v.duration)} — ${esc(v.desc)}</span>
           </div>`);
         card.onclick = () => {
