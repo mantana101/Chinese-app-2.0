@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Кадры видео — небо, холмы, ветер</title>
+<title>Живые кадры видео</title>
 <style>
 /* ============================================================
    汉语学习 — стили
@@ -912,18 +912,101 @@ button { font-family: inherit; cursor: pointer; }
   100% { transform: translate(0, 0); opacity: .25; }
 }
 
-/* ---------- герои ---------- */
-.vs-bust { transform-box: fill-box; transform-origin: 50% 100%; }
-.vs-bust.is-live { animation: vs-nod 3.6s ease-in-out infinite; }
-@keyframes vs-nod {
+/* ---------- герои: живая анимация ----------
+   Важно: на группе .vs-bust НЕ висит CSS-transform — иначе он затрёт
+   координаты из атрибута transform. Всё движение живёт во вложенных группах. */
+.vs-body { transform-box: fill-box; transform-origin: 50% 100%; }
+.vs-head { transform-box: fill-box; transform-origin: 50% 92%; }
+.vs-brow, .vs-pupil, .vs-arm { transform-box: fill-box; }
+.vs-brow { transform-origin: 50% 100%; }
+.vs-pupil { transform-origin: 50% 50%; }
+.vs-arm { transform-origin: 18% 6%; }
+
+/* дыхание и покачивание — есть всегда */
+.vs-bob { transform-box: fill-box; transform-origin: 50% 100%;
+  animation: vs-breathe 4.4s ease-in-out infinite; }
+@keyframes vs-breathe {
+  0%,100% { transform: translateY(0) scaleY(1); }
+  50%     { transform: translateY(-1.5px) scaleY(1.008); }
+}
+
+/* голова: медленный «живой» дрейф */
+.vs-head { animation: vs-head-drift 7.5s ease-in-out infinite; }
+@keyframes vs-head-drift {
+  0%,100% { transform: rotate(-.7deg) translateY(0); }
+  50%     { transform: rotate(.9deg) translateY(-1.2px); }
+}
+
+/* глаза моргают: веко закрывается коротким рывком */
+.vs-lid { transform-box: fill-box; transform-origin: 50% 0%; transform: scaleY(0); }
+.vs-bust .vs-eye:first-of-type .vs-lid { animation: vs-blink 6.2s infinite; }
+.vs-bust .vs-eye:last-of-type .vs-lid { animation: vs-blink 6.2s infinite .03s; }
+@keyframes vs-blink {
+  0%, 92%, 100% { transform: scaleY(0); }
+  94%           { transform: scaleY(1); }
+  96%           { transform: scaleY(.15); }
+  97%           { transform: scaleY(1); }
+}
+/* зрачки чуть смещаются, будто герой смотрит на собеседника */
+.vs-pupil { animation: vs-look 9s ease-in-out infinite; }
+@keyframes vs-look {
+  0%,100% { transform: translateX(0); }
+  30%     { transform: translateX(1.1px); }
+  65%     { transform: translateX(-.9px); }
+}
+
+/* ---------- речь: рот открывается в такт словам ---------- */
+.vs-mouth-open { opacity: 0; }
+.vs-mouth-closed { opacity: 1; }
+
+.vs-bust.is-live .vs-mouth-closed { animation: vs-mouth-hide 1.9s steps(1) infinite; }
+.vs-bust.is-live .vs-mouth-open   { animation: vs-talk 1.9s steps(1) infinite; }
+@keyframes vs-mouth-hide {
+  0%, 100% { opacity: 1; }
+  8%, 88%  { opacity: 0; }
+}
+@keyframes vs-talk {
+  0%, 6%   { opacity: 0; transform: scaleY(.2); }
+  8%       { opacity: 1; transform: scaleY(.55); }
+  20%      { opacity: 1; transform: scaleY(1); }
+  32%      { opacity: 1; transform: scaleY(.45); }
+  46%      { opacity: 1; transform: scaleY(.9); }
+  58%      { opacity: 1; transform: scaleY(.35); }
+  72%      { opacity: 1; transform: scaleY(.8); }
+  84%      { opacity: 1; transform: scaleY(.4); }
+  88%,100% { opacity: 0; transform: scaleY(.2); }
+}
+.vs-mouth-open { transform-box: fill-box; transform-origin: 50% 0%; }
+
+/* говорящий кивает и поднимает брови */
+.vs-bust.is-live .vs-bob { animation: vs-talk-bob 2.6s ease-in-out infinite; }
+@keyframes vs-talk-bob {
   0%,100% { transform: translateY(0) rotate(0deg); }
-  50%     { transform: translateY(-3px) rotate(-.4deg); }
+  25%     { transform: translateY(-2.5px) rotate(-.6deg); }
+  60%     { transform: translateY(1px) rotate(.4deg); }
 }
-.vs-bust:not(.is-live) { animation: vs-idle 5.8s ease-in-out infinite; }
-@keyframes vs-idle {
+.vs-bust.is-live .vs-head { animation: vs-talk-head 3.4s ease-in-out infinite; }
+@keyframes vs-talk-head {
+  0%,100% { transform: rotate(0deg) translateY(0); }
+  30%     { transform: rotate(-1.6deg) translateY(-1.5px); }
+  70%     { transform: rotate(1.2deg) translateY(0); }
+}
+.vs-bust.is-live .vs-brow { animation: vs-brow-up 2.2s ease-in-out infinite; }
+@keyframes vs-brow-up {
   0%,100% { transform: translateY(0); }
-  50%     { transform: translateY(-1.3px); }
+  40%     { transform: translateY(-1.8px); }
 }
+
+/* жест рукой у говорящего */
+.vs-bust.is-live .vs-arm-near { animation: vs-gesture 3.1s ease-in-out infinite; }
+.vs-bust.is-live .vs-arm-far  { animation: vs-gesture 3.1s ease-in-out infinite .35s; }
+@keyframes vs-gesture {
+  0%,100% { transform: rotate(0deg); }
+  45%     { transform: rotate(-2.6deg); }
+}
+
+/* слушающий чуть покачивается в такт — заметно, что он здесь */
+.vs-bust:not(.is-live) .vs-bob { animation-duration: 5.2s; }
 
 .vs-tag {
   position: absolute; bottom: 10px; z-index: 4;
@@ -1009,20 +1092,23 @@ button { font-family: inherit; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .vs-scene, .vs-art, .vs-cloud, .vs-grass, .vs-blade, .vs-bust, .vs-shimmer, .vs-pollen circle,
+  .vs-bob, .vs-head, .vs-lid, .vs-pupil, .vs-brow, .vs-arm, .vs-mouth-open, .vs-mouth-closed,
   .vs-bubble, .vs-hanzi, .vs-pinyin, .vs-ru, .vs-sub, .vs-tip { animation: none !important; }
+  .vs-mouth-closed { opacity: 1 !important; }
+  .vs-mouth-open { opacity: 0 !important; }
 }
 
 
 body { padding: 24px; }
-.dwrap { max-width: 1060px; margin: 0 auto; }
-.dgrid { display: grid; gap: 22px; }
-.dcap { color: #9a8f84; font-size: 12.5px; margin-bottom: 7px; letter-spacing: .3px; }
+.dwrap { max-width: 1020px; margin: 0 auto; }
+.dcap { color: #9a8f84; font-size: 12.5px; margin-bottom: 7px; }
 </style></head>
 <body><div class="dwrap">
-<h1 style="font-size: 23px; margin: 0 0 6px;">Кадры видео: небо, холмы, ветер</h1>
-<p style="color: #b6a89a; font-size: 14px; margin: 0 0 24px;">
-Облака плывут, трава качается, пыльца летит, камера медленно «дышит». Всё рисунком — работает офлайн.</p>
-<div class="dgrid" id="out"></div></div>
+<h1 style="font-size: 23px; margin: 0 0 6px;">Живые кадры: герои дышат, моргают и говорят</h1>
+<p style="color: #b6a89a; font-size: 14px; margin: 0 0 22px;">
+Смотрите на лица: глаза моргают, зрачки смещаются, у говорящего открывается рот и кивает голова,
+он жестикулирует. Облака плывут, трава качается.</p>
+<div id="out" style="display:grid;gap:22px"></div></div>
 <script>const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));</script>
 <script>
 /* ============================================================
@@ -2455,8 +2541,8 @@ function artField(pal, y0) {
 
 /* ---------- окружение: дом, чемоданы, забор, посуда, панно ---------- */
 function artEnv(set, pal) {
-  const wall = set === 'hotel' ? '#8d7a63' : '#efe6d2';
-  const roof = set === 'hotel' ? '#6b5340' : '#b4543c';
+  const wall = set === 'hotel' ? '#7d6651' : '#dccdaf';
+  const roof = set === 'hotel' ? '#5c4636' : '#9e4632';
   const house = `
     <g class="vs-house">
       <path d="M392 318 V222 h132 v96Z" fill="${wall}"/>
@@ -2571,59 +2657,216 @@ function artHair(p, d) {
 /* ---------- герой по грудь, в 3/4 к собеседнику ---------- */
 function artBust(p, side, speaking) {
   const d = side === 'left' ? 1 : -1;
-  const mouth = speaking
-    ? `<ellipse cx="${2 * d}" cy="-33" rx="5.4" ry="4" fill="#7d403f"/>
-       <ellipse cx="${2 * d}" cy="-30.5" rx="3.2" ry="1.4" fill="#c47a74" opacity=".7"/>`
-    : `<path d="M${-6 * d} -34 q${7 * d} 6 ${13 * d} -1" stroke="#7d403f" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  const X = (n) => (n * d).toFixed(1);
   return `
-  <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}" transform="translate(${side === 'left' ? 138 : 664} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.02 : 1.05} 1)">
+  <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}"
+     transform="translate(${side === 'left' ? 138 : 664} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.02 : 1.05} 1)">
+    <ellipse class="vs-cast-shadow" cx="0" cy="96" rx="86" ry="12" fill="#2f3d24" opacity=".22"/>
+
+    <g class="vs-bob">
     <!-- корпус: покатые плечи, свободная одежда -->
-    <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
-    <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
-    <!-- рукава -->
-    <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}"/>
-    <path d="M82 26 q14 22 16 52 q1 10 -7 10 q-8 1 -9 -9 q-3 -26 -12 -44Z" fill="${p.coat2}" opacity=".92"/>
-    <!-- вырез и лацканы -->
-    <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
-    <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".15"/>
-    <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
-    <!-- лёгкая складка на груди -->
-    <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".35"/>
-    <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
-    <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+    <g class="vs-body">
+      <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
+      <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
+      <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
+      <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".14"/>
+      <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
+      <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".3"/>
 
-    <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
-    <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".38"/>
-    <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
-    <path d="M${-40 * d} -70 q${-6 * d} 8 ${-2 * d} 16 q${4 * d} 2 ${6 * d} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
-    <path d="M${-40 * d} -66 q${3 * d} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
+      <!-- плечи идущие в рукава -->
+      <g class="vs-arm vs-arm-${side === 'left' ? 'far' : 'near'}">
+        <path d="M${X(-82)} 26 q${X(-14)} 22 ${X(-16)} 52 q${X(-1)} 10 ${X(7)} 10 q${X(8)} 1 ${X(9)} -9 q${X(3)} -26 ${X(12)} -44Z" fill="${p.coat2}"/>
+      </g>
+      <g class="vs-arm vs-arm-${side === 'left' ? 'near' : 'far'}">
+        <path d="M${X(82)} 26 q${X(14)} 22 ${X(16)} 52 q${X(1)} 10 ${X(-7)} 10 q${X(-8)} 1 ${X(-9)} -9 q${X(-3)} -26 ${X(-12)} -44Z" fill="${p.coat2}" opacity=".92"/>
+      </g>
 
-    ${artHair(p, d)}
-    ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
-      <path d="M${-29 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
-      <path d="M${6 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
-      <path d="M${-9 * d} -63 h${15 * d}"/>
-    </g>` : ''}
+      <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
+      <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+    </g>
 
-    <path d="M${-34 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
-    <path d="M${8 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
+    <!-- голова: наклоняется и кивает отдельно от тела -->
+    <g class="vs-head">
+      <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
+      <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".35"/>
+      <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
+      <path d="M${X(-40)} -70 q${X(-6)} 8 ${X(-2)} 16 q${X(4)} 2 ${X(6)} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
+      <path d="M${X(-40)} -66 q${X(3)} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
 
-    <ellipse cx="${-19 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
-    <ellipse cx="${22 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
-    <ellipse cx="${-18 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
-    <ellipse cx="${23 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
-    <circle cx="${-20 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
-    <circle cx="${21 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
-    <path d="M${-27 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M${15 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M${3 * d} -52 q${3 * d} 6 ${-3 * d} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75"/>
-    ${mouth}
-    <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
-    <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
-    <path d="M-40 -96 q8 -38 40 -40" stroke="#ffe8c2" stroke-width="2.6" fill="none" opacity=".5" stroke-linecap="round"/>
-    <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".26" stroke-linecap="round"/>
+      ${artHair(p, d)}
+
+      <!-- брови: поднимаются, когда герой говорит -->
+      <g class="vs-brow">
+        <path d="M${X(-33)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+        <path d="M${X(9)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+      </g>
+
+      ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
+        <path d="M${X(-29)} -70 h${X(20)} v14 h${X(-20)}Z"/>
+        <path d="M${X(6)} -70 h${X(20)} v14 h${X(-20)}Z"/>
+        <path d="M${X(-9)} -63 h${X(15)}"/>
+      </g>` : ''}
+
+      <!-- глаза: моргают, зрачки чуть гуляют -->
+      <g class="vs-eye vs-eye-${side}">
+        <ellipse cx="${-19 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+        <g class="vs-pupil">
+          <ellipse cx="${-18 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
+          <circle cx="${-20 * d}" cy="-64.4" r="2" fill="#fff" opacity=".95"/>
+          <circle cx="${-16 * d}" cy="-58" r="1.1" fill="#fff" opacity=".5"/>
+        </g>
+        <path d="M${-26 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path class="vs-lid" d="M-28 -62 q9 -3 18 0 q-9 8 -18 0Z" fill="${p.skin}"/>
+      </g>
+      <g class="vs-eye vs-eye-${side}">
+        <ellipse cx="${22 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+        <g class="vs-pupil">
+          <ellipse cx="${23 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
+          <circle cx="${21 * d}" cy="-64.4" r="2" fill="#fff" opacity=".95"/>
+          <circle cx="${25 * d}" cy="-58" r="1.1" fill="#fff" opacity=".5"/>
+        </g>
+        <path d="M${15 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path class="vs-lid" d="M13 -62 q9 -3 18 0 q-9 8 -18 0Z" fill="${p.skin}"/>
+      </g>
+
+      <path d="M${X(3)} -52 q${X(3)} 6 ${X(-3)} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+      <path d="M-22 -26 q22 14 44 -2" stroke="${p.skin2}" stroke-width="2" fill="none" opacity=".22" stroke-linecap="round"/>
+
+      <!-- рот: закрытая линия и открывающийся овал -->
+      <g class="vs-mouth">
+        <path class="vs-mouth-closed" d="M${-7 * d} -33 q${7 * d} 5 ${14 * d} -1" stroke="#8c4a46" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <g class="vs-mouth-open">
+          <path d="M${-6 * d} -33.5 q${6 * d} -2.4 ${12 * d} 0 q${-1.6 * d} 8.5 ${-6 * d} 8.5 q${-4.4 * d} 0 ${-6 * d} -8.5Z" fill="#8a4a45"/>
+          <path d="M${-4 * d} -32.6 q${4 * d} -1.4 ${8 * d} 0 q${-.8 * d} 2 ${-4 * d} 2 q${-3.2 * d} 0 ${-4 * d} -2Z" fill="#f2eee4" opacity=".85"/>
+        </g>
+      </g>
+
+      <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
+      <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
+      <path d="M-38 -98 q7 -34 34 -38" stroke="#ffe8c2" stroke-width="4.5" fill="none" opacity=".22" stroke-linecap="round" filter="url(#vsS2)"/>
+    </g>
+
+    <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".24" stroke-linecap="round"/>
+    </g>
   </g>`;
 }
+
+/* ---------- окружение: дом, чемоданы, забор, посуда, панно ---------- */
+function artEnv(set, pal) {
+  const wall = set === 'hotel' ? '#7d6651' : '#dccdaf';
+  const roof = set === 'hotel' ? '#5c4636' : '#9e4632';
+  const house = `
+    <g class="vs-house">
+      <path d="M392 318 V222 h132 v96Z" fill="${wall}"/>
+      <path d="M380 226 L458 172 L536 226Z" fill="${roof}"/>
+      <path d="M380 226 L458 178 L536 226 L458 232Z" fill="#000" opacity=".12"/>
+      <rect x="414" y="244" width="30" height="26" rx="2" fill="#5d7c8c" opacity=".85"/>
+      <path d="M429 244 v26 M414 257 h30" stroke="${wall}" stroke-width="2.2"/>
+      <rect x="472" y="244" width="30" height="26" rx="2" fill="#5d7c8c" opacity=".7"/>
+      <path d="M487 244 v26 M472 257 h30" stroke="${wall}" stroke-width="2.2"/>
+      <rect x="444" y="282" width="26" height="34" rx="3" fill="#7a5a3e"/>
+      <circle cx="465" cy="300" r="2" fill="#e8c46a"/>
+      <path d="M392 318 h132" stroke="#000" stroke-width="2" opacity=".15"/>
+    </g>`;
+  const sets = {
+    classroom: () => house,
+    brush: () => `
+      <g opacity=".92">
+        <path d="M120 300 h150 v-96 h-150Z" fill="#efe6d2"/>
+        <path d="M110 204 L195 148 L280 204Z" fill="#b4543c"/>
+        <rect x="150" y="232" width="30" height="26" fill="#5d7c8c" opacity=".85"/>
+        <rect x="216" y="232" width="30" height="26" fill="#5d7c8c" opacity=".7"/>
+        <rect x="180" y="266" width="26" height="34" fill="#7a5a3e"/>
+      </g>`,
+    airport: () => `
+      ${house}
+      <g>
+        <rect x="250" y="304" width="46" height="30" rx="4" fill="#a8724a"/>
+        <rect x="258" y="297" width="11" height="9" rx="3" fill="#8d5c39"/>
+        <path d="M277 304 v30" stroke="#8d5c39" stroke-width="2"/>
+        <rect x="306" y="312" width="36" height="24" rx="4" fill="#7a6a52"/>
+        <path d="M324 312 v24" stroke="#5d5040" stroke-width="2"/>
+      </g>`,
+    city: () => `
+      ${house}
+      <g stroke="#8a6a4a" stroke-width="3" fill="none" opacity=".8">
+        <path d="M60 330 h180 M70 330 v-26 M100 330 v-32 M130 330 v-24 M160 330 v-30 M190 330 v-26 M220 330 v-22"/>
+      </g>`,
+    hotel: () => `
+      <g>
+        <path d="M372 318 V206 h176 v112Z" fill="${wall}"/>
+        <path d="M356 210 h208 l-10 -14 h-188Z" fill="${roof}"/>
+        <rect x="396" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".9"/>
+        <rect x="436" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".85"/>
+        <rect x="476" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".7"/>
+        <rect x="424" y="280" width="52" height="38" rx="3" fill="#5c4230"/>
+        <path d="M424 298 h52" stroke="#3f2c1f" stroke-width="2"/>
+        <ellipse cx="516" cy="264" rx="8" ry="10" fill="${pal.warm}" opacity=".9"/>
+        <ellipse cx="516" cy="268" rx="30" ry="26" fill="${pal.warm}" opacity=".2" filter="url(#vsS3)"/>
+      </g>
+      <g>
+        <ellipse cx="300" cy="336" rx="42" ry="8" fill="#4a3a2a" opacity=".45"/>
+        <path d="M274 336 q-2 -28 26 -28 q28 0 26 28Z" fill="#efe6d2"/>
+        <path d="M288 312 q12 -9 24 0" stroke="${pal.warm}" stroke-width="2.6" fill="none"/>
+        <ellipse cx="300" cy="306" rx="13" ry="4" fill="#c9b183"/>
+      </g>`,
+    cafe: () => `
+      <g>
+        <path d="M300 318 V212 h180 v106Z" fill="${wall}"/>
+        <path d="M288 216 L390 168 L492 216Z" fill="${roof}"/>
+        <path d="M288 216 L390 172 L492 216 L390 222Z" fill="#000" opacity=".1"/>
+        <rect x="326" y="232" width="38" height="30" rx="2" fill="#f2cf8e" opacity=".9"/>
+        <rect x="382" y="232" width="38" height="30" rx="2" fill="#f2cf8e" opacity=".8"/>
+        <path d="M326 247 h38 M345 232 v30" stroke="${wall}" stroke-width="2.2" opacity=".8"/>
+        <path d="M382 247 h38 M401 232 v30" stroke="${wall}" stroke-width="2.2" opacity=".8"/>
+        <rect x="416" y="278" width="40" height="40" rx="3" fill="#6b4a33"/>
+        <circle cx="436" cy="298" r="2.6" fill="#e8c46a"/>
+        <path d="M300 318 h180" stroke="#000" stroke-width="2" opacity=".12"/>
+      </g>
+      <g>
+        <path d="M232 320 v-40" stroke="#4a3a2a" stroke-width="4"/>
+        <ellipse cx="232" cy="274" rx="36" ry="7" fill="#c9b183"/>
+        <path d="M216 274 q0 -20 16 -20 q16 0 16 20Z" fill="#f0e4cf"/>
+        <path d="M224 256 q4 -10 0 -15 M236 256 q4 -10 0 -15" stroke="${pal.warm}" stroke-width="2" fill="none" opacity=".8"/>
+        <path d="M248 260 q9 0 9 7 q0 7 -9 7" stroke="#f0e4cf" stroke-width="3" fill="none"/>
+      </g>`,
+    studio: () => house
+  };
+  return (sets[set] || sets.studio)();
+}
+
+/* ---------- причёски героев ---------- */
+function artHair(p, d) {
+  const c = p.hair, c2 = p.hair2 || p.hair;
+  if (p.style === 'long') {
+    return `
+      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-6 -30 -48 -30 q-42 0 -48 30Z" fill="${c}"/>
+      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-12 -18 -22 -20 q-8 8 -22 6 q-16 4 -30 -4 q-12 4 -22 18Z" fill="${c}"/>
+      <path d="M-46 -88 q-4 30 -3 58 q1 18 6 28 q-12 -10 -15 -34 q-2 -28 2 -52Z" fill="${c}"/>
+      <path d="M46 -88 q4 30 3 58 q-1 18 -6 28 q12 -10 15 -34 q2 -28 -2 -52Z" fill="${c2}"/>
+      <path d="M-42 -84 q16 12 38 7 q-16 12 -40 4Z" fill="#fff" opacity=".09"/>`;
+  }
+  if (p.style === 'bun') {
+    return `
+      <circle cx="${-44 * d}" cy="-104" r="17" fill="${c2}"/>
+      <circle cx="${-46 * d}" cy="-107" r="13" fill="${c}"/>
+      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-4 -14 -14 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -22 -4 q-8 4 -10 14Z" fill="${c}"/>
+      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-6 -32 -46 -32 q-40 0 -46 32Z" fill="${c2}"/>
+      <path d="M-42 -82 q14 10 30 6 q-12 10 -32 3Z" fill="#fff" opacity=".12"/>`;
+  }
+  if (p.style === 'cap') {
+    return `
+      <path d="M-48 -92 q-2 -50 48 -50 q50 0 48 50 q-6 -16 -18 -20 q-10 8 -30 8 q-20 0 -30 -8 q-14 6 -18 20Z" fill="${c}"/>
+      <path d="M-52 -92 q26 -12 56 -6 q28 6 46 4 q-6 12 -46 12 q-34 0 -56 -10Z" fill="${c2}"/>
+      <path d="M-52 -92 q-14 2 -18 8 q12 4 20 -2Z" fill="${c2}" opacity=".9"/>`;
+  }
+  return `
+    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-3 -14 -13 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -24 -4 q-8 4 -11 14Z" fill="${c}"/>
+    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-6 -30 -47 -30 q-41 0 -47 30Z" fill="${c2}"/>
+    <path d="M-40 -80 q14 8 30 5 q-12 9 -30 3Z" fill="#fff" opacity=".1"/>`;
+}
+
+/* ---------- герой по грудь, в 3/4 к собеседнику ---------- */
 
 /* ---------- целый кадр ---------- */
 function buildSceneStage(scene, lesson, state) {
@@ -2814,18 +3057,16 @@ const EXTERNAL_VIDEOS = [
 <script>
 const picks = [
   ['taxi', 'Водитель', 'Али', '师傅，去酒店。', 'Shī fu, qù jiǔ diàn.', 'Мастер, в отель.', '师傅 — вежливо к водителю.'],
-  ['airport', 'Али', 'Служащая аэропорта', '请问，登机口在哪里？', 'Qǐng wèn, dēng jī kǒu zài nǎ lǐ?', 'Извините, где выход на посадку?', '请问 — «позвольте спросить».'],
-  ['hotel', 'Администратор', 'Али', '欢迎光临！', 'Huān yíng guāng lín!', 'Добро пожаловать!', 'Так встречают гостей.'],
   ['cafe', 'Али', 'Девушка за столом', '我要一杯茶。', 'Wǒ yào yì bēi chá.', 'Я хочу чашку чая.', '杯 — счётное слово для чашек.'],
   ['classroom', 'Учитель', 'Али', '今天我们学四声。', 'Jīn tiān wǒ men xué sì shēng.', 'Сегодня учим четыре тона.', '四声 — «четыре тона».'],
-  ['brush', 'Учитель', 'Али', '人 → 从 → 众', 'rén → cóng → zhòng', 'Человек → двое идут → толпа!', 'Один человек 人, два 从, три 众.']
+  ['hotel', 'Администратор', 'Али', '欢迎光临！', 'Huān yíng guāng lín!', 'Добро пожаловать!', 'Так встречают гостей.']
 ];
 const out = document.getElementById('out');
 picks.forEach(([loc, who, other, hanzi, pinyin, ru, tip]) => {
   const sc = { who, other, loc, hanzi, pinyin, ru, tip };
   const cap = document.createElement('div');
   cap.className = 'dcap';
-  cap.textContent = who + ' · ' + other;
+  cap.textContent = who + ' (говорит) · ' + other;
   const d = document.createElement('div');
   d.className = 'vid-stage';
   d.innerHTML = buildSceneStage(sc, { title: 'Демо', level: '' }, { subs: true });

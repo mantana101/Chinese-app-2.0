@@ -908,18 +908,101 @@ button { font-family: inherit; cursor: pointer; }
   100% { transform: translate(0, 0); opacity: .25; }
 }
 
-/* ---------- герои ---------- */
-.vs-bust { transform-box: fill-box; transform-origin: 50% 100%; }
-.vs-bust.is-live { animation: vs-nod 3.6s ease-in-out infinite; }
-@keyframes vs-nod {
+/* ---------- герои: живая анимация ----------
+   Важно: на группе .vs-bust НЕ висит CSS-transform — иначе он затрёт
+   координаты из атрибута transform. Всё движение живёт во вложенных группах. */
+.vs-body { transform-box: fill-box; transform-origin: 50% 100%; }
+.vs-head { transform-box: fill-box; transform-origin: 50% 92%; }
+.vs-brow, .vs-pupil, .vs-arm { transform-box: fill-box; }
+.vs-brow { transform-origin: 50% 100%; }
+.vs-pupil { transform-origin: 50% 50%; }
+.vs-arm { transform-origin: 18% 6%; }
+
+/* дыхание и покачивание — есть всегда */
+.vs-bob { transform-box: fill-box; transform-origin: 50% 100%;
+  animation: vs-breathe 4.4s ease-in-out infinite; }
+@keyframes vs-breathe {
+  0%,100% { transform: translateY(0) scaleY(1); }
+  50%     { transform: translateY(-1.5px) scaleY(1.008); }
+}
+
+/* голова: медленный «живой» дрейф */
+.vs-head { animation: vs-head-drift 7.5s ease-in-out infinite; }
+@keyframes vs-head-drift {
+  0%,100% { transform: rotate(-.7deg) translateY(0); }
+  50%     { transform: rotate(.9deg) translateY(-1.2px); }
+}
+
+/* глаза моргают: веко закрывается коротким рывком */
+.vs-lid { transform-box: fill-box; transform-origin: 50% 0%; transform: scaleY(0); }
+.vs-bust .vs-eye:first-of-type .vs-lid { animation: vs-blink 6.2s infinite; }
+.vs-bust .vs-eye:last-of-type .vs-lid { animation: vs-blink 6.2s infinite .03s; }
+@keyframes vs-blink {
+  0%, 92%, 100% { transform: scaleY(0); }
+  94%           { transform: scaleY(1); }
+  96%           { transform: scaleY(.15); }
+  97%           { transform: scaleY(1); }
+}
+/* зрачки чуть смещаются, будто герой смотрит на собеседника */
+.vs-pupil { animation: vs-look 9s ease-in-out infinite; }
+@keyframes vs-look {
+  0%,100% { transform: translateX(0); }
+  30%     { transform: translateX(1.1px); }
+  65%     { transform: translateX(-.9px); }
+}
+
+/* ---------- речь: рот открывается в такт словам ---------- */
+.vs-mouth-open { opacity: 0; }
+.vs-mouth-closed { opacity: 1; }
+
+.vs-bust.is-live .vs-mouth-closed { animation: vs-mouth-hide 1.9s steps(1) infinite; }
+.vs-bust.is-live .vs-mouth-open   { animation: vs-talk 1.9s steps(1) infinite; }
+@keyframes vs-mouth-hide {
+  0%, 100% { opacity: 1; }
+  8%, 88%  { opacity: 0; }
+}
+@keyframes vs-talk {
+  0%, 6%   { opacity: 0; transform: scaleY(.2); }
+  8%       { opacity: 1; transform: scaleY(.55); }
+  20%      { opacity: 1; transform: scaleY(1); }
+  32%      { opacity: 1; transform: scaleY(.45); }
+  46%      { opacity: 1; transform: scaleY(.9); }
+  58%      { opacity: 1; transform: scaleY(.35); }
+  72%      { opacity: 1; transform: scaleY(.8); }
+  84%      { opacity: 1; transform: scaleY(.4); }
+  88%,100% { opacity: 0; transform: scaleY(.2); }
+}
+.vs-mouth-open { transform-box: fill-box; transform-origin: 50% 0%; }
+
+/* говорящий кивает и поднимает брови */
+.vs-bust.is-live .vs-bob { animation: vs-talk-bob 2.6s ease-in-out infinite; }
+@keyframes vs-talk-bob {
   0%,100% { transform: translateY(0) rotate(0deg); }
-  50%     { transform: translateY(-3px) rotate(-.4deg); }
+  25%     { transform: translateY(-2.5px) rotate(-.6deg); }
+  60%     { transform: translateY(1px) rotate(.4deg); }
 }
-.vs-bust:not(.is-live) { animation: vs-idle 5.8s ease-in-out infinite; }
-@keyframes vs-idle {
+.vs-bust.is-live .vs-head { animation: vs-talk-head 3.4s ease-in-out infinite; }
+@keyframes vs-talk-head {
+  0%,100% { transform: rotate(0deg) translateY(0); }
+  30%     { transform: rotate(-1.6deg) translateY(-1.5px); }
+  70%     { transform: rotate(1.2deg) translateY(0); }
+}
+.vs-bust.is-live .vs-brow { animation: vs-brow-up 2.2s ease-in-out infinite; }
+@keyframes vs-brow-up {
   0%,100% { transform: translateY(0); }
-  50%     { transform: translateY(-1.3px); }
+  40%     { transform: translateY(-1.8px); }
 }
+
+/* жест рукой у говорящего */
+.vs-bust.is-live .vs-arm-near { animation: vs-gesture 3.1s ease-in-out infinite; }
+.vs-bust.is-live .vs-arm-far  { animation: vs-gesture 3.1s ease-in-out infinite .35s; }
+@keyframes vs-gesture {
+  0%,100% { transform: rotate(0deg); }
+  45%     { transform: rotate(-2.6deg); }
+}
+
+/* слушающий чуть покачивается в такт — заметно, что он здесь */
+.vs-bust:not(.is-live) .vs-bob { animation-duration: 5.2s; }
 
 .vs-tag {
   position: absolute; bottom: 10px; z-index: 4;
@@ -1005,5 +1088,8 @@ button { font-family: inherit; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .vs-scene, .vs-art, .vs-cloud, .vs-grass, .vs-blade, .vs-bust, .vs-shimmer, .vs-pollen circle,
+  .vs-bob, .vs-head, .vs-lid, .vs-pupil, .vs-brow, .vs-arm, .vs-mouth-open, .vs-mouth-closed,
   .vs-bubble, .vs-hanzi, .vs-pinyin, .vs-ru, .vs-sub, .vs-tip { animation: none !important; }
+  .vs-mouth-closed { opacity: 1 !important; }
+  .vs-mouth-open { opacity: 0 !important; }
 }

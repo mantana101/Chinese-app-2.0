@@ -1428,8 +1428,8 @@ function artField(pal, y0) {
 
 /* ---------- окружение: дом, чемоданы, забор, посуда, панно ---------- */
 function artEnv(set, pal) {
-  const wall = set === 'hotel' ? '#8d7a63' : '#efe6d2';
-  const roof = set === 'hotel' ? '#6b5340' : '#b4543c';
+  const wall = set === 'hotel' ? '#7d6651' : '#dccdaf';
+  const roof = set === 'hotel' ? '#5c4636' : '#9e4632';
   const house = `
     <g class="vs-house">
       <path d="M392 318 V222 h132 v96Z" fill="${wall}"/>
@@ -1531,9 +1531,13 @@ function artHair(p, d) {
   }
   if (p.style === 'cap') {
     return `
-      <path d="M-48 -92 q-2 -50 48 -50 q50 0 48 50 q-6 -16 -18 -20 q-10 8 -30 8 q-20 0 -30 -8 q-14 6 -18 20Z" fill="${c}"/>
-      <path d="M-52 -92 q26 -12 56 -6 q28 6 46 4 q-6 12 -46 12 q-34 0 -56 -10Z" fill="${c2}"/>
-      <path d="M-52 -92 q-14 2 -18 8 q12 4 20 -2Z" fill="${c2}" opacity=".9"/>`;
+      <!-- волосы под кепкой -->
+      <path d="M-46 -92 q-2 -48 46 -48 q48 0 46 48 q-6 -24 -46 -24 q-40 0 -46 24Z" fill="${c}"/>
+      <!-- кепка: купол и козырёк -->
+      <path d="M-44 -96 q2 -50 44 -50 q42 0 44 50 q-14 -26 -44 -26 q-30 0 -44 26Z" fill="${c2}"/>
+      <path d="M-46 -96 q22 -12 46 -12 q24 0 46 12 q-2 6 -10 6 q-36 -8 -72 0 q-8 0 -10 -6Z" fill="${c2}"/>
+      <path d="M${-46 * d} -94 q${-22 * d} 2 ${-30 * d} 10 q${14 * d} 6 ${26 * d} -2Z" fill="${c2}" opacity=".95"/>
+      <path d="M-30 -110 q14 -14 32 -10 q-14 6 -22 14Z" fill="#fff" opacity=".14"/>`;
   }
   return `
     <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-3 -14 -13 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -24 -4 q-8 4 -11 14Z" fill="${c}"/>
@@ -1541,60 +1545,94 @@ function artHair(p, d) {
     <path d="M-40 -80 q14 8 30 5 q-12 9 -30 3Z" fill="#fff" opacity=".1"/>`;
 }
 
-/* ---------- герой по грудь, в 3/4 к собеседнику ---------- */
 function artBust(p, side, speaking) {
   const d = side === 'left' ? 1 : -1;
-  const mouth = speaking
-    ? `<ellipse cx="${2 * d}" cy="-33" rx="5.4" ry="4" fill="#7d403f"/>
-       <ellipse cx="${2 * d}" cy="-30.5" rx="3.2" ry="1.4" fill="#c47a74" opacity=".7"/>`
-    : `<path d="M${-6 * d} -34 q${7 * d} 6 ${13 * d} -1" stroke="#7d403f" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  const X = (n) => (n * d).toFixed(1);
+  const FL = 'transform="translate(0 0) scale(-1 1)"'; /* отражение рукава */
   return `
-  <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}" transform="translate(${side === 'left' ? 138 : 664} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.02 : 1.05} 1)">
-    <!-- корпус: покатые плечи, свободная одежда -->
-    <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
-    <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
-    <!-- рукава -->
-    <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}"/>
-    <path d="M82 26 q14 22 16 52 q1 10 -7 10 q-8 1 -9 -9 q-3 -26 -12 -44Z" fill="${p.coat2}" opacity=".92"/>
-    <!-- вырез и лацканы -->
-    <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
-    <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".15"/>
-    <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
-    <!-- лёгкая складка на груди -->
-    <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".35"/>
-    <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
-    <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+  <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}"
+     transform="translate(${side === 'left' ? 138 : 664} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.02 : 1.05} 1)">
+    <ellipse class="vs-cast-shadow" cx="0" cy="96" rx="86" ry="12" fill="#2f3d24" opacity=".22"/>
 
-    <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
-    <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".38"/>
-    <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
-    <path d="M${-40 * d} -70 q${-6 * d} 8 ${-2 * d} 16 q${4 * d} 2 ${6 * d} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
-    <path d="M${-40 * d} -66 q${3 * d} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
+    <g class="vs-bob">
+      <g class="vs-body">
+        <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
+        <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
+        <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
+        <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".14"/>
+        <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
+        <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".3"/>
 
-    ${artHair(p, d)}
-    ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
-      <path d="M${-29 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
-      <path d="M${6 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
-      <path d="M${-9 * d} -63 h${15 * d}"/>
-    </g>` : ''}
+        <g class="vs-arm vs-arm-far">
+          <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}"/>
+        </g>
+        <g class="vs-arm vs-arm-near">
+          <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}" opacity=".92" ${FL}/>
+        </g>
 
-    <path d="M${-34 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
-    <path d="M${8 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
+        <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
+        <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+      </g>
 
-    <ellipse cx="${-19 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
-    <ellipse cx="${22 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
-    <ellipse cx="${-18 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
-    <ellipse cx="${23 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
-    <circle cx="${-20 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
-    <circle cx="${21 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
-    <path d="M${-27 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M${15 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M${3 * d} -52 q${3 * d} 6 ${-3 * d} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75"/>
-    ${mouth}
-    <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
-    <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
-    <path d="M-40 -96 q8 -38 40 -40" stroke="#ffe8c2" stroke-width="2.6" fill="none" opacity=".5" stroke-linecap="round"/>
-    <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".26" stroke-linecap="round"/>
+      <g class="vs-head">
+        <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
+        <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".35"/>
+        <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
+        <path d="M-22 -26 q22 14 44 -2" stroke="${p.skin2}" stroke-width="2" fill="none" opacity=".2" stroke-linecap="round"/>
+        <path d="M${X(-40)} -70 q${X(-6)} 8 ${X(-2)} 16 q${X(4)} 2 ${X(6)} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
+        <path d="M${X(-40)} -66 q${X(3)} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
+
+        ${artHair(p, d)}
+
+        <g class="vs-brow">
+          <path d="M${X(-33)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+          <path d="M${X(9)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+        </g>
+
+        ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
+          <path d="M${X(-29)} -70 h${X(20)} v14 h${X(-20)}Z"/>
+          <path d="M${X(6)} -70 h${X(20)} v14 h${X(-20)}Z"/>
+          <path d="M${X(-9)} -63 h${X(15)}"/>
+        </g>` : ''}
+
+        <g class="vs-eye">
+          <ellipse cx="${-19 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+          <g class="vs-pupil">
+            <ellipse cx="${-18 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
+            <circle cx="${-20 * d}" cy="-64.4" r="1.9" fill="#fff" opacity=".95"/>
+            <circle cx="${-16 * d}" cy="-58.4" r="1" fill="#fff" opacity=".5"/>
+          </g>
+          <path d="M${-26 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path class="vs-lid" d="M-27 -63 q9 -3 18 0 q-9 9 -18 0Z" fill="${p.skin}"/>
+        </g>
+        <g class="vs-eye">
+          <ellipse cx="${22 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+          <g class="vs-pupil">
+            <ellipse cx="${23 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
+            <circle cx="${21 * d}" cy="-64.4" r="1.9" fill="#fff" opacity=".95"/>
+            <circle cx="${25 * d}" cy="-58.4" r="1" fill="#fff" opacity=".5"/>
+          </g>
+          <path d="M${15 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path class="vs-lid" d="M13 -63 q9 -3 18 0 q-9 9 -18 0Z" fill="${p.skin}"/>
+        </g>
+
+        <path d="M${X(3)} -52 q${X(3)} 6 ${X(-3)} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+
+        <g class="vs-mouth">
+          <path class="vs-mouth-closed" d="M${-7 * d} -33 q${7 * d} 5 ${14 * d} -1" stroke="#8c4a46" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <g class="vs-mouth-open">
+            <path d="M${-6 * d} -33.5 q${6 * d} -2.4 ${12 * d} 0 q${-1.6 * d} 8.5 ${-6 * d} 8.5 q${-4.4 * d} 0 ${-6 * d} -8.5Z" fill="#8a4a45"/>
+            <path d="M${-4 * d} -32.6 q${4 * d} -1.4 ${8 * d} 0 q${-.8 * d} 2 ${-4 * d} 2 q${-3.2 * d} 0 ${-4 * d} -2Z" fill="#f2eee4" opacity=".85"/>
+          </g>
+        </g>
+
+        <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
+        <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
+        <path d="M-38 -98 q7 -34 34 -38" stroke="#ffe8c2" stroke-width="4.5" fill="none" opacity=".22" stroke-linecap="round" filter="url(#vsS2)"/>
+      </g>
+
+      <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".24" stroke-linecap="round"/>
+    </g>
   </g>`;
 }
 
