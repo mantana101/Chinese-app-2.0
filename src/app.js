@@ -63,6 +63,29 @@ window.__setState = (s) => { state = { ...DEFAULT_STATE, ...s }; Store.set(KEY, 
 /* Слияние серверного прогресса с локальным.
    Нужно, когда ученик занимается и на телефоне, и на компьютере:
    берём лучшее из двух состояний, а не «кто последний сохранил». */
+/* Объединение журнала занятий: одна запись = урок + время + результат.
+   Ключ уникальности — урок и момент окончания, поэтому повторная
+   синхронизация не размножает историю. */
+function mergeQuizLog(...lists) {
+  const seen = new Set();
+  const out = [];
+  const all = [];
+  lists.forEach(list => {
+    if (Array.isArray(list)) all.push(...list.filter(q => q && typeof q === 'object'));
+  });
+  // Сначала более новые записи, чтобы при слиянии осталось актуальное значение.
+  all.sort((a, b) => (Number(b && b.at) || 0) - (Number(a && a.at) || 0));
+  for (const q of all) {
+    const key = [q.lesson || '', Number(q.at) || 0, Number(q.score) || 0].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(q);
+  }
+  // Храним в хронологическом порядке, как раньше (slice(-6) в статистике).
+  out.sort((a, b) => (Number(a && a.at) || 0) - (Number(b && b.at) || 0));
+  return out.slice(-500);
+}
+
 function mergeProgress(incoming) {
   if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return state;
   const server = incoming;
@@ -84,8 +107,10 @@ function mergeProgress(incoming) {
   const days = Array.from(new Set(
     [].concat(server.days || [], state.days || []).filter(d => typeof d === 'string')
   )).sort().slice(-400);
-  const quizLog = [].concat(server.quizLog || [], state.quizLog || [])
-    .filter(q => q && typeof q === 'object').slice(-500);
+  // Журнал занятий объединяем без дублей: одно и то же занятие приходит и
+  // с сервера, и из локального состояния при каждой синхронизации — раньше
+  // история росла на одну запись за каждую синхронизацию.
+  const quizLog = mergeQuizLog(server.quizLog, state.quizLog);
 
   state = Object.assign({}, DEFAULT_STATE, server, state, {
     lessons, cards, days, quizLog,
@@ -153,7 +178,7 @@ function speak(text, rate) {
   } catch (e) { toast('Ошибка озвучки'); }
 }
 function toneBtn(text, cls = 'speak') {
-  return `<button class="${cls}" data-speak="${esc(text)}" title="Прослушать">🔊</button>`;
+  return `<button class="${cls}" data-speak="${esc(text)}" title="Прослушать" aria-label="Прослушать: ${esc(text)}">🔊</button>`;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-speak]');
@@ -422,7 +447,7 @@ function renderLesson(root, args) {
       <div class="vc-h">${esc(w.h)}</div>
       <div class="vc-p">${esc(w.p)}</div>
       <div class="vc-r">${esc(w.r)}</div>
-      <div class="vc-tools">${toneBtn(w.h, 'speak sm')}<button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки">＋</button></div>`);
+      <div class="vc-tools">${toneBtn(w.h, 'speak sm')}<button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки" aria-label="Добавить ${esc(w.h)} в карточки">＋</button></div>`);
     tbl.appendChild(card);
   });
   v.appendChild(tbl);
@@ -1026,6 +1051,7 @@ function renderToneListen(host) {
       <span class="tt-ex">${esc(t.ex)}</span>
       <span class="tt-r">${esc(t.r)}</span>`);
     const b = el('button', 'speak sm', '🔊');
+    b.setAttribute('aria-label', 'Прослушать произношение');
     b.onclick = () => speak(t.ex.replace(/[^\u4e00-\u9fa5]/g, '') || t.s);
     row.appendChild(b);
     const tb = el('button', 'btn btn-sm', '▶');
@@ -1236,6 +1262,7 @@ function renderWriteCard(host) {
   const clr = el('button', 'btn btn-ghost', '🧽 Очистить');
   clr.onclick = () => { clearInterval(demoTimer); grid(); };
   const spk = el('button', 'btn btn-ghost', '🔊');
+  spk.setAttribute('aria-label', 'Прослушать текст');
   spk.onclick = () => speak(item.h);
   ctr.appendChild(prev); ctr.appendChild(demo); ctr.appendChild(clr); ctr.appendChild(spk); ctr.appendChild(next);
   p.appendChild(ctr);
@@ -2122,7 +2149,30 @@ document.addEventListener('DOMContentLoaded', boot);
 async function boot() {
   initNav();
   touchDay();
-  if (window.Auth) { try { await Auth.boot(); } catch (e) { } }
+
+  /* Страховка от «вечного» экрана загрузки: если сеть или сервер отвечают
+     слишком долго, показываем приложение в локальном режиме, а не пустоту.
+     Данные всё равно подтянутся позже — Auth.boot не отменяется. */
+  let booted = false;
+  const fallback = setTimeout(() => {
+    if (booted || !document.querySelector('#view') || $('#view').innerHTML.trim()) return;
+    window.__guest = false;
+    showOfflineNotice();
+    paintAccountFoot();
+    route();
+  }, 4000);
+
+  if (window.Auth) {
+    try {
+      await Promise.race([
+        Auth.boot(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+      ]);
+    } catch (e) { /* сервер недоступен — работаем локально */ }
+  }
+  booted = true;
+  clearTimeout(fallback);
+  if (window.Auth && Auth.online === false) showOfflineNotice();
   maybeFrameBanner();
   paintAccountFoot();
   updateNavRoles();
@@ -2137,6 +2187,28 @@ async function boot() {
   });
 }
 
+/* Сервер недоступен: честно говорим об этом, а не делаем вид, что всё
+   сохранилось. Прогресс при этом остаётся в браузере и уйдёт на сервер,
+   когда связь вернётся. */
+function showOfflineNotice() {
+  if (document.getElementById('offlineBar')) return;
+  const bar = el('div', 'frame-banner offline-bar');
+  bar.id = 'offlineBar';
+  bar.innerHTML = '<span>📴 <b>Нет связи с сервером.</b> Учиться можно — прогресс сохраняется в браузере и отправится на сервер, когда связь вернётся.</span>';
+  const x = el('button', 'fb-x', '✕');
+  x.setAttribute('aria-label', 'Закрыть уведомление');
+  x.onclick = () => bar.remove();
+  bar.appendChild(x);
+  document.body.prepend(bar);
+
+  window.addEventListener('online', () => {
+    const b = document.getElementById('offlineBar');
+    if (b) b.remove();
+    toast('Связь восстановлена — синхронизируем прогресс');
+    if (window.Auth && Auth.boot) Auth.boot().then(() => route()).catch(() => { });
+  }, { once: true });
+}
+
 /* Если открыт просмотр файла без сервера или iframe с заблокированным localStorage —
    подсказываем пользователю, как войти и сохранить прогресс. */
 function maybeFrameBanner() {
@@ -2145,6 +2217,7 @@ function maybeFrameBanner() {
     const b = el('div', 'frame-banner');
     b.innerHTML = `<span>📌 Вы открыли просмотр файла <b>index.html</b> (без сети). Чтобы войти в аккаунт и открыть панель класса, переключитесь на панель <b>Live Preview («Chinese Learning App»)</b>.</span>`;
     const close = el('button', 'fb-x', '✕');
+    close.setAttribute('aria-label', 'Закрыть подсказку');
     close.onclick = () => b.remove();
     b.appendChild(close);
     document.body.prepend(b);
@@ -2157,6 +2230,7 @@ function maybeFrameBanner() {
     btn.onclick = () => { if (window.__showAuth) window.__showAuth(); b.remove(); };
     b.appendChild(btn);
     const close = el('button', 'fb-x', '✕');
+    close.setAttribute('aria-label', 'Закрыть подсказку');
     close.onclick = () => b.remove();
     b.appendChild(close);
     document.body.prepend(b);

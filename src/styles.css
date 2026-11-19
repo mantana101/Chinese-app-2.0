@@ -762,3 +762,38 @@ button { font-family: inherit; cursor: pointer; }
 /* Плашка «доступна новая версия» — заметная, но не мешает работе. */
 .build-outdated { background: rgba(106,159,212,.16); border-bottom-color: rgba(106,159,212,.45); color: #dceafa; }
 .build-outdated .btn { flex: none; }
+
+/* ---------- Доступность ---------- */
+
+/* Видимый фокус для навигации с клавиатуры. Без него по Tab невозможно
+   понять, где ты находишься: браузерный outline срезался стилями кнопок. */
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.btn:focus-visible, .opt:focus-visible, #mnav a:focus-visible, #nav a:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Пользователи с чувствительностью к анимации: убираем всё «прыгающее».
+   Само приложение остаётся полностью рабочим. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti-box { display: none !important; }
+}
+
+/* Скрытый для мыши, но доступный скринридерам текст. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Плашка «нет связи» — холодный тон, чтобы отличать от новостей о версии. */
+.offline-bar { background: rgba(208,69,58,.16); border-bottom-color: rgba(208,69,58,.45); color: #ffd9d3; }
