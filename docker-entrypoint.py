@@ -10,15 +10,16 @@ Render Disk / Railway Volume монтируется в /app/data **после** 
 
 Почему не shell-скрипт с su
 ---------------------------
-В slim-образе может не оказаться `su`, `chown` или `chmod`, а `su` ещё и
-по-разному передаёт окружение. Здесь всё делается средствами Python
-(os.chown, os.setgid, os.setuid) — без внешних бинарников и без сюрпризов.
+В slim-образе нет `su` (busybox «su» из util-linux не принимает -s так, как
+ожидает POSIX-скрипт), может не быть `chown`. Здесь всё делается средствами
+Python: os.chown, os.setgid, os.setuid — без внешних бинарников.
 
-Если контейнер запущен не от root (Kubernetes runAsNonRoot) — просто
-запускаем сервер как есть, ничего не меняя.
+Главный принцип: **никогда не падать молча**. Если права исправить не
+удалось, сервер всё равно запускается, а в лог пишется точная причина.
+Пусть лучше приложение ответит понятной ошибкой на /api/*, чем сервис
+уйдёт в бесконечный рестарт с пустым логом.
 """
 
-import grp
 import os
 import sys
 
@@ -26,99 +27,114 @@ APP_UID = 10001
 APP_GID = 0
 
 
+def log(msg: str) -> None:
+    print(f"[entrypoint] {msg}", flush=True)
+
+
+def err(msg: str) -> None:
+    print(f"[entrypoint] ОШИБКА: {msg}", file=sys.stderr, flush=True)
+
+
 def data_dir() -> str:
     db_path = os.environ.get("DB_PATH") or "/app/data/app.db"
     return os.path.dirname(os.path.abspath(db_path)) or "/app"
 
 
-def ensure_dir(path: str) -> None:
+def describe(path: str) -> str:
+    """Человеческое описание каталога: владелец, права, устройство, запись."""
+    try:
+        st = os.stat(path)
+    except OSError as exc:
+        return f"{path}: недоступен ({exc})"
+    writable = "да" if os.access(path, os.W_OK) else "НЕТ"
+    return (
+        f"{path}: uid={st.st_uid} gid={st.st_gid} mode={oct(st.st_mode & 0o777)} "
+        f"dev={st.st_dev} запись_для_root={writable}"
+    )
+
+
+def prepare(path: str) -> None:
+    """Создаёт каталог данных и отдаёт его appuser. Ошибки — только в лог."""
     try:
         os.makedirs(path, exist_ok=True)
     except OSError as exc:
-        print(f"[entrypoint] не удалось создать {path}: {exc}", file=sys.stderr)
-        sys.exit(1)
+        err(f"не удалось создать {path}: {exc}")
+        return
 
-
-def chown_tree(path: str) -> None:
-    """Отдаёт каталог данных пользователю приложения.
-
-    Ошибки не фатальны: на некоторых сетевых ФС (NFS) chown запрещён, но
-    запись при этом может быть разрешена. Реальную проверку делаем ниже.
-    """
     targets = [path]
     try:
-        for name in os.listdir(path):
-            targets.append(os.path.join(path, name))
-    except OSError:
-        pass
+        targets += [os.path.join(path, n) for n in os.listdir(path)]
+    except OSError as exc:
+        err(f"не удалось прочитать {path}: {exc}")
+
     for target in targets:
         try:
             os.chown(target, APP_UID, APP_GID)
         except OSError:
-            pass
-        # Каталогу нужен бит записи для владельца, файлам — нет.
+            pass  # NFS и некоторые ФС запрещают chown — это не фатально
         if os.path.isdir(target):
             try:
                 os.chmod(target, 0o775)
             except OSError:
                 pass
 
+    log("после подготовки: " + describe(path))
 
-def can_write_as_app_user(path: str) -> bool:
-    """Проверяет запись, временно переключаясь на appuser (и возвращаясь)."""
+
+def probe(path: str) -> bool:
+    """Реальная пробная запись от имени appuser — единственный надёжный тест."""
     saved_uid, saved_gid = os.getuid(), os.getgid()
     try:
         os.setegid(APP_GID)
         os.seteuid(APP_UID)
-        probe = os.path.join(path, ".write-probe")
-        with open(probe, "w", encoding="utf-8") as f:
+        probe_path = os.path.join(path, ".write-probe")
+        with open(probe_path, "w", encoding="utf-8") as f:
             f.write("ok")
-        os.unlink(probe)
+        os.unlink(probe_path)
         return True
-    except OSError:
+    except OSError as exc:
+        err(f"запись в {path} от имени appuser не удалась: {exc}")
         return False
     finally:
-        os.seteuid(saved_uid)
-        os.setegid(saved_gid)
+        try:
+            os.seteuid(saved_uid)
+            os.setegid(saved_gid)
+        except OSError:
+            pass
+
+
+def drop_privileges() -> None:
+    os.setgroups([])
+    os.setgid(APP_GID)
+    os.setuid(APP_UID)
 
 
 def main() -> None:
     argv = sys.argv[1:] or ["python3", "-u", "server.py"]
-    target_dir = data_dir()
+    target = data_dir()
 
-    is_root = hasattr(os, "geteuid") and os.geteuid() == 0
-    if not is_root:
-        # Уже непривилегированный процесс — менять нечего.
-        print(f"[entrypoint] не root, запускаю как есть: {argv}", flush=True)
+    log(f"DB_PATH={os.environ.get('DB_PATH')} каталог={target}")
+    log("до подготовки: " + describe(target))
+
+    if not (hasattr(os, "geteuid") and os.geteuid() == 0):
+        log(f"уже не root (uid={os.getuid()}) — запускаю как есть")
         os.execvp(argv[0], argv)
 
-    ensure_dir(target_dir)
-    chown_tree(target_dir)
+    prepare(target)
 
-    if not can_write_as_app_user(target_dir):
-        print(
-            f"ОШИБКА: у пользователя appuser (uid {APP_UID}) нет прав на запись "
-            f"в {target_dir}.\n"
-            "Проверьте в Render/Railway, что диск привязан к этому сервису, "
-            "смонтирован в /app/data и не помечен read-only.",
-            file=sys.stderr,
-            flush=True,
-        )
-        sys.exit(1)
+    if not probe(target):
+        # Не выходим: пусть сервер запустится и отдаст внятную ошибку в API,
+        # а не уйдёт в цикл рестартов. Причина уже записана в лог выше.
+        err("продолжаю запуск без понижения привилегий — проверьте диск в Render")
+        os.execvp(argv[0], argv)
 
+    log("права в порядке, понижаю привилегии до appuser и запускаю сервер")
     try:
-        gid = grp.getgrnam("appuser").gr_gid
-        uid = APP_UID
-    except KeyError:
-        gid, uid = APP_GID, APP_UID
+        drop_privileges()
+    except OSError as exc:
+        err(f"не удалось понизить привилегии ({exc}) — запускаю от root")
+        os.execvp(argv[0], argv)
 
-    print(f"[entrypoint] права на {target_dir} в порядке, запускаю: {' '.join(argv)}",
-          flush=True)
-
-    # Сбрасываем привилегии навсегда и запускаем сервер.
-    os.setgroups([])
-    os.setgid(gid)
-    os.setuid(uid)
     os.execvp(argv[0], argv)
 
 
