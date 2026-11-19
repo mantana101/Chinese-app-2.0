@@ -1269,28 +1269,68 @@ const STORY_CHAPTERS = [
    Анимации отключаются при prefers-reduced-motion.
 */
 
+/* ============================================================
+   Живописная сцена видео: акварельное небо, слоистые холмы,
+   тёплый свет, рисованные герои. Всё — SVG внутри страницы,
+   без внешних картинок, поэтому работает офлайн.
+   ============================================================ */
+
 const VIDEO_SCENES = {
-  /* Локации: цвет неба, земля, дальний план и «декорации» */
-  airport: { label: 'Аэропорт', sky: 'linear-gradient(180deg,#1b2a3d 0%,#2c4257 55%,#3a5266 100%)', ground: '#243444', set: 'airport' },
-  taxi:    { label: 'Улица Сианя', sky: 'linear-gradient(180deg,#221a2e 0%,#3a2740 50%,#5c3a3f 100%)', ground: '#2b2027', set: 'city' },
-  hotel:   { label: 'Отель', sky: 'linear-gradient(180deg,#1d1a26 0%,#2a2436 60%,#352c40 100%)', ground: '#241f2e', set: 'hotel' },
-  cafe:    { label: 'Кафе', sky: 'linear-gradient(180deg,#2a1f18 0%,#3d2b1f 58%,#4d3626 100%)', ground: '#2b2018', set: 'cafe' },
-  classroom: { label: 'Класс', sky: 'linear-gradient(180deg,#1c2434 0%,#273349 58%,#32405a 100%)', ground: '#1f2839', set: 'classroom' },
-  brush:   { label: 'Прописи', sky: 'linear-gradient(180deg,#201c26 0%,#2c2733 58%,#382f3d 100%)', ground: '#221d28', set: 'brush' },
-  studio:  { label: 'Студия', sky: 'linear-gradient(180deg,#181822 0%,#252334 60%,#2f2b40 100%)', ground: '#1e1c28', set: 'studio' }
+  airport:   { label: 'Аэропорт',     set: 'airport' },
+  taxi:      { label: 'Улица Сианя',  set: 'city' },
+  hotel:     { label: 'Отель',        set: 'hotel' },
+  cafe:      { label: 'Кафе',         set: 'cafe' },
+  classroom: { label: 'Класс',        set: 'classroom' },
+  brush:     { label: 'Прописи',      set: 'brush' },
+  studio:    { label: 'Студия',       set: 'studio' }
 };
 
-/* Кто есть кто: имя, иероглиф-аватар, цвет, сторона кадра */
+/* Палитра: небо сверху вниз, солнце, три плана, дымка, тёплый свет */
+const VIDEO_ART = {
+  airport:   { sky: ['#16324f', '#5d8bab', '#eecba2'], sun: [706, 104, 48, '#ffeccb'],
+               far: '#7b98ac', mid: '#43596d', near: '#1e2c3a', haze: '#cfe0ea',
+               warm: '#ffd9a4', vig: '#0b1620', leaf: '#152029' },
+  city:      { sky: ['#2a2240', '#8b5f76', '#f4b585'], sun: [195, 126, 54, '#ffd7a2'],
+               far: '#96738a', mid: '#524260', near: '#241d33', haze: '#f2c6a6',
+               warm: '#ffcf9a', vig: '#120c1a', leaf: '#1a1424' },
+  cafe:      { sky: ['#3d2c22', '#8f6547', '#f6cf94'], sun: [652, 92, 40, '#fff0d2'],
+               far: '#a37f5b', mid: '#5d4531', near: '#2a1d14', haze: '#f4d2a6',
+               warm: '#ffd6a3', vig: '#140d08', leaf: '#1e1610' },
+  classroom: { sky: ['#21384f', '#7ba0b6', '#ead6ab'], sun: [246, 100, 44, '#fff4d4'],
+               far: '#87a0af', mid: '#40576b', near: '#1d2a35', haze: '#e4e2c8',
+               warm: '#ffe6b4', vig: '#0a141a', leaf: '#141d22' },
+  hotel:     { sky: ['#1b1d33', '#54527b', '#dfae82'], sun: [470, 112, 38, '#ffe4bd'],
+               far: '#736c8f', mid: '#3c3960', near: '#1b192a', haze: '#e0c3b4',
+               warm: '#ffd2a0', vig: '#090810', leaf: '#131120' },
+  brush:     { sky: ['#2b2430', '#79666c', '#e9c9a8'], sun: [660, 88, 34, '#ffead1'],
+               far: '#9a8587', mid: '#544449', near: '#241d20', haze: '#efd3ba',
+               warm: '#ffe0b8', vig: '#100c0f', leaf: '#191416' },
+  studio:    { sky: ['#141826', '#41405f', '#ab8ca2'], sun: [618, 96, 36, '#ffe6c4'],
+               far: '#615c7d', mid: '#363250', near: '#181624', haze: '#cfbcc9',
+               warm: '#ffd7ae', vig: '#07060b', leaf: '#100e18' }
+};
+
 const VIDEO_CAST = {
-  'Рассказчик':      { glyph: '语', color: '#e0b354', side: 'left' },
-  'Али':             { glyph: '阿', color: '#5aa88f', side: 'left' },
-  'Служащая':        { glyph: '服', color: '#6a9fd4', side: 'right' },
-  'Служащая аэропорта': { glyph: '服', color: '#6a9fd4', side: 'right' },
-  'Водитель':        { glyph: '车', color: '#d0453a', side: 'right' },
-  'Администратор':   { glyph: '店', color: '#c98cd6', side: 'right' },
-  'Девушка за столом': { glyph: '友', color: '#f0a06a', side: 'right' },
-  'Девушка':         { glyph: '友', color: '#f0a06a', side: 'right' },
-  'Учитель':         { glyph: '师', color: '#8bb8e8', side: 'right' }
+  'Рассказчик':          { style: 'short', glyph: '语', coat: '#5c534c', coat2: '#413a35', skin: '#e9c19b', skin2: '#cfa079', hair: '#2b2422', hair2: '#1a1513', eye: '#3b2b27' },
+  'Али':                 { style: 'short', glyph: '阿', coat: '#41707b', coat2: '#2b4f59', skin: '#e8b98f', skin2: '#cd9a72', hair: '#231b1e', hair2: '#171214', eye: '#3d2b28' },
+  'Служащая':            { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f2cba6', skin2: '#d8a882', hair: '#241d1f', hair2: '#171214', eye: '#3a2a28' },
+  'Служащая аэропорта':  { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f2cba6', skin2: '#d8a882', hair: '#241d1f', hair2: '#171214', eye: '#3a2a28' },
+  'Водитель':            { style: 'cap',   glyph: '车', coat: '#a3503c', coat2: '#7b382a', skin: '#dfa878', skin2: '#bd8659', hair: '#2a211c', hair2: '#171310', eye: '#3a2a26' },
+  'Администратор':       { style: 'short', glyph: '店', coat: '#7d5f96', coat2: '#5c4572', skin: '#f3cba9', skin2: '#d8ac87', hair: '#261f26', hair2: '#161016', eye: '#3d2b28' },
+  'Девушка за столом':   { style: 'long',  glyph: '友', coat: '#8e4a63', coat2: '#693448', skin: '#f4cda8', skin2: '#dcb08c', hair: '#38281f', hair2: '#241811', eye: '#3d2b28' },
+  'Девушка':             { style: 'long',  glyph: '友', coat: '#8e4a63', coat2: '#693448', skin: '#f4cda8', skin2: '#dcb08c', hair: '#38281f', hair2: '#241811', eye: '#3d2b28' },
+  'Учитель':             { style: 'bun',   glyph: '师', coat: '#57737f', coat2: '#3f575f', skin: '#eec4a0', skin2: '#d0a481', hair: '#2b2523', hair2: '#1a1513', eye: '#3a2a26', glasses: '#e8dfd0' }
+};
+
+/* Кто по умолчанию стоит на каждой локации — чтобы кадр не был пустым */
+const VIDEO_LOC_CAST = {
+  airport:   ['Али', 'Служащая аэропорта'],
+  city:      ['Али', 'Водитель'],
+  hotel:     ['Али', 'Администратор'],
+  cafe:      ['Али', 'Девушка за столом'],
+  classroom: ['Али', 'Учитель'],
+  brush:     ['Али', 'Учитель'],
+  studio:    ['Рассказчик', 'Рассказчик']
 };
 
 function sceneLocation(scene, lesson) {
@@ -1300,145 +1340,326 @@ function sceneLocation(scene, lesson) {
   if (/такси|Такси|дорог/i.test(t)) return 'taxi';
   if (/отел|Отель/i.test(t)) return 'hotel';
   if (/кафе|Кафе/i.test(t)) return 'cafe';
+  if (/класс|Класс|тон|числ/i.test(t)) return 'classroom';
+  if (/иероглиф|Прописи|Письмо/i.test(t)) return 'brush';
   return 'studio';
 }
 
-/* Декорации рисуем SVG — они масштабируются без потерь и не требуют картинок */
-function sceneDecor(set) {
-  const sets = {
-    airport: `
-      <g opacity=".55">
-        <rect x="120" y="150" width="16" height="120" fill="#16222f"/>
-        <rect x="640" y="140" width="18" height="130" fill="#16222f"/>
-        <rect x="132" y="160" width="160" height="8" fill="#1d2c3a" rx="3"/>
-        <rect x="560" y="150" width="170" height="8" fill="#1d2c3a" rx="3"/>
-      </g>
-      <g opacity=".35" fill="#7fb0d8">
-        <rect x="300" y="240" width="90" height="52" rx="6"/>
-        <rect x="420" y="255" width="120" height="42" rx="6"/>
-      </g>
-      <g opacity=".22" fill="#cfe6ff">
-        <circle cx="240" cy="90" r="3"/><circle cx="480" cy="70" r="2.5"/>
-        <circle cx="700" cy="110" r="2"/><circle cx="60" cy="130" r="2"/>
-      </g>`,
-    city: `
-      <g opacity=".5">
-        <rect x="40" y="120" width="70" height="160" fill="#1c1520"/>
-        <rect x="130" y="90" width="54" height="190" fill="#241a26"/>
-        <rect x="600" y="105" width="66" height="175" fill="#1c1520"/>
-        <rect x="690" y="140" width="58" height="140" fill="#241a26"/>
-      </g>
-      <g fill="#ffd98a" opacity=".5">
-        <rect x="54" y="140" width="10" height="12"/><rect x="76" y="140" width="10" height="12"/>
-        <rect x="54" y="172" width="10" height="12"/><rect x="144" y="112" width="9" height="11"/>
-        <rect x="164" y="112" width="9" height="11"/><rect x="614" y="130" width="9" height="11"/>
-        <rect x="636" y="158" width="9" height="11"/><rect x="704" y="164" width="9" height="11"/>
-      </g>
-      <rect x="0" y="262" width="800" height="6" fill="#3a2b33" opacity=".8"/>`,
-    hotel: `
-      <g opacity=".6">
-        <rect x="250" y="120" width="300" height="14" rx="4" fill="#3b3348"/>
-        <rect x="270" y="134" width="260" height="90" fill="#241f33"/>
-        <rect x="300" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
-        <rect x="378" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
-        <rect x="456" y="150" width="46" height="60" rx="3" fill="#4a3f5e"/>
-      </g>
-      <g opacity=".3" fill="#e0b354">
-        <circle cx="400" cy="96" r="26"/>
-        <rect x="392" y="96" width="16" height="24" rx="4"/>
-      </g>`,
-    cafe: `
-      <g opacity=".55">
-        <rect x="90" y="170" width="150" height="10" rx="4" fill="#4a3728"/>
-        <rect x="560" y="176" width="160" height="10" rx="4" fill="#4a3728"/>
-        <rect x="150" y="180" width="10" height="80" fill="#3a2b20"/>
-        <rect x="620" y="186" width="10" height="80" fill="#3a2b20"/>
-      </g>
-      <g opacity=".4" fill="#ffb968">
-        <circle cx="200" cy="86" r="14"/><circle cx="620" cy="94" r="11"/>
-      </g>
-      <g stroke="#ffb968" stroke-width="2" opacity=".18" fill="none">
-        <path d="M200 66 v-14 M618 74 v-10"/>
-      </g>`,
-    classroom: `
-      <g opacity=".6">
-        <rect x="120" y="120" width="220" height="130" rx="6" fill="#1d2f35"/>
-        <rect x="128" y="128" width="204" height="114" rx="4" fill="#22383f"/>
-        <rect x="150" y="150" width="60" height="8" rx="3" fill="#4a7a6a"/>
-        <rect x="150" y="172" width="120" height="6" rx="3" fill="#3c6357"/>
-        <rect x="150" y="190" width="90" height="6" rx="3" fill="#3c6357"/>
-        <rect x="560" y="140" width="150" height="110" rx="6" fill="#1a2534"/>
-        <rect x="575" y="155" width="40" height="30" rx="3" fill="#2e4a63"/>
-        <rect x="625" y="155" width="40" height="30" rx="3" fill="#2e4a63"/>
-      </g>
-      <g opacity=".45" fill="#8fb8d8">
-        <rect x="330" y="255" width="140" height="10" rx="4"/>
-        <rect x="350" y="265" width="10" height="35"/>
-        <rect x="440" y="265" width="10" height="35"/>
-      </g>`,
-    brush: `
-      <g opacity=".55">
-        <rect x="130" y="95" width="170" height="170" rx="8" fill="none" stroke="#4a3f52" stroke-width="2"/>
-        <line x1="215" y1="95" x2="215" y2="265" stroke="#4a3f52" stroke-width="1.5" stroke-dasharray="6 6"/>
-        <line x1="130" y1="180" x2="300" y2="180" stroke="#4a3f52" stroke-width="1.5" stroke-dasharray="6 6"/>
-        <rect x="500" y="110" width="150" height="150" rx="8" fill="none" stroke="#4a3f52" stroke-width="2"/>
-        <line x1="575" y1="110" x2="575" y2="260" stroke="#4a3f52" stroke-width="1.5" stroke-dasharray="6 6"/>
-      </g>
-      <g opacity=".35">
-        <rect x="196" y="150" width="8" height="90" rx="4" fill="#c9a86a"/>
-        <rect x="196" y="140" width="8" height="18" rx="4" fill="#8e6b3d"/>
-      </g>`,
-    studio: `
-      <g opacity=".4">
-        <circle cx="400" cy="150" r="110" fill="none" stroke="#4b4560" stroke-width="2"/>
-        <circle cx="400" cy="150" r="150" fill="none" stroke="#3a3550" stroke-width="1.5"/>
-      </g>`
-  };
-  return sets[set] || sets.studio;
+/* ---------- мелкие элементы рисунка ---------- */
+function artCloud(x, y, s, o, c) {
+  return `<g opacity="${o}" fill="${c}" filter="url(#vsB)">
+    <ellipse cx="${x}" cy="${y}" rx="${64 * s}" ry="${23 * s}"/>
+    <ellipse cx="${x - 36 * s}" cy="${y + 7 * s}" rx="${40 * s}" ry="${16 * s}"/>
+    <ellipse cx="${x + 42 * s}" cy="${y + 6 * s}" rx="${46 * s}" ry="${17 * s}"/>
+    <ellipse cx="${x + 10 * s}" cy="${y - 14 * s}" rx="${36 * s}" ry="${19 * s}"/>
+  </g>`;
 }
 
-/* Кадр сцены: фон + герои + облачко с репликой */
+function artHills(c, y, amp, op, blur) {
+  return `<path d="M-40 ${y} C 140 ${y - amp} 260 ${y + amp * 0.55} 420 ${y - amp * 0.4}
+            C 580 ${y - amp * 1.15} 720 ${y + amp * 0.35} 940 ${y - amp * 0.55} V420 H-40Z"
+          fill="${c}" opacity="${op}"${blur ? ' filter="url(#vsA)"' : ''}/>`;
+}
+
+/* ---------- причёски героев ---------- */
+function artHair(p, d) {
+  const c = p.hair, c2 = p.hair2 || p.hair;
+  if (p.style === 'long') {
+    return `
+      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-6 -30 -48 -30 q-42 0 -48 30Z" fill="${c}"/>
+      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-12 -18 -22 -20 q-8 8 -22 6 q-16 4 -30 -4 q-12 4 -22 18Z" fill="${c}"/>
+      <path d="M-46 -88 q-4 30 -3 58 q1 18 6 28 q-12 -10 -15 -34 q-2 -28 2 -52Z" fill="${c}"/>
+      <path d="M46 -88 q4 30 3 58 q-1 18 -6 28 q12 -10 15 -34 q2 -28 -2 -52Z" fill="${c2}"/>
+      <path d="M-42 -84 q16 12 38 7 q-16 12 -40 4Z" fill="#fff" opacity=".09"/>`;
+  }
+  if (p.style === 'bun') {
+    return `
+      <circle cx="${-44 * d}" cy="-104" r="17" fill="${c2}"/>
+      <circle cx="${-46 * d}" cy="-107" r="13" fill="${c}"/>
+      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-4 -14 -14 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -22 -4 q-8 4 -10 14Z" fill="${c}"/>
+      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-6 -32 -46 -32 q-40 0 -46 32Z" fill="${c2}"/>
+      <path d="M-42 -82 q14 10 30 6 q-12 10 -32 3Z" fill="#fff" opacity=".12"/>`;
+  }
+  if (p.style === 'cap') {
+    return `
+      <path d="M-48 -92 q-2 -50 48 -50 q50 0 48 50 q-6 -16 -18 -20 q-10 8 -30 8 q-20 0 -30 -8 q-14 6 -18 20Z" fill="${c}"/>
+      <path d="M-52 -92 q26 -12 56 -6 q28 6 46 4 q-6 12 -46 12 q-34 0 -56 -10Z" fill="${c2}"/>
+      <path d="M-52 -92 q-14 2 -18 8 q12 4 20 -2Z" fill="${c2}" opacity=".9"/>`;
+  }
+  return `
+    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-3 -14 -13 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -24 -4 q-8 4 -11 14Z" fill="${c}"/>
+    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-6 -30 -47 -30 q-41 0 -47 30Z" fill="${c2}"/>
+    <path d="M-40 -80 q14 8 30 5 q-12 9 -30 3Z" fill="#fff" opacity=".1"/>`;
+}
+
+/* ---------- герой по грудь, в 3/4 к собеседнику ---------- */
+function artBust(p, side, speaking) {
+  const d = side === 'left' ? 1 : -1;
+  const mouth = speaking
+    ? `<ellipse cx="${2 * d}" cy="-33" rx="5.4" ry="4" fill="#7d403f"/>
+       <ellipse cx="${2 * d}" cy="-30.5" rx="3.2" ry="1.4" fill="#c47a74" opacity=".7"/>`
+    : `<path d="M${-6 * d} -34 q${7 * d} 6 ${13 * d} -1" stroke="#7d403f" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  return `
+  <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}" transform="translate(${side === 'left' ? 148 : 654} ${side === 'left' ? 300 : 306}) scale(${side === 'left' ? 1.34 : 1.38} 1)">
+    <!-- корпус: покатые плечи, свободная одежда -->
+    <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
+    <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
+    <!-- рукава -->
+    <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}"/>
+    <path d="M82 26 q14 22 16 52 q1 10 -7 10 q-8 1 -9 -9 q-3 -26 -12 -44Z" fill="${p.coat2}" opacity=".92"/>
+    <!-- вырез и лацканы -->
+    <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
+    <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".15"/>
+    <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
+    <!-- лёгкая складка на груди -->
+    <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".35"/>
+    <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
+    <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+
+    <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
+    <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".38"/>
+    <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
+    <path d="M${-40 * d} -70 q${-6 * d} 8 ${-2 * d} 16 q${4 * d} 2 ${6 * d} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
+    <path d="M${-40 * d} -66 q${3 * d} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
+
+    ${artHair(p, d)}
+    ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
+      <path d="M${-29 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
+      <path d="M${6 * d} -70 h${20 * d} v14 h${-20 * d}Z"/>
+      <path d="M${-9 * d} -63 h${15 * d}"/>
+    </g>` : ''}
+
+    <path d="M${-34 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
+    <path d="M${8 * d} -84 q${11 * d} -5 ${22 * d} 1" stroke="${p.hair}" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".8"/>
+
+    <ellipse cx="${-19 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
+    <ellipse cx="${22 * d}" cy="-62" rx="8" ry="9" fill="#fbf4e9"/>
+    <ellipse cx="${-18 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
+    <ellipse cx="${23 * d}" cy="-61" rx="4.8" ry="6" fill="${p.eye}"/>
+    <circle cx="${-20 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
+    <circle cx="${21 * d}" cy="-64" r="1.8" fill="#fff" opacity=".95"/>
+    <path d="M${-27 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M${15 * d} -64 q${8 * d} -11 ${17 * d} -1" stroke="#3d2b28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M${3 * d} -52 q${3 * d} 6 ${-3 * d} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75"/>
+    ${mouth}
+    <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
+    <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".22"/>
+    <path d="M-40 -96 q8 -38 40 -40" stroke="#ffe8c2" stroke-width="2.6" fill="none" opacity=".5" stroke-linecap="round"/>
+    <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".26" stroke-linecap="round"/>
+  </g>`;
+}
+
+/* ---------- окружение каждой локации ---------- */
+function artEnv(set, L) {
+  const sets = {
+    city: () => `
+      <path d="M170 250 L272 138 q10 -12 20 0 L400 250Z" fill="${L.far}" opacity=".55" filter="url(#vsA)"/>
+      <path d="M258 158 q12 -12 24 -2 q-10 8 -24 2Z" fill="#fff" opacity=".35"/>
+      <ellipse cx="400" cy="252" rx="330" ry="46" fill="${L.warm}" opacity=".2" filter="url(#vsB)"/>
+      <g opacity=".55" filter="url(#vsA)">
+        <path d="M26 348 V206 q0 -6 6 -6 h62 q6 0 6 6 v142Z" fill="${L.mid}"/>
+        <path d="M108 348 V232 q0 -5 5 -5 h50 q5 0 5 5 v116Z" fill="${L.far}"/>
+        <path d="M634 348 V196 q0 -6 6 -6 h60 q6 0 6 6 v152Z" fill="${L.mid}"/>
+        <path d="M712 348 V224 q0 -5 5 -5 h52 q5 0 5 5 v124Z" fill="${L.far}"/>
+        <path d="M20 206 h84 l-8 -14 h-68Z" fill="${L.mid}"/>
+      </g>
+      <g fill="${L.warm}" opacity=".75">
+        <rect x="44" y="220" width="8" height="11"/><rect x="64" y="220" width="8" height="11"/>
+        <rect x="44" y="248" width="8" height="11"/><rect x="84" y="248" width="8" height="11"/>
+        <rect x="652" y="212" width="8" height="11"/><rect x="674" y="212" width="8" height="11"/>
+        <rect x="652" y="240" width="8" height="11"/>
+      </g>
+      <g>
+        <rect x="486" y="196" width="3.4" height="150" fill="${L.near}"/>
+        <path d="M488 200 q20 -6 26 10" stroke="${L.near}" stroke-width="3" fill="none"/>
+        <ellipse cx="516" cy="216" rx="9" ry="11" fill="${L.warm}" opacity=".9"/>
+        <ellipse cx="516" cy="218" rx="40" ry="40" fill="${L.warm}" opacity=".16" filter="url(#vsB)"/>
+      </g>`,
+    airport: () => `
+      <path d="M44 346 V158 q0 -8 8 -8 h306 q8 0 8 8 v188Z" fill="${L.mid}"/>
+      <path d="M58 336 V170 q0 -6 6 -6 h282 q6 0 6 6 v166Z" fill="${L.haze}" opacity=".28"/>
+      <g stroke="${L.near}" stroke-width="2" opacity=".55">
+        <path d="M58 226 h294 M58 288 h294 M140 170 v166 M226 170 v166 M300 170 v166"/>
+      </g>
+      <path d="M26 152 h352 l-14 -26 q-3 -6 -10 -6 h-304 q-7 0 -10 6Z" fill="${L.near}" opacity=".85"/>
+      <path d="M26 152 h352 v6 h-352Z" fill="${L.warm}" opacity=".25"/>
+      <g opacity=".85" transform="translate(566 258)">
+        <path d="M-58 0 q30 -14 74 -10 l26 4 q8 2 6 8 l-30 6 q-42 4 -70 0Z" fill="${L.near}"/>
+        <path d="M-6 -6 l22 -34 q6 -8 10 -2 l-4 34Z" fill="${L.near}" opacity=".9"/>
+        <path d="M14 8 l10 26 q3 7 8 2 l2 -28Z" fill="${L.near}" opacity=".75"/>
+        <circle cx="-46" cy="2" r="3" fill="${L.warm}" opacity=".9"/>
+      </g>`,
+    cafe: () => `
+      <g>
+        <path d="M56 128 h308 v172 h-308Z" fill="${L.haze}" opacity=".2"/>
+        <g stroke="${L.near}" stroke-width="5" opacity=".7" fill="none">
+          <path d="M56 128 h308 v172 h-308Z"/><path d="M210 128 v172 M56 214 h308"/>
+        </g>
+      </g>
+      <g>
+        <path d="M486 66 v52 M492 66 v52" stroke="${L.near}" stroke-width="2.4"/>
+        <path d="M488 118 h36 l-7 16 h-22Z" fill="${L.near}"/>
+        <ellipse cx="506" cy="146" rx="15" ry="18" fill="${L.warm}" opacity=".85" filter="url(#vsA)"/>
+        <ellipse cx="506" cy="154" rx="70" ry="74" fill="${L.warm}" opacity=".13" filter="url(#vsB)"/>
+        <path d="M596 66 v70" stroke="${L.near}" stroke-width="2.4"/>
+        <path d="M592 136 h34 l-7 15 h-20Z" fill="${L.near}"/>
+        <ellipse cx="609" cy="162" rx="13" ry="16" fill="${L.warm}" opacity=".8" filter="url(#vsA)"/>
+      </g>
+      <g>
+        <ellipse cx="448" cy="352" rx="80" ry="13" fill="${L.near}"/>
+        <path d="M418 300 h14 v52 h-14Z" fill="${L.near}"/>
+        <path d="M404 288 h56 q4 0 4 4 v6 q-32 4 -64 0 v-6 q0 -4 4 -4Z" fill="${L.mid}"/>
+        <path d="M432 268 h22 q3 12 -11 12 q-14 0 -11 -12Z" fill="#e9dcc8"/>
+        <path d="M437 262 q4 -8 0 -14 M447 262 q4 -8 0 -14" stroke="#fff" stroke-width="1.4" fill="none" opacity=".45"/>
+      </g>`,
+    classroom: () => `
+      <path d="M120 96 h380 q6 0 6 6 v168 q0 6 -6 6 h-380 q-6 0 -6 -6 v-168 q0 -6 6 -6Z" fill="#2b3b2c"/>
+      <path d="M130 104 h360 q5 0 5 5 v162 q0 5 -5 5 h-360 q-5 0 -5 -5 v-162 q0 -5 5 -5Z" fill="#31463c"/>
+      <g stroke="#e8f0e4" stroke-width="2.2" fill="none" opacity=".6" stroke-linecap="round">
+        <path d="M170 150 h86 M170 176 h140 M170 202 h104"/>
+        <path d="M340 148 q18 -16 34 2 q10 12 -6 18 M394 146 v40 M386 156 h16"/>
+      </g>
+      <path d="M120 270 h380 v12 q0 3 -3 3 h-374 q-3 0 -3 -3Z" fill="#5b4632"/>
+      <path d="M560 110 h176 q6 0 6 6 v164 q0 6 -6 6 h-176 Z" fill="${L.haze}" opacity=".4"/>
+      <g stroke="${L.near}" stroke-width="6" fill="none" opacity=".85">
+        <path d="M560 110 h176 q6 0 6 6 v164 q0 6 -6 6 h-176Z"/><path d="M648 110 v176 M560 198 h182"/>
+      </g>
+      <g opacity=".9">
+        <path d="M70 330 h200 v14 q0 3 -3 3 h-194 q-3 0 -3 -3Z" fill="#7a5c3c"/>
+        <path d="M92 344 h9 v46 h-9Z M240 344 h9 v46 h-9Z" fill="#543f29"/>
+        <path d="M540 336 h190 v13 q0 3 -3 3 h-184 q-3 0 -3 -3Z" fill="#7a5c3c"/>
+        <path d="M560 349 h8 v41 h-8Z M700 349 h8 v41 h-8Z" fill="#543f29"/>
+      </g>`,
+    hotel: () => `
+      <path d="M356 362 V250 q0 -8 8 -8 h348 q8 0 8 8 v112Z" fill="#5a3f2c"/>
+      <path d="M352 250 q0 -8 8 -8 h352 q8 0 8 8 v8 q-186 10 -376 0Z" fill="#8a6547"/>
+      <g stroke="#42301f" stroke-width="2" opacity=".5">
+        <path d="M452 256 v106 M540 256 v106 M628 256 v106"/>
+      </g>
+      <path d="M384 216 h96 q4 0 4 4 v4 q-52 4 -104 0 v-4 q0 -4 4 -4Z" fill="#8a6547"/>
+      <rect x="404" y="224" width="7" height="30" fill="#4a3423"/>
+      <rect x="454" y="224" width="7" height="30" fill="#4a3423"/>
+      <path d="M398 200 h34 q3 0 3 3 v10 q-20 3 -40 0 v-10 q0 -3 3 -3Z" fill="#e8dcc4"/>
+      <g fill="${L.warm}" opacity=".55">
+        <circle cx="470" cy="150" r="5"/><circle cx="500" cy="150" r="5"/><circle cx="530" cy="150" r="5"/>
+        <circle cx="560" cy="150" r="5"/><circle cx="590" cy="150" r="5"/>
+      </g>
+      <ellipse cx="700" cy="170" rx="22" ry="26" fill="${L.warm}" opacity=".85" filter="url(#vsA)"/>
+      <ellipse cx="700" cy="180" rx="90" ry="90" fill="${L.warm}" opacity=".12" filter="url(#vsB)"/>`,
+    brush: () => `
+      <path d="M130 70 h300 v290 h-300Z" fill="#efe3cd" opacity=".93"/>
+      <path d="M130 70 h300 v290 h-300Z" fill="none" stroke="#c9b492" stroke-width="3"/>
+      <g stroke="#c2a98a" stroke-width="1.4" opacity=".85" fill="none">
+        <path d="M168 112 h220 v220 h-220Z"/>
+        <path d="M278 112 v220 M168 222 h220" stroke-dasharray="7 7"/>
+      </g>
+      <g stroke="#2f2a26" stroke-width="5" fill="none" stroke-linecap="round" opacity=".85">
+        <path d="M248 200 q-14 26 4 44 M264 196 q18 22 6 46 M232 268 h92"/>
+      </g>
+      <ellipse cx="576" cy="322" rx="58" ry="16" fill="#2c2622"/>
+      <ellipse cx="576" cy="316" rx="52" ry="13" fill="#413733"/>
+      <path d="M548 346 l84 -50 q10 -6 14 2 q4 8 -6 14 l-84 50Z" fill="#b08c56"/>
+      <path d="M636 292 q18 -12 26 4 q-8 14 -26 10Z" fill="#3a2f2a"/>`,
+    studio: () => `
+      <g opacity=".5">
+        <circle cx="400" cy="170" r="120" fill="none" stroke="${L.mid}" stroke-width="2"/>
+        <circle cx="400" cy="170" r="168" fill="none" stroke="${L.mid}" stroke-width="1.5"/>
+        <path d="M400 50 v40 M400 250 v40 M280 170 h40 M460 170 h40" stroke="${L.warm}" stroke-width="2" opacity=".7"/>
+      </g>`
+  };
+  return (sets[set] || sets.studio)();
+}
+
+/* ---------- целый кадр ---------- */
 function buildSceneStage(scene, lesson, state) {
   const locKey = sceneLocation(scene, lesson);
   const loc = VIDEO_SCENES[locKey];
+  const L = VIDEO_ART[loc.set] || VIDEO_ART.studio;
+
   const who = scene.who || 'Рассказчик';
-  const cast = VIDEO_CAST[who] || { glyph: '语', color: '#e0b354', side: 'left' };
+  const pair = VIDEO_LOC_CAST[locKey] || ['Али', 'Рассказчик'];
 
-  /* Герой слева и герой справа. Если в сцене есть собеседник (other) —
-     показываем двоих. Говорит всегда `who`, поэтому подсвечиваем именно его
-     сторону, а не «левый по умолчанию». */
-  let left, right;
-  if (scene.other) {
-    const other = VIDEO_CAST[scene.other] || { glyph: '汉', color: '#8b7cf6', side: 'right' };
-    if (cast.side === 'left') { left = { ...cast, name: who, active: true };
-                                right = { ...other, name: scene.other, active: false }; }
-    else                       { left = { ...other, name: scene.other, active: false };
-                                 right = { ...cast, name: who, active: true }; }
-  } else if (cast.side === 'right') {
-    left = { glyph: '学', color: '#6a9fd4', name: '汉语学习', active: false, ghost: true };
-    right = { ...cast, name: who, active: true };
+  /* Кто слева, кто справа: говорит всегда `who`, второй — собеседник из сцены
+     или герой, закреплённый за локацией. */
+  let leftName, rightName;
+  if (scene.other && scene.other !== who) {
+    leftName = who;
+    rightName = scene.other;
+  } else if (who === pair[1]) {
+    leftName = pair[0]; rightName = who;
   } else {
-    left = { ...cast, name: who, active: true };
-    right = { glyph: '汉', color: '#8b7cf6', name: '汉语', active: false, ghost: true };
+    leftName = who; rightName = pair[1];
   }
+  if (leftName === rightName) rightName = 'Рассказчик';
 
-  const heroHTML = (h, side) => `
-    <div class="vs-hero vs-${side}${h.active ? ' is-speaking' : ''}${h.ghost ? ' vs-ghost' : ''}" style="--hc:${h.color}">
-      <div class="vs-ava">${esc(h.glyph)}</div>
-      <div class="vs-name">${esc(h.name)}</div>
-    </div>`;
+  const left = VIDEO_CAST[leftName] || VIDEO_CAST['Рассказчик'];
+  const right = VIDEO_CAST[rightName] || VIDEO_CAST['Рассказчик'];
+  /* Говорит тот, чьё имя совпало с `who`; если в кадре его нет — левый. */
+  const leftLive = leftName === who || (rightName !== who);
+  const rightLive = rightName === who;
+  const [sx, sy] = L.sun;
 
   return `
-    <div class="vs-scene" style="--sky:${loc.sky};--ground:${loc.ground}">
-      <div class="vs-sky"></div>
-      <div class="vs-depth">
-        <svg class="vs-decor" viewBox="0 0 800 320" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-          ${sceneDecor(loc.set)}
-        </svg>
-      </div>
-      <div class="vs-ground"></div>
-      ${heroHTML(left, 'left')}
-      ${heroHTML(right, 'right')}
+    <div class="vs-scene" style="--vig:${L.vig}">
+      <svg class="vs-art" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="vsSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="${L.sky[0]}"/><stop offset=".55" stop-color="${L.sky[1]}"/><stop offset="1" stop-color="${L.sky[2]}"/>
+          </linearGradient>
+          <radialGradient id="vsSun">
+            <stop offset="0" stop-color="${L.sun[3]}" stop-opacity=".9"/>
+            <stop offset=".4" stop-color="${L.sun[3]}" stop-opacity=".35"/>
+            <stop offset="1" stop-color="${L.sun[3]}" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="vsHaze" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="${L.haze}" stop-opacity="0"/>
+            <stop offset=".35" stop-color="${L.haze}" stop-opacity=".65"/>
+            <stop offset="1" stop-color="${L.haze}" stop-opacity="0"/>
+          </linearGradient>
+          <radialGradient id="vsVig" cx=".5" cy=".45" r=".8">
+            <stop offset=".5" stop-color="${L.vig}" stop-opacity="0"/>
+            <stop offset="1" stop-color="${L.vig}" stop-opacity=".8"/>
+          </radialGradient>
+          <filter id="vsA" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+          <filter id="vsB" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+          <filter id="vsGrain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="11"/>
+            <feColorMatrix type="saturate" values="0"/></filter>
+        </defs>
+
+        <rect width="800" height="420" fill="url(#vsSky)"/>
+        <ellipse cx="${sx}" cy="${sy}" rx="${L.sun[2] * 8}" ry="${L.sun[2] * 6}" fill="url(#vsSun)"/>
+        <circle cx="${sx}" cy="${sy}" r="${L.sun[2]}" fill="${L.sun[3]}" opacity=".85" filter="url(#vsA)"/>
+
+        <g class="vs-clouds">
+          <g class="vs-c1">${artCloud(170, 84, 1.1, 0.3, '#ffe9d2')}</g>
+          <g class="vs-c2">${artCloud(560, 58, 0.8, 0.2, '#fff0dd')}</g>
+          <g class="vs-c3">${artCloud(690, 146, 0.6, 0.16, '#fff6e8')}</g>
+        </g>
+
+        ${artHills(L.far, 252, 52, 0.5, true)}
+        <rect y="150" width="800" height="200" fill="url(#vsHaze)"/>
+        ${artHills(L.mid, 300, 38, 0.9, true)}
+        ${artHills(L.near, 352, 20, 1, true)}
+
+        <g class="vs-env" opacity=".95">${artEnv(loc.set, L)}</g>
+
+        <g opacity=".07" fill="${L.warm}" filter="url(#vsB)">
+          <path d="M${sx - 30} ${sy} L${sx + 240} 420 L${sx + 120} 420Z"/>
+          <path d="M${sx + 20} ${sy} L${sx + 430} 420 L${sx + 330} 420Z"/>
+        </g>
+
+        <g class="vs-cast">
+          ${artBust(left, 'left', leftLive)}
+          ${artBust(right, 'right', rightLive)}
+        </g>
+
+        <rect width="800" height="420" fill="url(#vsVig)"/>
+        <rect width="800" height="420" filter="url(#vsGrain)" opacity=".1"/>
+      </svg>
+
+      <div class="vs-tag vs-tag-l">${esc(leftName)}</div>
+      <div class="vs-tag vs-tag-r">${esc(rightName)}</div>
+
       <div class="vs-bubble">
         <div class="vs-who">${esc(who)}</div>
         <div class="vs-hanzi">${esc(scene.hanzi)}</div>
