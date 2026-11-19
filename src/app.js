@@ -1546,21 +1546,19 @@ function renderVideos(root) {
       const sc = L.scenes[vidState.sceneIdx] || L.scenes[0];
       const pct = Math.round(((vidState.sceneIdx + 1) / L.scenes.length) * 100);
 
+      /* Анимированный кадр: фон локации, герои и облачко с репликой.
+         Каждый новый кадр получает key, чтобы CSS проиграл вход заново. */
+      const animKey = `${vidState.lessonIdx}-${vidState.sceneIdx}-${vidState.playing ? 'p' : 's'}-${vidState.subs ? 1 : 0}`;
       stage.innerHTML = `
         <div class="vid-top">
           <span class="vid-badge">${esc(L.level)}</span>
           <span class="vid-time">Сцена ${vidState.sceneIdx + 1} / ${L.scenes.length} · ${esc(L.duration)}</span>
         </div>
-        <div class="vid-main">
-          <div class="vid-hanzi">${esc(sc.hanzi)}</div>
-          <div class="vid-pinyin">${esc(sc.pinyin)}</div>
-          ${drawToneCurve(sc.tone)}
-          ${sc.who ? `<div class="vid-who">${esc(sc.who)}</div>` : ''}
-          <div class="vid-ru">${esc(sc.ru)}</div>
-          ${vidState.subs ? `<div class="vid-sub">${esc(sc.sub)}</div>` : ''}
-          ${sc.tip ? `<div class="vid-tip">💡 ${esc(sc.tip)}</div>` : ''}
-        </div>
+        ${buildSceneStage(sc, L, vidState)}
+        ${sc.tone ? drawToneCurve(sc.tone) : ''}
         <div class="vid-bar"><i style="width:${pct}%"></i></div>`;
+      const sceneEl = stage.querySelector('.vs-scene');
+      if (sceneEl) sceneEl.dataset.key = animKey;
 
       ctr.innerHTML = '';
       const playB = el('button', 'btn btn-primary', vidState.playing ? '⏸ Пауза' : '▶ Смотреть урок');
