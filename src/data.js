@@ -1270,9 +1270,9 @@ const STORY_CHAPTERS = [
 */
 
 /* ============================================================
-   Живописная сцена видео: акварельное небо, слоистые холмы,
-   тёплый свет, рисованные герои. Всё — SVG внутри страницы,
-   без внешних картинок, поэтому работает офлайн.
+   Сцена видео: рисованный мультсериал — плоские заливки,
+   чёткий контур, тёплая земляная палитра. Всё SVG внутри
+   страницы, поэтому работает офлайн.
    ============================================================ */
 
 const VIDEO_SCENES = {
@@ -1285,42 +1285,54 @@ const VIDEO_SCENES = {
   studio:    { label: 'Студия',       set: 'studio' }
 };
 
-/* Палитры: дневная (луга и небо) и вечерняя (тёплый закат для кафе и отеля) */
+/* Контур всей сцены: один цвет на кадр, как в мультсериале */
+const VS_INK = '#26303a';
+
+/* Палитра: плоские тона неба, земли и света */
 const VIDEO_ART = {
   day: {
-    sky: ['#1f5f9c', '#5fa2c9', '#e6e6d2', '#f6e9c9'],
-    cloud: ['#ffffff', '#f2f5f6', '#d7e2ea', '#b3c7d6'],
-    sun: [150, 76, 380, '#fff6d8'],
-    far: ['#93b0c2', '#86a4b8', '#9ab5c5'],
-    hill1: '#9dbd6f', hill2: '#82a95a',
-    grass: ['#77a352', '#5d8a42', '#456c34'],
-    blade: ['#8fbb62', '#a8cd76', '#6f9a4c', '#4e7a35'],
-    leaf: ['#4c7a44', '#6f9e5c'],
-    path: '#c9b183', vig: '#20301f', warm: '#fff3c9'
+    skyTop: '#8fc3d4', skyMid: '#cfe2df', skyLow: '#f2e2c4',
+    sun: '#f7d98b', sunRim: '#ffe9a8',
+    cloud: '#ffffff', cloudShade: '#cfdde3',
+    far: ['#9fb4b8', '#8ea6ad', '#a3b8bb'], snow: '#e8eef0',
+    hill1: '#9dbd72', hill1Hi: '#b7cf8b',
+    hill2: '#86ac59', hill2Hi: '#a2c471',
+    front: '#6f9447',
+    grass: '#4f7135', tree: '#5f8a4a', treeHi: '#79a45c', trunk: '#7a5638',
+    path: '#d8bf90', wall: '#e6d6b8', roof: '#b9503a', roofHi: '#cf6448',
+    window: '#7fa9c4', door: '#8a5a38',
+    light: '#fff3cd', vig: '#1d2a33'
   },
   dusk: {
-    sky: ['#2e2a5c', '#7d5f87', '#d9976f', '#f7d9a4'],
-    cloud: ['#ffe7cf', '#f7cfae', '#dba585', '#b8806a'],
-    sun: [630, 150, 300, '#ffd9a0'],
-    far: ['#8d7f9c', '#7e6f8e', '#9a8399'],
-    hill1: '#6c6a55', hill2: '#55563f',
-    grass: ['#5c6040', '#4b5034', '#3b3f2a'],
-    blade: ['#7a7d4f', '#8d8f5c', '#5e6238', '#484b2b'],
-    leaf: ['#3d4a34', '#556045'],
-    path: '#b99a78', vig: '#1b1420', warm: '#ffd9a0'
+    skyTop: '#4d4a86', skyMid: '#c07a72', skyLow: '#f2c98c',
+    sun: '#f7c178', sunRim: '#ffdca6',
+    cloud: '#ffe7cd', cloudShade: '#d9a48e',
+    far: ['#8a7f9e', '#7b7090', '#94849a'], snow: '#e8dcd6',
+    hill1: '#7f8a52', hill1Hi: '#95a065',
+    hill2: '#6a7645', hill2Hi: '#828e55',
+    front: '#55603a',
+    grass: '#3f4a2b', tree: '#4d6338', treeHi: '#647a48', trunk: '#6a4c32',
+    path: '#c2a17a', wall: '#dcc6a8', roof: '#9e4632', roofHi: '#b95a42',
+    window: '#f2cf8e', door: '#7a4c30',
+    light: '#ffd9a0', vig: '#1a1520'
   }
 };
 
+const VIDEO_LOC_ART = {
+  airport: 'day', taxi: 'day', hotel: 'dusk', cafe: 'dusk',
+  classroom: 'day', brush: 'day', studio: 'dusk'
+};
+
 const VIDEO_CAST = {
-  'Рассказчик':          { style: 'short', glyph: '语', coat: '#5c534c', coat2: '#413a35', skin: '#e9c19b', skin2: '#cfa079', hair: '#2b2422', hair2: '#1a1513', eye: '#3b2b27' },
-  'Али':                 { style: 'short', glyph: '阿', coat: '#41707b', coat2: '#2b4f59', skin: '#e8b98f', skin2: '#cd9a72', hair: '#231b1e', hair2: '#171214', eye: '#3d2b28' },
-  'Служащая':            { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f2cba6', skin2: '#d8a882', hair: '#241d1f', hair2: '#171214', eye: '#3a2a28' },
-  'Служащая аэропорта':  { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f2cba6', skin2: '#d8a882', hair: '#241d1f', hair2: '#171214', eye: '#3a2a28' },
-  'Водитель':            { style: 'cap',   glyph: '车', coat: '#a3503c', coat2: '#7b382a', skin: '#dfa878', skin2: '#bd8659', hair: '#2a211c', hair2: '#171310', eye: '#3a2a26' },
-  'Администратор':       { style: 'short', glyph: '店', coat: '#7d5f96', coat2: '#5c4572', skin: '#f3cba9', skin2: '#d8ac87', hair: '#261f26', hair2: '#161016', eye: '#3d2b28' },
-  'Девушка за столом':   { style: 'long',  glyph: '友', coat: '#8e4a63', coat2: '#693448', skin: '#f4cda8', skin2: '#dcb08c', hair: '#38281f', hair2: '#241811', eye: '#3d2b28' },
-  'Девушка':             { style: 'long',  glyph: '友', coat: '#8e4a63', coat2: '#693448', skin: '#f4cda8', skin2: '#dcb08c', hair: '#38281f', hair2: '#241811', eye: '#3d2b28' },
-  'Учитель':             { style: 'bun',   glyph: '师', coat: '#57737f', coat2: '#3f575f', skin: '#eec4a0', skin2: '#d0a481', hair: '#2b2523', hair2: '#1a1513', eye: '#3a2a26', glasses: '#e8dfd0' }
+  'Рассказчик':          { style: 'short', glyph: '语', coat: '#5c534c', coat2: '#413a35', skin: '#e9c19b', hair: '#2b2422', eye: '#3b2b27' },
+  'Али':                 { style: 'short', glyph: '阿', coat: '#3f7f86', coat2: '#2e6169', skin: '#f0c294', hair: '#2b2320', eye: '#3b4a50' },
+  'Служащая':            { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f5cba3', hair: '#33251f', eye: '#3b4a50' },
+  'Служащая аэропорта':  { style: 'bun',   glyph: '服', coat: '#3a6091', coat2: '#284668', skin: '#f5cba3', hair: '#33251f', eye: '#3b4a50' },
+  'Водитель':            { style: 'cap',   glyph: '车', coat: '#a3503c', coat2: '#7b382a', skin: '#dcab7d', hair: '#2a211c', eye: '#3b4a50' },
+  'Администратор':       { style: 'short', glyph: '店', coat: '#7d5f96', coat2: '#5c4572', skin: '#f5cba3', hair: '#2b2320', eye: '#3b4a50' },
+  'Девушка за столом':   { style: 'long',  glyph: '友', coat: '#a2593f', coat2: '#7d3f2c', skin: '#f5cba3', hair: '#3c2a20', eye: '#3b4a50' },
+  'Девушка':             { style: 'long',  glyph: '友', coat: '#a2593f', coat2: '#7d3f2c', skin: '#f5cba3', hair: '#3c2a20', eye: '#3b4a50' },
+  'Учитель':             { style: 'bun',   glyph: '师', coat: '#57737f', coat2: '#3f575f', skin: '#eec4a0', hair: '#2b2523', eye: '#3b4a50', glasses: '#e8dfd0' }
 };
 
 const VIDEO_LOC_CAST = {
@@ -1331,12 +1343,6 @@ const VIDEO_LOC_CAST = {
   classroom: ['Али', 'Учитель'],
   brush:     ['Али', 'Учитель'],
   studio:    ['Рассказчик', 'Рассказчик']
-};
-
-/* Какая локация в какой палитре живёт */
-const VIDEO_LOC_ART = {
-  airport: 'day', taxi: 'day', hotel: 'dusk', cafe: 'dusk',
-  classroom: 'day', brush: 'day', studio: 'dusk'
 };
 
 function sceneLocation(scene, lesson) {
@@ -1351,287 +1357,230 @@ function sceneLocation(scene, lesson) {
   return 'studio';
 }
 
-/* ---------- кучевое облако ---------- */
-function artCumulus(x, y, s, seed, pal, o) {
-  const rnd = (n) => {
-    const v = Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453;
-    return v - Math.floor(v);
-  };
-  const n = 11, lobes = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const ang = Math.PI * (0.1 + 0.8 * t);
-    lobes.push({
-      cx: x + Math.cos(ang) * 86 * s * (0.5 + 0.5 * rnd(i + 3)),
-      cy: y - Math.sin(ang) * 40 * s * (0.7 + 0.5 * rnd(i + 7)),
-      r: (26 + rnd(i) * 20) * s * (0.55 + 0.7 * Math.sin(Math.PI * t))
-    });
-  }
-  const shape = lobes.map(p => `<circle cx="${p.cx.toFixed(0)}" cy="${p.cy.toFixed(0)}" r="${p.r.toFixed(0)}"/>`).join('')
-    + `<ellipse cx="${x}" cy="${y + 2 * s}" rx="${92 * s}" ry="${22 * s}"/>`;
-  const light = lobes.slice(1, 9).map(p =>
-    `<circle cx="${(p.cx - p.r * .12).toFixed(0)}" cy="${(p.cy - p.r * .34).toFixed(0)}" r="${(p.r * .55).toFixed(0)}"/>`).join('');
-  return `<g class="vs-cloud${o < 1 ? ' is-far' : ''}" opacity="${o}">
-    <g filter="url(#vsS1)" fill="${pal.cloud[3]}" opacity=".85" transform="translate(0 ${(5 * s).toFixed(1)})">${shape}</g>
-    <g filter="url(#vsS1)" fill="url(#vsCloudBody)">${shape}</g>
-    <g filter="url(#vsS2)" fill="${pal.cloud[0]}" opacity=".9">${light}</g>
+/* ---------- облако: плотная масса с контуром ---------- */
+function artCloud(x, y, s, pal, o) {
+  const p = (dx, dy, r) =>
+    `<circle cx="${(x + dx * s).toFixed(0)}" cy="${(y + dy * s).toFixed(0)}" r="${(r * s).toFixed(1)}"/>`;
+  return `<g class="vs-cloud" opacity="${o}">
+    <g fill="${pal.cloud}" stroke="${VS_INK}" stroke-width="${(1.7 * s).toFixed(1)}" stroke-linejoin="round">
+      ${p(-46, 4, 21)}${p(-20, -10, 27)}${p(12, -18, 31)}${p(44, -6, 23)}${p(66, 6, 17)}${p(-66, 10, 15)}
+      <ellipse cx="${x}" cy="${(y + 13 * s).toFixed(0)}" rx="${(84 * s).toFixed(0)}" ry="${(17 * s).toFixed(0)}"/>
+    </g>
+    <ellipse cx="${(x + 6 * s).toFixed(0)}" cy="${(y + 21 * s).toFixed(0)}" rx="${(70 * s).toFixed(0)}" ry="${(10 * s).toFixed(0)}"
+             fill="${pal.cloudShade}" opacity=".5"/>
   </g>`;
 }
 
-/* ---------- дерево ---------- */
+/* ---------- дерево: крона двумя тонами с контуром ---------- */
 function artTree(x, base, s, pal) {
   return `<g transform="translate(${x} ${base}) scale(${s})">
-    <path d="M-5 0 q-2 -28 2 -48 q3 -12 7 0 q3 20 1 48Z" fill="#4a3a2a" opacity=".9"/>
-    <g filter="url(#vsS2)">
-      <circle cx="0" cy="-70" r="34" fill="${pal.leaf[0]}"/>
-      <circle cx="-24" cy="-58" r="24" fill="${pal.leaf[0]}"/>
-      <circle cx="24" cy="-58" r="26" fill="${pal.leaf[0]}"/>
-      <circle cx="-8" cy="-86" r="24" fill="${pal.leaf[1]}"/>
-      <circle cx="16" cy="-76" r="18" fill="${pal.leaf[1]}" opacity=".9"/>
-    </g>
+    <path d="M-4 0 v-22 h8 v22Z" fill="${pal.trunk}" stroke="${VS_INK}" stroke-width="2.2"/>
+    <path d="M0 -20 q-26 0 -26 -22 q0 -22 26 -22 q26 0 26 22 q0 22 -26 22Z"
+          fill="${pal.tree}" stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M0 -52 q-14 -2 -14 -14 q0 -12 14 -12 q14 0 14 12 q0 12 -14 14Z" fill="${pal.treeHi}" opacity=".85"/>
   </g>`;
 }
 
-/* ---------- трава ---------- */
+/* ---------- трава: короткие штрихи ---------- */
 function artBlades(from, to, col, n, base, hMin, hMax, seed) {
   let out = '';
   for (let i = 0; i < n; i++) {
     const t = i / n;
-    const x = from + (to - from) * t + Math.sin(i * 7.1 + seed) * 9;
+    const x = from + (to - from) * t + Math.sin(i * 7.1 + seed) * 10;
     const h = hMin + Math.abs(Math.cos(i * 3.7 + seed)) * (hMax - hMin);
-    const bend = Math.sin(i * 2.3 + seed) * 5;
-    out += `<path class="vs-blade" d="M${x.toFixed(0)} ${base} q${bend.toFixed(1)} ${(-h * .6).toFixed(1)} ${(bend * 1.6).toFixed(1)} ${(-h).toFixed(1)}"
-      stroke="${col}" stroke-width="${(1.1 + (i % 3) * .4).toFixed(1)}" fill="none" stroke-linecap="round" opacity=".85"
-      style="animation-delay:${((i % 9) * .27).toFixed(2)}s"/>`;
+    const lean = Math.sin(i * 2.3 + seed) * 4;
+    out += `<path class="vs-blade" d="M${x.toFixed(0)} ${base} l${lean.toFixed(1)} ${(-h).toFixed(1)}"
+      stroke="${col}" stroke-width="${(2 + (i % 3) * .4).toFixed(1)}" fill="none" stroke-linecap="round"/>
+      <path class="vs-blade" d="M${(x + 5).toFixed(0)} ${base} l${(-lean).toFixed(1)} ${(-h * .75).toFixed(1)}"
+      stroke="${col}" stroke-width="${(1.8 + (i % 2) * .4).toFixed(1)}" fill="none" stroke-linecap="round" opacity=".8"/>`;
   }
   return out;
 }
 
+/* ---------- луг: три пласта с контуром ---------- */
 function artField(pal, y0) {
-  const [c1, c2, c3] = pal.grass, b = pal.blade;
+  const g = `stroke="${VS_INK}" stroke-width="2.2" stroke-linejoin="round"`;
   return `
-    <path d="M0 ${y0} C 130 ${y0 - 26} 250 ${y0 + 14} 400 ${y0 - 6} C 560 ${y0 - 26} 690 ${y0 + 18} 800 ${y0 - 4} V420 H0Z" fill="${c1}"/>
-    <path d="M0 ${y0 + 34} C 150 ${y0 + 8} 300 ${y0 + 46} 470 ${y0 + 30} C 620 ${y0 + 16} 710 ${y0 + 44} 800 ${y0 + 32} V420 H0Z" fill="${c2}"/>
-    <path d="M0 ${y0 + 76} C 170 ${y0 + 50} 330 ${y0 + 88} 520 ${y0 + 70} C 660 ${y0 + 56} 730 ${y0 + 84} 800 ${y0 + 74} V420 H0Z" fill="${c3}"/>
-    <g filter="url(#vsS4)" opacity=".3" fill="${pal.warm}">
-      <ellipse cx="250" cy="${y0 + 12}" rx="150" ry="16"/>
-      <ellipse cx="600" cy="${y0 + 46}" rx="130" ry="14"/>
-    </g>
+    <path d="M0 ${y0} C 130 ${y0 - 26} 250 ${y0 + 14} 400 ${y0 - 6} C 560 ${y0 - 26} 690 ${y0 + 18} 800 ${y0 - 4} V420 H0Z" fill="${pal.hill2}" ${g}/>
+    <path d="M0 ${y0} C 130 ${y0 - 26} 250 ${y0 + 14} 400 ${y0 - 6} C 560 ${y0 - 26} 690 ${y0 + 18} 800 ${y0 - 4} V${y0 + 26} H0Z" fill="${pal.hill2Hi}" opacity=".7"/>
+    <path d="M0 ${y0 + 52} C 170 ${y0 + 28} 340 ${y0 + 66} 520 ${y0 + 48} C 660 ${y0 + 34} 730 ${y0 + 62} 800 ${y0 + 52} V420 H0Z" fill="${pal.front}" ${g}/>
     <g class="vs-grass">
-      ${artBlades(0, 800, b[0], 70, y0 + 6, 6, 14, 1)}
-      ${artBlades(0, 800, b[1], 60, y0 + 44, 8, 18, 3)}
-      ${artBlades(0, 800, b[2], 54, y0 + 84, 10, 22, 5)}
-      ${artBlades(20, 220, b[3], 26, y0 + 16, 14, 30, 7)}
-      ${artBlades(560, 790, b[3], 24, y0 + 20, 14, 30, 9)}
+      ${artBlades(0, 800, pal.grass, 22, y0 + 22, 6, 13, 1)}
+      ${artBlades(0, 800, pal.grass, 18, y0 + 62, 8, 16, 4)}
+      ${artBlades(60, 240, pal.grass, 10, y0 + 78, 11, 20, 9)}
+      ${artBlades(600, 780, pal.grass, 9, y0 + 82, 11, 20, 12)}
     </g>`;
 }
 
-/* ---------- окружение: дом, чемоданы, забор, посуда, панно ---------- */
+/* ---------- постройки: плоские фигуры с толстым контуром ---------- */
 function artEnv(set, pal) {
-  const wall = set === 'hotel' ? '#7d6651' : '#dccdaf';
-  const roof = set === 'hotel' ? '#5c4636' : '#9e4632';
+  const wall = pal.wall, roof = pal.roof;
   const house = `
-    <g class="vs-house">
-      <path d="M392 318 V222 h132 v96Z" fill="${wall}"/>
-      <path d="M380 226 L458 172 L536 226Z" fill="${roof}"/>
-      <path d="M380 226 L458 178 L536 226 L458 232Z" fill="#000" opacity=".12"/>
-      <rect x="414" y="244" width="30" height="26" rx="2" fill="#5d7c8c" opacity=".85"/>
-      <path d="M429 244 v26 M414 257 h30" stroke="${wall}" stroke-width="2.2"/>
-      <rect x="472" y="244" width="30" height="26" rx="2" fill="#5d7c8c" opacity=".7"/>
-      <path d="M487 244 v26 M472 257 h30" stroke="${wall}" stroke-width="2.2"/>
-      <rect x="444" y="282" width="26" height="34" rx="3" fill="#7a5a3e"/>
-      <circle cx="465" cy="300" r="2" fill="#e8c46a"/>
-      <path d="M392 318 h132" stroke="#000" stroke-width="2" opacity=".15"/>
+    <g class="vs-house" stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+      <path d="M392 330 V252 h128 v78Z" fill="${wall}"/>
+      <path d="M378 254 L456 200 L534 254Z" fill="${roof}"/>
+      <path d="M378 254 L456 208 L534 254Z" fill="${pal.roofHi}" opacity=".75"/>
+      <rect x="414" y="272" width="28" height="24" fill="${pal.window}"/>
+      <rect x="470" y="272" width="28" height="24" fill="${pal.window}"/>
+      <rect x="444" y="302" width="24" height="28" fill="${pal.door}"/>
     </g>`;
   const sets = {
     classroom: () => house,
     brush: () => `
-      <g opacity=".92">
-        <path d="M120 300 h150 v-96 h-150Z" fill="#efe6d2"/>
-        <path d="M110 204 L195 148 L280 204Z" fill="#b4543c"/>
-        <rect x="150" y="232" width="30" height="26" fill="#5d7c8c" opacity=".85"/>
-        <rect x="216" y="232" width="30" height="26" fill="#5d7c8c" opacity=".7"/>
-        <rect x="180" y="266" width="26" height="34" fill="#7a5a3e"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M104 330 V240 h140 v90Z" fill="${pal.wall}"/>
+        <path d="M92 242 L174 186 L256 242Z" fill="${pal.roof}"/>
+        <rect x="132" y="266" width="26" height="22" fill="${pal.window}"/>
+        <rect x="192" y="266" width="26" height="22" fill="${pal.window}"/>
+        <rect x="164" y="302" width="22" height="28" fill="${pal.door}"/>
       </g>`,
     airport: () => `
       ${house}
-      <g>
-        <rect x="250" y="304" width="46" height="30" rx="4" fill="#a8724a"/>
-        <rect x="258" y="297" width="11" height="9" rx="3" fill="#8d5c39"/>
-        <path d="M277 304 v30" stroke="#8d5c39" stroke-width="2"/>
-        <rect x="306" y="312" width="36" height="24" rx="4" fill="#7a6a52"/>
-        <path d="M324 312 v24" stroke="#5d5040" stroke-width="2"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M246 336 h50 v-32 h-50Z" fill="#b07a4c"/>
+        <path d="M246 304 h50 M246 322 h50" fill="none" stroke-width="2"/>
+        <path d="M296 336 h34 v-22 h-34Z" fill="#8d7a5e"/>
       </g>`,
     city: () => `
       ${house}
-      <g stroke="#8a6a4a" stroke-width="3" fill="none" opacity=".8">
-        <path d="M60 330 h180 M70 330 v-26 M100 330 v-32 M130 330 v-24 M160 330 v-30 M190 330 v-26 M220 330 v-22"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" fill="none">
+        <path d="M64 344 h170 M74 344 v-26 M104 344 v-30 M134 344 v-22 M164 344 v-28 M194 344 v-24 M224 344 v-20"/>
+      </g>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M700 344 v-26 q0 -6 6 -6 h40 q6 0 6 6 v26Z" fill="#c9b58e"/>
+        <path d="M726 312 v-30" stroke-width="3"/>
+        <circle cx="726" cy="278" r="8" fill="${pal.light}"/>
       </g>`,
     hotel: () => `
-      <g>
-        <path d="M372 318 V206 h176 v112Z" fill="${wall}"/>
-        <path d="M356 210 h208 l-10 -14 h-188Z" fill="${roof}"/>
-        <rect x="396" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".9"/>
-        <rect x="436" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".85"/>
-        <rect x="476" y="226" width="26" height="34" rx="2" fill="#f2d79a" opacity=".7"/>
-        <rect x="424" y="280" width="52" height="38" rx="3" fill="#5c4230"/>
-        <path d="M424 298 h52" stroke="#3f2c1f" stroke-width="2"/>
-        <ellipse cx="516" cy="264" rx="8" ry="10" fill="${pal.warm}" opacity=".9"/>
-        <ellipse cx="516" cy="268" rx="30" ry="26" fill="${pal.warm}" opacity=".2" filter="url(#vsS3)"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M372 330 V236 h176 v94Z" fill="${wall}"/>
+        <path d="M356 238 h208 l-8 -16 h-192Z" fill="${roof}"/>
+        <rect x="396" y="258" width="26" height="30" fill="${pal.window}"/>
+        <rect x="440" y="258" width="26" height="30" fill="${pal.window}"/>
+        <rect x="484" y="258" width="26" height="30" fill="${pal.window}"/>
+        <rect x="424" y="300" width="60" height="30" fill="${pal.door}"/>
       </g>
-      <g>
-        <ellipse cx="300" cy="336" rx="42" ry="8" fill="#4a3a2a" opacity=".45"/>
-        <path d="M274 336 q-2 -28 26 -28 q28 0 26 28Z" fill="#efe6d2"/>
-        <path d="M288 312 q12 -9 24 0" stroke="${pal.warm}" stroke-width="2.6" fill="none"/>
-        <ellipse cx="300" cy="306" rx="13" ry="4" fill="#c9b183"/>
+      <g stroke="${VS_INK}" stroke-width="2.2" fill="none">
+        <path d="M300 336 v-34 M280 302 h40" />
+      </g>
+      <g stroke="${VS_INK}" stroke-width="2.2" stroke-linejoin="round">
+        <path d="M282 302 q18 -12 36 0Z" fill="${pal.light}"/>
+        <path d="M288 336 h24 v-30 h-24Z" fill="${wall}"/>
       </g>`,
     cafe: () => `
-      <g>
-        <path d="M300 318 V212 h180 v106Z" fill="${wall}"/>
-        <path d="M288 216 L390 168 L492 216Z" fill="${roof}"/>
-        <path d="M288 216 L390 172 L492 216 L390 222Z" fill="#000" opacity=".1"/>
-        <rect x="326" y="232" width="38" height="30" rx="2" fill="#f2cf8e" opacity=".9"/>
-        <rect x="382" y="232" width="38" height="30" rx="2" fill="#f2cf8e" opacity=".8"/>
-        <path d="M326 247 h38 M345 232 v30" stroke="${wall}" stroke-width="2.2" opacity=".8"/>
-        <path d="M382 247 h38 M401 232 v30" stroke="${wall}" stroke-width="2.2" opacity=".8"/>
-        <rect x="416" y="278" width="40" height="40" rx="3" fill="#6b4a33"/>
-        <circle cx="436" cy="298" r="2.6" fill="#e8c46a"/>
-        <path d="M300 318 h180" stroke="#000" stroke-width="2" opacity=".12"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M300 330 V232 h180 v98Z" fill="${wall}"/>
+        <path d="M288 234 L390 180 L492 234Z" fill="${roof}"/>
+        <path d="M288 234 L390 188 L492 234Z" fill="${pal.roofHi}" opacity=".7"/>
+        <rect x="326" y="256" width="34" height="28" fill="${pal.window}"/>
+        <rect x="384" y="256" width="34" height="28" fill="${pal.window}"/>
+        <rect x="426" y="298" width="34" height="32" fill="${pal.door}"/>
       </g>
-      <g>
-        <path d="M232 320 v-40" stroke="#4a3a2a" stroke-width="4"/>
-        <ellipse cx="232" cy="274" rx="36" ry="7" fill="#c9b183"/>
-        <path d="M216 274 q0 -20 16 -20 q16 0 16 20Z" fill="#f0e4cf"/>
-        <path d="M224 256 q4 -10 0 -15 M236 256 q4 -10 0 -15" stroke="${pal.warm}" stroke-width="2" fill="none" opacity=".8"/>
-        <path d="M248 260 q9 0 9 7 q0 7 -9 7" stroke="#f0e4cf" stroke-width="3" fill="none"/>
+      <g stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round">
+        <path d="M214 336 v-34 h44 v34Z" fill="${wall}"/>
+        <path d="M236 302 q-16 0 -16 -12 q0 -12 16 -12 q16 0 16 12 q0 12 -16 12Z" fill="${pal.light}"/>
       </g>`,
     studio: () => house
   };
   return (sets[set] || sets.studio)();
 }
 
-/* ---------- причёски героев ---------- */
+/* ---------- причёски ---------- */
 function artHair(p, d) {
-  const c = p.hair, c2 = p.hair2 || p.hair;
+  const c = p.hair, c2 = p.hair;
+  const ink = `stroke="${VS_INK}" stroke-width="2.2" stroke-linejoin="round"`;
   if (p.style === 'long') {
     return `
-      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-6 -30 -48 -30 q-42 0 -48 30Z" fill="${c}"/>
-      <path d="M-48 -90 q-2 -52 48 -52 q50 0 48 52 q-12 -18 -22 -20 q-8 8 -22 6 q-16 4 -30 -4 q-12 4 -22 18Z" fill="${c}"/>
-      <path d="M-46 -88 q-4 30 -3 58 q1 18 6 28 q-12 -10 -15 -34 q-2 -28 2 -52Z" fill="${c}"/>
-      <path d="M46 -88 q4 30 3 58 q-1 18 -6 28 q12 -10 15 -34 q2 -28 -2 -52Z" fill="${c2}"/>
-      <path d="M-42 -84 q16 12 38 7 q-16 12 -40 4Z" fill="#fff" opacity=".09"/>`;
+      <path d="M-42 -84 q2 -42 42 -42 q40 0 42 42 q-8 -16 -42 -16 q-34 0 -42 16Z" fill="${c}" ${ink}/>
+      <path d="M-42 -82 q-10 32 -2 62 q-14 -16 -12 -42 q1 -12 14 -20Z" fill="${c}" ${ink}/>
+      <path d="M42 -82 q10 32 2 62 q14 -16 12 -42 q-1 -12 -14 -20Z" fill="${c2}" ${ink}/>`;
   }
   if (p.style === 'bun') {
     return `
-      <circle cx="${-44 * d}" cy="-104" r="17" fill="${c2}"/>
-      <circle cx="${-46 * d}" cy="-107" r="13" fill="${c}"/>
-      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-4 -14 -14 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -22 -4 q-8 4 -10 14Z" fill="${c}"/>
-      <path d="M-46 -90 q-2 -52 46 -52 q48 0 46 52 q-6 -32 -46 -32 q-40 0 -46 32Z" fill="${c2}"/>
-      <path d="M-42 -82 q14 10 30 6 q-12 10 -32 3Z" fill="#fff" opacity=".12"/>`;
+      <circle cx="${-40 * d}" cy="-98" r="14" fill="${c}" ${ink}/>
+      <path d="M-42 -84 q2 -44 42 -44 q40 0 42 44 q-8 -18 -42 -18 q-34 0 -42 18Z" fill="${c}" ${ink}/>`;
   }
   if (p.style === 'cap') {
     return `
-      <!-- волосы под кепкой -->
-      <path d="M-46 -92 q-2 -48 46 -48 q48 0 46 48 q-6 -24 -46 -24 q-40 0 -46 24Z" fill="${c}"/>
-      <!-- кепка: купол и козырёк -->
-      <path d="M-44 -96 q2 -50 44 -50 q42 0 44 50 q-14 -26 -44 -26 q-30 0 -44 26Z" fill="${c2}"/>
-      <path d="M-46 -96 q22 -12 46 -12 q24 0 46 12 q-2 6 -10 6 q-36 -8 -72 0 q-8 0 -10 -6Z" fill="${c2}"/>
-      <path d="M${-46 * d} -94 q${-22 * d} 2 ${-30 * d} 10 q${14 * d} 6 ${26 * d} -2Z" fill="${c2}" opacity=".95"/>
-      <path d="M-30 -110 q14 -14 32 -10 q-14 6 -22 14Z" fill="#fff" opacity=".14"/>`;
+      <path d="M-42 -88 q2 -40 42 -40 q40 0 42 40 q-8 -18 -42 -18 q-34 0 -42 18Z" fill="${c}" ${ink}/>
+      <path d="M-44 -90 q10 -46 44 -46 q34 0 44 46 q-14 -22 -44 -22 q-30 0 -44 22Z" fill="${p.coat2}" ${ink}/>
+      <path d="M${-44 * d} -90 q${-20 * d} 2 ${-28 * d} 9 q${13 * d} 6 ${24 * d} -2Z" fill="${p.coat2}" ${ink}/>`;
   }
-  return `
-    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-3 -14 -13 -18 q-9 6 -20 2 q-12 10 -26 6 q-14 4 -24 -4 q-8 4 -11 14Z" fill="${c}"/>
-    <path d="M-47 -92 q-2 -50 47 -50 q49 0 47 50 q-6 -30 -47 -30 q-41 0 -47 30Z" fill="${c2}"/>
-    <path d="M-40 -80 q14 8 30 5 q-12 9 -30 3Z" fill="#fff" opacity=".1"/>`;
+  return `<path d="M-42 -86 q2 -42 42 -42 q40 0 42 42 q-8 -16 -42 -16 q-34 0 -42 16Z" fill="${c}" ${ink}/>`;
 }
 
+/* ---------- герой: плоские тона, толстый контур, живая мимика ---------- */
 function artBust(p, side, speaking) {
   const d = side === 'left' ? 1 : -1;
   const X = (n) => (n * d).toFixed(1);
-  const FL = 'transform="translate(0 0) scale(-1 1)"'; /* отражение рукава */
+  const ink = `stroke="${VS_INK}" stroke-width="2.4" stroke-linejoin="round"`;
   return `
   <g class="vs-bust vs-bust-${side}${speaking ? ' is-live' : ''}"
-     transform="translate(${side === 'left' ? 138 : 664} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.02 : 1.05} 1)">
-    <ellipse class="vs-cast-shadow" cx="0" cy="96" rx="86" ry="12" fill="#2f3d24" opacity=".22"/>
+     transform="translate(${side === 'left' ? 144 : 658} ${side === 'left' ? 352 : 358}) scale(${side === 'left' ? 1.06 : 1.09} 1)">
+    <ellipse class="vs-cast-shadow" cx="0" cy="96" rx="80" ry="11" fill="${VS_INK}" opacity=".22"/>
 
     <g class="vs-bob">
-      <g class="vs-body">
-        <path d="M-88 70 q6 -42 48 -58 q20 -7 40 -7 q20 0 40 7 q42 16 48 58 l4 26 h-180Z" fill="${p.coat}"/>
-        <path d="M-88 70 q6 -42 48 -58 q10 -3 20 -5 q-26 20 -30 70Z" fill="${p.coat2}" opacity=".45"/>
-        <path d="M-30 -34 L0 -6 L30 -34 L20 -14 L0 10 L-20 -14Z" fill="${p.coat2}" opacity=".85"/>
-        <path d="M-30 -34 L0 -6 L-20 -14Z" fill="#000" opacity=".14"/>
-        <path d="M30 -34 L0 -6 L20 -14Z" fill="#fff" opacity=".08"/>
-        <path d="M-46 54 q22 8 46 2" stroke="${p.coat2}" stroke-width="2" fill="none" opacity=".3"/>
+      <g class="vs-body" ${ink}>
+        <path d="M-76 76 q6 -44 50 -58 q18 -7 30 -7 q14 0 30 7 q44 14 50 58 l2 18 h-164Z" fill="${p.coat}"/>
+        <path d="M-76 76 q6 -44 50 -58 q10 -3 20 -5 q-26 22 -30 82Z" fill="${p.coat2}"/>
+        <path d="M-26 -30 L0 -4 L26 -30 L18 -12 L0 8 L-18 -12Z" fill="${p.coat2}"/>
 
         <g class="vs-arm vs-arm-far">
-          <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}"/>
+          <path d="M-74 30 q-14 22 -16 48 q-1 10 7 10 q8 1 9 -9 q3 -24 12 -42Z" fill="${p.coat2}"/>
         </g>
         <g class="vs-arm vs-arm-near">
-          <path d="M-82 26 q-14 22 -16 52 q-1 10 7 10 q8 1 9 -9 q3 -26 12 -44Z" fill="${p.coat2}" opacity=".92" ${FL}/>
+          <path d="M74 30 q14 22 16 48 q1 10 -7 10 q-8 1 -9 -9 q-3 -24 -12 -42Z" fill="${p.coat2}" opacity=".92"/>
         </g>
 
-        <path d="M-22 -34 q10 12 28 6 l3 -30 q-16 10 -33 4Z" fill="${p.skin2}"/>
-        <path d="M-22 -34 q14 10 30 4 q-14 8 -30 2Z" fill="${p.skin2}" opacity=".7"/>
+        <path d="M-22 -34 q10 12 26 6 l2 -28 q-15 9 -30 4Z" fill="${p.skin}"/>
       </g>
 
       <g class="vs-head">
-        <path d="M-42 -80 q0 -50 42 -50 q42 0 42 50 q0 21 -6 34 q-11 30 -36 30 q-25 0 -36 -30 q-6 -13 -6 -34Z" fill="${p.skin}"/>
-        <path d="M-42 -92 q4 54 24 72 q-22 -8 -26 -44 q-1 -16 2 -28Z" fill="${p.skin2}" opacity=".35"/>
-        <path d="M-28 -118 q13 -11 31 -8 q-14 6 -24 15Z" fill="#fff" opacity=".18"/>
-        <path d="M-22 -26 q22 14 44 -2" stroke="${p.skin2}" stroke-width="2" fill="none" opacity=".2" stroke-linecap="round"/>
-        <path d="M${X(-40)} -70 q${X(-6)} 8 ${X(-2)} 16 q${X(4)} 2 ${X(6)} -2" fill="${p.skin}" stroke="${p.skin2}" stroke-width=".8" opacity=".85"/>
-        <path d="M${X(-40)} -66 q${X(3)} 4 0 9" stroke="${p.skin2}" stroke-width="1.2" fill="none" opacity=".6"/>
-
+        <path d="M-40 -78 q0 -46 40 -46 q40 0 40 46 q0 20 -6 32 q-11 28 -34 28 q-23 0 -34 -28 q-6 -12 -6 -32Z" fill="${p.skin}" ${ink}/>
         ${artHair(p, d)}
 
-        <g class="vs-brow">
-          <path d="M${X(-33)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
-          <path d="M${X(9)} -80 q${X(11)} -4 ${X(21)} 1" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+        <g class="vs-brow" stroke="${p.hair}" stroke-width="2.8" fill="none" stroke-linecap="round">
+          <path d="M${X(-31)} -76 q${X(10)} -4 ${X(19)} 0"/>
+          <path d="M${X(9)} -76 q${X(10)} -4 ${X(19)} 0"/>
         </g>
-
-        ${p.glasses ? `<g stroke="${p.glasses}" stroke-width="1.9" fill="none" opacity=".7" stroke-linejoin="round">
-          <path d="M${X(-29)} -70 h${X(20)} v14 h${X(-20)}Z"/>
-          <path d="M${X(6)} -70 h${X(20)} v14 h${X(-20)}Z"/>
-          <path d="M${X(-9)} -63 h${X(15)}"/>
-        </g>` : ''}
 
         <g class="vs-eye">
-          <ellipse cx="${-19 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+          <ellipse cx="${-19 * d}" cy="-60" rx="8" ry="9" fill="#fdf6ea" stroke="${VS_INK}" stroke-width="1.8"/>
           <g class="vs-pupil">
-            <ellipse cx="${-18 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
-            <circle cx="${-20 * d}" cy="-64.4" r="1.9" fill="#fff" opacity=".95"/>
-            <circle cx="${-16 * d}" cy="-58.4" r="1" fill="#fff" opacity=".5"/>
+            <circle cx="${-18 * d}" cy="-59.6" r="4.4" fill="${p.eye}"/>
+            <circle cx="${-20 * d}" cy="-61.6" r="1.5" fill="#fff"/>
           </g>
-          <path d="M${-26 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <path class="vs-lid" d="M-27 -63 q9 -3 18 0 q-9 9 -18 0Z" fill="${p.skin}"/>
+          <path class="vs-lid" d="M-27 -61.5 q8 -3 16 0 q-8 8 -16 0Z" fill="${p.skin}"/>
         </g>
         <g class="vs-eye">
-          <ellipse cx="${22 * d}" cy="-62" rx="7.4" ry="8.6" fill="#fbf4e9"/>
+          <ellipse cx="${19 * d}" cy="-60" rx="8" ry="9" fill="#fdf6ea" stroke="${VS_INK}" stroke-width="1.8"/>
           <g class="vs-pupil">
-            <ellipse cx="${23 * d}" cy="-61.5" rx="4.8" ry="5.8" fill="${p.eye}"/>
-            <circle cx="${21 * d}" cy="-64.4" r="1.9" fill="#fff" opacity=".95"/>
-            <circle cx="${25 * d}" cy="-58.4" r="1" fill="#fff" opacity=".5"/>
+            <circle cx="${20 * d}" cy="-59.6" r="4.4" fill="${p.eye}"/>
+            <circle cx="${18 * d}" cy="-61.6" r="1.5" fill="#fff"/>
           </g>
-          <path d="M${15 * d} -66 q${8 * d} -9 ${16 * d} -1" stroke="#3d2b28" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <path class="vs-lid" d="M13 -63 q9 -3 18 0 q-9 9 -18 0Z" fill="${p.skin}"/>
+          <path class="vs-lid" d="M11 -61.5 q8 -3 16 0 q-8 8 -16 0Z" fill="${p.skin}"/>
         </g>
 
-        <path d="M${X(3)} -52 q${X(3)} 6 ${X(-3)} 7" stroke="${p.skin2}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+        <path d="M${X(2)} -50 q${X(3)} 5 ${X(-3)} 6" stroke="#c08f68" stroke-width="2" fill="none" stroke-linecap="round"/>
 
         <g class="vs-mouth">
-          <path class="vs-mouth-closed" d="M${-7 * d} -33 q${7 * d} 5 ${14 * d} -1" stroke="#8c4a46" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <path class="vs-mouth-closed" d="M${-8 * d} -32 q${8 * d} 7 ${16 * d} -1" stroke="${VS_INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
           <g class="vs-mouth-open">
-            <path d="M${-6 * d} -33.5 q${6 * d} -2.4 ${12 * d} 0 q${-1.6 * d} 8.5 ${-6 * d} 8.5 q${-4.4 * d} 0 ${-6 * d} -8.5Z" fill="#8a4a45"/>
-            <path d="M${-4 * d} -32.6 q${4 * d} -1.4 ${8 * d} 0 q${-.8 * d} 2 ${-4 * d} 2 q${-3.2 * d} 0 ${-4 * d} -2Z" fill="#f2eee4" opacity=".85"/>
+            <path d="M${-7 * d} -34 q${7 * d} -2 ${14 * d} 0 q${-2 * d} 11 ${-7 * d} 11 q${-5 * d} 0 ${-7 * d} -11Z"
+                  fill="#8c4a45" stroke="${VS_INK}" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M${-4.6 * d} -33 q${4.6 * d} -1.4 ${9 * d} 0 q${-1 * d} 2.4 ${-4.6 * d} 2.4 q${-3.6 * d} 0 ${-4.6 * d} -2.4Z" fill="#f6f1e4"/>
           </g>
         </g>
 
-        <ellipse cx="${-31 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
-        <ellipse cx="${34 * d}" cy="-44" rx="8" ry="4.4" fill="#dc8378" opacity=".24"/>
-        <path d="M-38 -98 q7 -34 34 -38" stroke="#ffe8c2" stroke-width="4.5" fill="none" opacity=".22" stroke-linecap="round" filter="url(#vsS2)"/>
-      </g>
+        <ellipse cx="${-30 * d}" cy="-42" rx="7" ry="4" fill="#e08a72" opacity=".35"/>
+        <ellipse cx="${32 * d}" cy="-42" rx="7" ry="4" fill="#e08a72" opacity=".35"/>
 
-      <path d="M-100 48 q6 -46 52 -66" stroke="#ffe8c2" stroke-width="2.2" fill="none" opacity=".24" stroke-linecap="round"/>
+        ${p.glasses ? `<g stroke="${VS_INK}" stroke-width="2" fill="none" opacity=".85">
+          <path d="M${X(-29)} -68 h${X(20)} v14 h${X(-20)}Z"/>
+          <path d="M${X(8)} -68 h${X(20)} v14 h${X(-20)}Z"/>
+          <path d="M${X(-9)} -61 h${X(17)}"/>
+        </g>` : ''}
+      </g>
     </g>
   </g>`;
 }
@@ -1659,102 +1608,78 @@ function buildSceneStage(scene, lesson, state) {
   const right = VIDEO_CAST[rightName] || VIDEO_CAST['Рассказчик'];
   const leftLive = leftName === who || rightName !== who;
   const rightLive = rightName === who;
-  const [sx, sy, sr, sc] = pal.sun;
 
   return `
     <div class="vs-scene" style="--vig:${pal.vig}">
       <svg class="vs-art" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <defs>
           <linearGradient id="vsSky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="${pal.sky[0]}"/><stop offset=".34" stop-color="${pal.sky[1]}"/>
-            <stop offset=".64" stop-color="${pal.sky[2]}"/><stop offset="1" stop-color="${pal.sky[3]}"/>
+            <stop offset="0" stop-color="${pal.skyTop}"/>
+            <stop offset=".55" stop-color="${pal.skyMid}"/>
+            <stop offset="1" stop-color="${pal.skyLow}"/>
           </linearGradient>
-          <linearGradient id="vsCloudBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="${pal.cloud[0]}"/><stop offset=".52" stop-color="${pal.cloud[1]}"/>
-            <stop offset=".78" stop-color="${pal.cloud[2]}"/><stop offset="1" stop-color="${pal.cloud[3]}"/>
-          </linearGradient>
-          <radialGradient id="vsSun">
-            <stop offset="0" stop-color="${sc}" stop-opacity=".95"/>
-            <stop offset=".5" stop-color="${sc}" stop-opacity=".3"/>
-            <stop offset="1" stop-color="${sc}" stop-opacity="0"/>
+          <radialGradient id="vsVig" cx=".5" cy=".42" r=".86">
+            <stop offset=".62" stop-color="${pal.vig}" stop-opacity="0"/>
+            <stop offset="1" stop-color="${pal.vig}" stop-opacity=".5"/>
           </radialGradient>
-          <linearGradient id="vsHaze" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="${pal.far[1]}" stop-opacity=".55"/>
-            <stop offset="1" stop-color="${pal.far[2]}" stop-opacity="0"/>
-          </linearGradient>
-          <radialGradient id="vsVig" cx=".5" cy=".42" r=".82">
-            <stop offset=".55" stop-color="${pal.vig}" stop-opacity="0"/>
-            <stop offset="1" stop-color="${pal.vig}" stop-opacity=".62"/>
-          </radialGradient>
-          <filter id="vsS1" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4"/></filter>
-          <filter id="vsS2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2"/></filter>
-          <filter id="vsS3" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
-          <filter id="vsS4" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
-          <filter id="vsGrain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="4" seed="9"/>
+          <filter id="vsGrain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="5"/>
             <feColorMatrix type="saturate" values="0"/></filter>
         </defs>
 
         <rect width="800" height="420" fill="url(#vsSky)"/>
-        <ellipse cx="${sx}" cy="${sy}" rx="${sr}" ry="${sr * 0.7}" fill="url(#vsSun)"/>
+
+        <!-- солнце: плоский диск с ободком -->
+        <circle cx="676" cy="86" r="44" fill="${pal.sun}" stroke="${VS_INK}" stroke-width="2.2"/>
+        <circle cx="676" cy="86" r="44" fill="${pal.sunRim}" opacity=".55"/>
 
         <g class="vs-sky-clouds">
-          ${artCumulus(250, 112, 1.1, 1, pal, 1)}
-          ${artCumulus(578, 70, 0.78, 4, pal, 0.95)}
-          ${artCumulus(690, 148, 0.58, 2, pal, 0.9)}
-          ${artCumulus(72, 92, 0.46, 3, pal, 0.75)}
+          ${artCloud(214, 112, 1.05, pal, 1)}
+          ${artCloud(520, 58, 0.72, pal, 1)}
+          ${artCloud(700, 168, 0.56, pal, 0.95)}
+          ${artCloud(76, 88, 0.44, pal, 0.85)}
         </g>
 
-        <!-- низкие облака у горизонта -->
-        <g opacity=".55" fill="${pal.cloud[0]}" filter="url(#vsS3)">
-          <ellipse cx="120" cy="238" rx="70" ry="12"/>
-          <ellipse cx="330" cy="228" rx="90" ry="13"/>
-          <ellipse cx="600" cy="242" rx="80" ry="11"/>
-          <ellipse cx="740" cy="230" rx="60" ry="10"/>
+        <g class="vs-birds" stroke="${VS_INK}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5">
+          <path d="M382 132 q7 -6 14 0 q7 -6 14 0"/>
+          <path d="M424 118 q6 -5 12 0 q6 -5 12 0"/>
+          <path d="M404 150 q5 -4 10 0 q5 -4 10 0"/>
         </g>
 
-        <!-- горы в дымке -->
-        <g filter="url(#vsS3)">
-          <path d="M-40 288 C60 232 120 198 190 234 C240 260 270 280 300 292Z" fill="${pal.far[0]}" opacity=".6"/>
-          <path d="M230 294 C330 228 400 188 470 228 C520 256 550 278 580 294Z" fill="${pal.far[1]}" opacity=".65"/>
-          <path d="M500 292 C580 242 640 216 700 246 C740 264 770 282 800 292Z" fill="${pal.far[2]}" opacity=".55"/>
+        <!-- горы: плоские треугольники с контуром -->
+        <g stroke="${VS_INK}" stroke-width="2.2" stroke-linejoin="round">
+          <path d="M-30 300 L112 178 L238 300Z" fill="${pal.far[0]}"/>
+          <path d="M112 178 L142 214 L84 214Z" fill="${pal.snow}" stroke-width="1.6"/>
+          <path d="M186 300 L334 156 L472 300Z" fill="${pal.far[1]}"/>
+          <path d="M334 156 L368 200 L300 200Z" fill="${pal.snow}" stroke-width="1.6"/>
+          <path d="M424 300 L562 190 L702 300Z" fill="${pal.far[2]}"/>
         </g>
-        <rect y="248" width="800" height="76" fill="url(#vsHaze)"/>
 
         <!-- холмы -->
-        <path d="M0 302 C120 264 260 298 400 284 C540 270 660 302 800 278 V420 H0Z" fill="${pal.hill1}"/>
-        <path d="M0 332 C140 302 300 338 470 322 C610 308 700 338 800 324 V420 H0Z" fill="${pal.hill2}"/>
+        <path d="M0 300 C120 266 260 296 400 282 C540 268 660 300 800 278 V420 H0Z"
+              fill="${pal.hill1}" stroke="${VS_INK}" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M0 300 C120 266 260 296 400 282 C540 268 660 300 800 278 V310 H0Z" fill="${pal.hill1Hi}" opacity=".65"/>
 
-        <g class="vs-far-grass" opacity=".55">
-          ${artBlades(0, 800, pal.blade[2], 46, 318, 4, 9, 13)}
-          ${artBlades(0, 800, pal.blade[0], 40, 330, 5, 11, 17)}
-        </g>
-
-        ${artTree(112, 334, 0.66, pal)}
-        ${artTree(716, 344, 0.52, pal)}
-        ${artTree(672, 322, 0.32, pal)}
+        ${artTree(110, 334, 0.72, pal)}
+        ${artTree(716, 344, 0.56, pal)}
+        ${artTree(676, 322, 0.34, pal)}
 
         ${artField(pal, 336)}
 
         <!-- тропинка -->
-        <path d="M330 420 C360 392 392 372 404 350 C412 334 424 328 442 326 L466 326 C440 342 420 360 412 382 C404 402 392 412 372 420Z"
-              fill="${pal.path}" opacity=".42"/>
-        <path d="M352 420 C378 396 402 378 412 358" stroke="${pal.path}" stroke-width="1.5" fill="none" opacity=".3"/>
+        <path d="M332 420 C356 394 388 372 400 350 C408 334 420 328 438 326 L464 326 C438 342 416 360 408 382 C400 402 390 412 370 420Z"
+              fill="${pal.path}" stroke="${VS_INK}" stroke-width="2" stroke-linejoin="round"/>
 
         <g class="vs-env">${artEnv(loc.set, pal)}</g>
 
-        <!-- блики света и ветер -->
-        <g class="vs-rays" opacity=".35" fill="${pal.warm}">
-          <path d="M${sx - 40} ${sy} L${sx + 190} 420 L${sx + 60} 420Z" filter="url(#vsS4)"/>
-          <path d="M${sx + 30} ${sy} L${sx + 330} 420 L${sx + 220} 420Z" filter="url(#vsS4)"/>
+        <!-- тёплые блики: мягкие плоские пятна у горизонта -->
+        <g class="vs-shimmer" opacity=".22" fill="${pal.light}">
+          <ellipse cx="250" cy="262" rx="210" ry="26"/>
+          <ellipse cx="600" cy="272" rx="170" ry="20"/>
         </g>
-        <g class="vs-shimmer" opacity=".5">
-          <ellipse cx="300" cy="88" rx="150" ry="60" fill="${pal.warm}" opacity=".16" filter="url(#vsS4)"/>
-          <ellipse cx="700" cy="60" rx="120" ry="46" fill="${pal.warm}" opacity=".12" filter="url(#vsS4)"/>
-        </g>
-        <g class="vs-pollen" fill="#fff6d0" opacity=".55">
-          <circle cx="180" cy="250" r="2.2"/><circle cx="320" cy="214" r="1.7"/>
-          <circle cx="470" cy="262" r="2"/><circle cx="620" cy="232" r="1.6"/>
-          <circle cx="720" cy="276" r="2.1"/><circle cx="90" cy="290" r="1.8"/>
+        <g class="vs-pollen" fill="${pal.light}" opacity=".85">
+          <circle cx="180" cy="250" r="2.6"/><circle cx="320" cy="214" r="2"/>
+          <circle cx="470" cy="262" r="2.4"/><circle cx="620" cy="232" r="2"/>
+          <circle cx="720" cy="276" r="2.5"/><circle cx="90" cy="290" r="2.2"/>
         </g>
 
         <g class="vs-cast">
@@ -1763,7 +1688,7 @@ function buildSceneStage(scene, lesson, state) {
         </g>
 
         <rect width="800" height="420" fill="url(#vsVig)"/>
-        <rect width="800" height="420" filter="url(#vsGrain)" opacity=".07"/>
+        <rect width="800" height="420" filter="url(#vsGrain)" opacity=".05"/>
       </svg>
 
       <div class="vs-tag vs-tag-l">${esc(leftName)}</div>
@@ -1780,7 +1705,6 @@ function buildSceneStage(scene, lesson, state) {
       <div class="vs-loc">${esc(loc.label)}</div>
     </div>`;
 }
-
 
 const EXTERNAL_VIDEOS = [
   {
