@@ -59,6 +59,46 @@ function save() {
 }
 window.__state = () => state;
 window.__setState = (s) => { state = { ...DEFAULT_STATE, ...s }; Store.set(KEY, JSON.stringify(state)); };
+
+/* Слияние серверного прогресса с локальным.
+   Нужно, когда ученик занимается и на телефоне, и на компьютере:
+   берём лучшее из двух состояний, а не «кто последний сохранил». */
+function mergeProgress(incoming) {
+  if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return state;
+  const server = incoming;
+
+  const lessons = Object.assign({}, server.lessons || {});
+  Object.keys(state.lessons || {}).forEach(id => {
+    const lv = state.lessons[id] || {};
+    const sv = lessons[id];
+    if (!sv) { lessons[id] = lv; return; }
+    lessons[id] = Object.assign({}, sv, lv, {
+      score: Math.max(Number(lv.score) || 0, Number(sv.score) || 0),
+      done: !!(lv.done || sv.done),
+      at: Math.max(Number(lv.at) || 0, Number(sv.at) || 0)
+    });
+  });
+
+  // Карточки: локальные «свежее» по коробке, серверные дополняют список.
+  const cards = Object.assign({}, server.cards || {}, state.cards || {});
+  const days = Array.from(new Set(
+    [].concat(server.days || [], state.days || []).filter(d => typeof d === 'string')
+  )).sort().slice(-400);
+  const quizLog = [].concat(server.quizLog || [], state.quizLog || [])
+    .filter(q => q && typeof q === 'object').slice(-500);
+
+  state = Object.assign({}, DEFAULT_STATE, server, state, {
+    lessons, cards, days, quizLog,
+    totalRight: Math.max(Number(state.totalRight) || 0, Number(server.totalRight) || 0),
+    totalWrong: Math.max(Number(state.totalWrong) || 0, Number(server.totalWrong) || 0),
+    streak: Math.max(Number(state.streak) || 0, Number(server.streak) || 0),
+    lastDay: (String(state.lastDay || '') > String(server.lastDay || ''))
+      ? state.lastDay : server.lastDay
+  });
+  Store.set(KEY, JSON.stringify(state));
+  return state;
+}
+window.__mergeProgress = mergeProgress;
 window.__lessonTitle = (id) => (LESSONS[id] && LESSONS[id].title) || id;
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -74,6 +114,22 @@ function touchDay() {
   }
 }
 
+/* ---------- Настройки (скорость речи, тема, звуки) ---------- */
+const PREFS = {
+  get slow() { return Store.get('zh_rate') === 'slow'; },
+  set slow(v) { Store.set('zh_rate', v ? 'slow' : 'normal'); },
+  get theme() { return Store.get('zh_theme') === 'light' ? 'light' : 'dark'; },
+  set theme(v) {
+    Store.set('zh_theme', v === 'light' ? 'light' : 'dark');
+    if (typeof document !== 'undefined') document.documentElement.dataset.theme = v === 'light' ? 'light' : '';
+  },
+  get sfx() { return Store.get('zh_sfx') !== 'off'; },
+  set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
+};
+if (typeof document !== 'undefined' && PREFS.theme === 'light') {
+  document.documentElement.dataset.theme = 'light';
+}
+
 /* ---------- Речь (TTS) ---------- */
 let voicesReady = false;
 function initVoices() {
@@ -84,13 +140,13 @@ if ('speechSynthesis' in window) {
   initVoices();
   speechSynthesis.onvoiceschanged = initVoices;
 }
-function speak(text, rate = 0.85) {
+function speak(text, rate) {
   if (!('speechSynthesis' in window)) { toast('Браузер не поддерживает озвучку'); return; }
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-CN';
-    u.rate = rate;
+    u.rate = rate !== undefined ? rate : (PREFS.slow ? 0.62 : 0.88);
     const v = speechSynthesis.getVoices().find(x => /zh|cmn|Chinese/i.test(x.lang + x.name));
     if (v) u.voice = v;
     speechSynthesis.speak(u);
@@ -101,8 +157,53 @@ function toneBtn(text, cls = 'speak') {
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-speak]');
-  if (b) { e.preventDefault(); speak(b.dataset.speak); }
+  if (b) { e.preventDefault(); e.stopPropagation(); speak(b.dataset.speak); }
 });
+
+/* ---------- Звуковые эффекты и конфетти ---------- */
+function playSfx(kind) {
+  if (!PREFS.sfx) return;
+  try {
+    const ctx = getCtx();
+    const t0 = ctx.currentTime;
+    const tone = (freq, start, dur, type = 'sine', gain = 0.08) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.001, start);
+      g.gain.exponentialRampToValueAtTime(gain, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(start); o.stop(start + dur);
+    };
+    if (kind === 'ok') {
+      tone(523.25, t0, 0.14);
+      tone(659.25, t0 + 0.07, 0.22);
+    } else if (kind === 'bad') {
+      tone(220, t0, 0.16, 'triangle', 0.07);
+      tone(175, t0 + 0.08, 0.2, 'triangle', 0.06);
+    } else if (kind === 'win') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, t0 + i * 0.08, 0.3, 'sine', 0.09));
+    }
+  } catch (e) { }
+}
+function launchConfetti() {
+  try {
+    const box = document.createElement('div');
+    box.className = 'confetti-box';
+    const colors = ['#e0b354', '#d0453a', '#5aa88f', '#6a9fd4', '#ffd9d3'];
+    for (let i = 0; i < 34; i++) {
+      const p = document.createElement('i');
+      p.style.left = (Math.random() * 100) + '%';
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.45) + 's';
+      p.style.animationDuration = (1.6 + Math.random() * 0.9) + 's';
+      p.style.setProperty('--dx', ((Math.random() - 0.5) * 160) + 'px');
+      box.appendChild(p);
+    }
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 2800);
+  } catch (e) { }
+}
 
 /* ---------- Уведомления ---------- */
 let toastEl;
@@ -127,12 +228,16 @@ const ROUTES = {
   write: renderWrite,
   read: renderRead,
   phrases: renderPhrases,
+  videos: renderVideos,
+  tutor: renderTutor,
   stats: renderStats,
   dict: renderDict,
   class: (root) => Auth.renderClass(root),
   account: renderAccount
 };
 function route() {
+  if (typeof videoStop === 'function') videoStop();
+  clearQuizKeys();
   const view = $('#view');
   view.innerHTML = '';
   if (window.Auth && Auth.needsAuth() && !window.__guest) { renderAuthGate(); return; }
@@ -142,6 +247,9 @@ function route() {
   view.scrollTop = 0;
   fn(view, rest);
   $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
+  $$('#mnav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
+  const fab = $('#tutorFab');
+  if (fab) fab.style.display = name === 'tutor' ? 'none' : 'flex';
   window.scrollTo(0, 0);
 }
 function renderAuthGate() {
@@ -181,6 +289,17 @@ function renderHome(root) {
     ob.appendChild(obBtn);
     root.appendChild(ob);
   }
+  if (window.Auth && Auth.user && Auth.grade && (Auth.grade.grade || Auth.grade.comment)) {
+    const gb = el('div', 'grade-banner');
+    gb.innerHTML = `
+      <div class="gb-left">
+        <span class="gb-tag">🎓 Оценка учителя</span>
+        ${Auth.grade.grade ? `<b class="gb-val">${esc(Auth.grade.grade)}</b>` : ''}
+        ${Auth.grade.comment ? `<span class="gb-cmt">${esc(Auth.grade.comment)}</span>` : ''}
+      </div>
+      <a class="btn btn-sm btn-ghost" href="#/account">В профиль →</a>`;
+    root.appendChild(gb);
+  }
   const id = nextLesson();
   const l = LESSONS[id];
   const mod = MODULES.find(m => m.lessons.includes(id));
@@ -191,6 +310,7 @@ function renderHome(root) {
 
   root.appendChild(el('div', 'hero', `
     <div class="hero-bg">学</div>
+    <div class="hero-seal" title="汉语学习">汉<br>语</div>
     <div class="hero-inner">
       <div class="hero-tag">汉语学习 · 学以致用</div>
       <h1>Привет, 同学!</h1>
@@ -198,6 +318,8 @@ function renderHome(root) {
       <div class="hero-actions">
         <a class="btn btn-primary" href="#/lesson/${id}">Продолжить урок →</a>
         <a class="btn btn-ghost" href="#/cards">Карточки${due ? ` <span class="pill">${due}</span>` : ''}</a>
+        <a class="btn btn-ghost" href="#/videos">🎬 Видео</a>
+        <a class="btn btn-ghost" href="#/tutor">🤖 ИИ-агент</a>
       </div>
       <div class="hero-stats">
         <div><b>${done}/${total}</b><span>уроков</span></div>
@@ -214,6 +336,8 @@ function renderHome(root) {
     { r: 'plan', ic: '📚', t: 'План курса', s: '4 модуля · 15 уроков' },
     { r: 'diag', ic: '🎯', t: 'Определить уровень', s: 'Тест из 50 вопросов' },
     { r: 'cards', ic: '🗂️', t: 'Карточки', s: due ? `${due} к повторению` : 'Все повторены — красавчик!' },
+    { r: 'videos', ic: '🎬', t: 'Видео-уроки', s: 'Мини-плеер + YouTube' },
+    { r: 'tutor', ic: '🤖', t: 'ИИ-репетитор', s: 'Спросить Сяо Мина' },
     { r: 'tones', ic: '🎵', t: 'Тоны', s: 'Тренажёр 4-го тона' },
     { r: 'write', ic: '✍️', t: 'Пропись', s: 'Иероглифы кистью' },
     { r: 'read', ic: '📄', t: 'Чтение', s: '3 текста с пиньинь' },
@@ -343,9 +467,25 @@ function lessonNavHTML(id) {
 }
 
 function quizSource() { return quizState.lesson === 'diag' ? DIAGNOSTIC : LESSONS[quizState.lesson]; }
+
+/* Горячие клавиши в практике: 1–4 — выбор ответа, Enter — следующий вопрос.
+   Без этого на компьютере приходилось каждый раз тянуться к мыши. */
+function setQuizKeys(handler) {
+  clearQuizKeys();
+  if (!quizState) return;
+  quizState._keys = handler;
+  document.addEventListener('keydown', handler);
+}
+function clearQuizKeys() {
+  if (quizState && quizState._keys) {
+    document.removeEventListener('keydown', quizState._keys);
+    quizState._keys = null;
+  }
+}
 function renderQuestion(host) {
   const l = quizSource();
   const q = l.quiz[quizState.idx];
+  clearQuizKeys();
   host.innerHTML = '';
   if (!q) { finishQuiz(host); return; }
 
@@ -366,7 +506,10 @@ function renderQuestion(host) {
     state.totalWrong += ok ? 0 : 1;
     if (ok) quizState.correct++;
     quizState.answers.push({ q: q.q, ok });
+    playSfx(ok ? 'ok' : 'bad');
     fb.className = 'q-feedback ' + (ok ? 'ok' : 'bad');
+    fb.setAttribute('role', 'status');
+    fb.setAttribute('aria-live', 'polite');
     fb.innerHTML = (ok ? '✅ Верно! ' : '❌ Не совсем. ') + (expl || '');
     fb.style.display = 'block';
     const next = el('button', 'btn btn-primary', quizState.idx + 1 >= l.quiz.length ? 'Итоги →' : 'Далее →');
@@ -392,6 +535,24 @@ function renderQuestion(host) {
       opts.appendChild(b);
     });
     body.appendChild(opts);
+    body.appendChild(el('div', 'q-hint', 'Клавиши 1–4 — ответ, Enter — далее'));
+    setQuizKeys(e => {
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
+      if (body.dataset.answered) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const nb = controls.querySelector('button');
+          if (nb) nb.click();
+        }
+        return;
+      }
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= q.o.length) {
+        e.preventDefault();
+        const btns = $$('.opt', opts);
+        if (btns[n - 1]) btns[n - 1].click();
+      }
+    });
     if (q.k === 'listen') {
       const pb = el('div', 'listen-row', `${toneBtn(q.o[q.a], 'speak big')} <span>нажмите, чтобы услышать</span>`);
       body.appendChild(pb);
@@ -454,6 +615,7 @@ function renderQuestion(host) {
 }
 
 function finishQuiz(host) {
+  clearQuizKeys();
   const l = quizSource();
   const score = quizState.correct / l.quiz.length;
   if (quizState.lesson === 'diag') { renderDiagResult(host, score); return; }
@@ -465,7 +627,10 @@ function finishQuiz(host) {
     at: Date.now()
   };
   state.quizLog.push({ lesson: quizState.lesson, score, at: Date.now() });
+  // Без ограничения лог рос бы годами и раздувал и браузер, и запросы.
+  state.quizLog = state.quizLog.slice(-500);
   save();
+  if (score >= 0.6) { playSfx('win'); launchConfetti(); }
   host.innerHTML = `<div class="quiz-done">
       <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
       <h3>Результат: ${quizState.correct} из ${l.quiz.length} (${Math.round(score * 100)}%)</h3>
@@ -550,14 +715,21 @@ function renderDiagResult(host, score) {
    ============================================================ */
 const BOX_DAYS = [0, 1, 2, 4, 8, 16];
 function cardKey(w) { return w.h; }
-function addCard(h, p, r) {
+function addCard(h, p, r, deferSave = false) {
   if (!state.cards[cardKey({ h })]) state.cards[cardKey({ h })] = { box: 0, due: Date.now(), right: 0, wrong: 0, p, r };
-  else { const c = state.cards[cardKey({ h })]; c.p = p; c.r = r; }
-  save();
+  else { const c = state.cards[cardKey({ h })]; if (p) c.p = p; if (r) c.r = r; }
+  if (!deferSave) save();
 }
 function cardPool() {
   const pool = [];
-  Object.entries(state.cards).forEach(([k, c]) => pool.push({ h: k, p: c.p || '', r: c.r || '' }));
+  Object.entries(state.cards).forEach(([k, c]) => {
+    const fb = (!c.r || !c.p) ? lookupCardInfo(k) : null;
+    pool.push({
+      h: k,
+      p: c.p || (fb && fb.p) || '',
+      r: c.r || (fb && fb.r) || ''
+    });
+  });
   return pool;
 }
 let cardSession = { pool: [], idx: 0, right: 0, wrong: 0, revealed: false };
@@ -569,14 +741,39 @@ function renderCards(root) {
 
   const pool = cardPool();
   const due = dueCards();
+  const hard = pool.filter(c => {
+    const st = state.cards[c.h];
+    return st && st.wrong > 0 && (st.wrong >= st.right || st.box === 0);
+  });
   const bar = el('div', 'panel srs-bar');
   bar.appendChild(el('div', 'srs-stats', `
     <div><b>${pool.length}</b><span>всего карточек</span></div>
     <div><b>${due.length}</b><span>к повторению</span></div>
+    <div><b>${hard.length}</b><span>сложных</span></div>
     <div><b>${state.streak}</b><span>дней подряд</span></div>`));
   bar.appendChild(el('div', 'btn-row', `
     <button class="btn btn-primary" id="startSrs">▶ Начать повторение (${due.length || pool.length})</button>
+    ${hard.length ? `<button class="btn btn-ghost" id="startHard">🎯 Работа над ошибками (${hard.length})</button>` : ''}
     <button class="btn btn-ghost" id="addAllVocab">＋ Добавить весь словарь курса</button>`));
+
+  /* форма добавления своей карточки */
+  const customForm = el('form', 'custom-card-form', `
+    <input class="cc-in" name="h" placeholder="Иероглиф (напр. 加油)" required>
+    <input class="cc-in" name="p" placeholder="Пиньинь (jiāyóu)">
+    <input class="cc-in wide" name="r" placeholder="Перевод (не сдавайся!)" required>
+    <button class="btn btn-sm btn-primary" type="submit">＋ Своё слово</button>`);
+  customForm.onsubmit = (e) => {
+    e.preventDefault();
+    const h = customForm.querySelector('[name="h"]').value.trim();
+    const p = customForm.querySelector('[name="p"]').value.trim();
+    const r = customForm.querySelector('[name="r"]').value.trim();
+    if (!h || !r) return;
+    addCard(h, p, r);
+    toast(`「${h}» добавлено`);
+    root.innerHTML = '';
+    renderCards(root);
+  };
+  bar.appendChild(customForm);
   wrap.appendChild(bar);
 
   const host = el('div', 'srs-host');
@@ -584,15 +781,22 @@ function renderCards(root) {
   root.appendChild(wrap);
 
   $('#startSrs').onclick = () => {
-    const p = due.length ? due.map(k => pool.find(c => c.h === k)) : pool;
+    const p = (due.length ? due.map(k => pool.find(c => c.h === k)) : pool).filter(Boolean);
     if (!p.length) { toast('Сначала добавьте карточки'); return; }
     cardSession = { pool: shuffle(p), idx: 0, right: 0, wrong: 0, revealed: false };
     renderCard(host);
   };
+  const hb = $('#startHard');
+  if (hb) hb.onclick = () => {
+    cardSession = { pool: shuffle(hard), idx: 0, right: 0, wrong: 0, revealed: false };
+    renderCard(host);
+  };
   $('#addAllVocab').onclick = () => {
     let n = 0;
-    Object.values(LESSONS).forEach(l => l.vocab.forEach(w => { addCard(w.h, w.p, w.r); n++; }));
+    Object.values(LESSONS).forEach(l => l.vocab.forEach(w => { addCard(w.h, w.p, w.r, true); n++; }));
+    save();
     toast(`Добавлено слов: ${n}`);
+    root.innerHTML = '';
     renderCards(root);
   };
   root.appendChild(cardListPanel());
@@ -604,12 +808,13 @@ function cardListPanel() {
   if (!pool.length) { p.appendChild(el('div', 'empty', 'Пока пусто. Нажмите «＋» рядом со словом в уроке или добавьте весь словарь.')); return p; }
   const list = el('div', 'card-list');
   pool.forEach(c => {
-    const st = state.cards[c.h];
+    const st = state.cards[c.h] || { box: 0 };
+    const box = Math.max(0, Math.min(5, Number(st.box || 0)));
     const row = el('div', 'cl-row', `
       <span class="cl-h">${esc(c.h)}</span>
       <span class="cl-p">${esc(c.p)}</span>
-      <span class="cl-r">${esc(c.r)}</span>
-      <span class="cl-box" title="Коробка Лейтнера">${'▮'.repeat(st.box + 1)}<i>${'▯'.repeat(5 - st.box)}</i></span>
+      <span class="cl-r">${esc(c.r || '—')}</span>
+      <span class="cl-box" title="Коробка Лейтнера">${'▮'.repeat(box + 1)}<i>${'▯'.repeat(5 - box)}</i></span>
       <button class="cl-del" data-del="${esc(c.h)}" title="Удалить">✕</button>`);
     list.appendChild(row);
   });
@@ -632,11 +837,26 @@ document.addEventListener('click', e => {
 });
 function shuffle(a) { const c = a.slice(); for (let i = c.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [c[i], c[j]] = [c[j], c[i]]; } return c; }
 
+function lookupCardInfo(h) {
+  for (const l of Object.values(LESSONS)) {
+    const w = l.vocab.find(x => x.h === h);
+    if (w) return w;
+  }
+  if (typeof PHRASES !== 'undefined') {
+    for (const cat of PHRASES) {
+      const w = (cat.items || []).find(x => x.h === h);
+      if (w) return w;
+    }
+  }
+  return null;
+}
+
 function renderCard(host) {
   host.innerHTML = '';
   const s = cardSession;
   const c = s.pool[s.idx];
   if (!c) {
+    if (s.right > 0 && s.right >= s.wrong) { playSfx('win'); launchConfetti(); }
     host.appendChild(el('div', 'panel quiz-done', `
       <div class="qd-emoji">🏆</div>
       <h3>Сессия завершена!</h3>
@@ -645,41 +865,80 @@ function renderCard(host) {
     $('#againSrs').onclick = () => { cardSession = { pool: shuffle(s.pool), idx: 0, right: 0, wrong: 0, revealed: false }; renderCard(host); };
     return;
   }
-  const st = state.cards[c.h];
-  const card = el('div', 'flashcard');
-  card.appendChild(el('div', 'fc-progress', `Карточка ${s.idx + 1} / ${s.pool.length}`));
-  card.appendChild(el('div', 'fc-hanzi', esc(c.h)));
-  card.appendChild(el('div', 'fc-pinyin', esc(c.p)));
-  const rev = el('div', 'fc-reveal', `<b>${esc(c.r)}</b><br><span class="fc-tip">Перевод</span>`);
-  if (!s.revealed) {
-    const b = el('button', 'btn btn-primary fc-show', 'Показать перевод');
-    b.onclick = () => { s.revealed = true; rev.style.display = 'block'; b.remove(); renderActions(); };
-    card.appendChild(b);
-  } else card.appendChild(rev);
-  card.appendChild(el('div', 'fc-speak-row', `${toneBtn(c.h, 'speak big')}<span>произношение</span>`));
+  const fallback = (!c.r || !c.p) ? lookupCardInfo(c.h) : null;
+  const py = c.p || (fallback && fallback.p) || '';
+  const tr = c.r || (fallback && fallback.r) || '—';
+
+  const card = el('div', 'flashcard fc-3d');
+  const inner = el('div', 'fc-inner' + (s.revealed ? ' flipped' : ''));
+  const front = el('div', 'fc-face fc-front');
+  const back = el('div', 'fc-face fc-back');
+
+  front.appendChild(el('div', 'fc-progress', `Карточка ${s.idx + 1} / ${s.pool.length}`));
+  front.appendChild(el('div', 'fc-hanzi', esc(c.h)));
+  front.appendChild(el('div', 'fc-pinyin', esc(py)));
+  const showBtn = el('button', 'btn btn-primary fc-show', 'Показать перевод');
+  front.appendChild(showBtn);
+  front.appendChild(el('div', 'fc-speak-row', `${toneBtn(c.h, 'speak big')}<span>произношение · нажмите карточку</span>`));
+
+  back.appendChild(el('div', 'fc-progress', `Карточка ${s.idx + 1} / ${s.pool.length}`));
+  back.appendChild(el('div', 'fc-hanzi sm', esc(c.h)));
+  back.appendChild(el('div', 'fc-pinyin', esc(py)));
+  back.appendChild(el('div', 'fc-reveal', `<b>${esc(tr)}</b><br><span class="fc-tip">Перевод</span>`));
+  back.appendChild(el('div', 'fc-speak-row', `${toneBtn(c.h, 'speak big')}<span>свайп ← снова · → помню</span>`));
+
+  inner.appendChild(front);
+  inner.appendChild(back);
+  card.appendChild(inner);
   host.appendChild(card);
 
   const actions = el('div', 'fc-actions');
   host.appendChild(actions);
+
+  const grade = (ok) => {
+    const cur = state.cards[c.h];
+    if (ok) { cur.box = Math.min(cur.box + 1, BOX_DAYS.length - 1); cur.right++; s.right++; playSfx('ok'); }
+    else { cur.box = 0; cur.wrong++; s.wrong++; playSfx('bad'); }
+    cur.due = Date.now() + BOX_DAYS[cur.box] * 864e5;
+    save();
+    s.idx++; s.revealed = false;
+    renderCard(host);
+  };
+
   function renderActions() {
     actions.innerHTML = '';
     if (!s.revealed) return;
     const again = el('button', 'btn btn-ghost', '↻ Снова');
     const good = el('button', 'btn btn-primary', '✓ Помню');
-    const grade = (ok) => {
-      const cur = state.cards[c.h];
-      if (ok) { cur.box = Math.min(cur.box + 1, BOX_DAYS.length - 1); cur.right++; s.right++; }
-      else { cur.box = 0; cur.wrong++; s.wrong++; }
-      cur.due = Date.now() + BOX_DAYS[cur.box] * 864e5;
-      save();
-      s.idx++; s.revealed = false;
-      renderCard(host);
-    };
     again.onclick = () => grade(false);
     good.onclick = () => grade(true);
     actions.appendChild(again);
     actions.appendChild(good);
   }
+
+  const reveal = () => {
+    if (s.revealed) return;
+    s.revealed = true;
+    inner.classList.add('flipped');
+    renderActions();
+  };
+  showBtn.onclick = (e) => { e.stopPropagation(); reveal(); };
+  card.onclick = (e) => { if (!e.target.closest('button')) reveal(); };
+
+  /* свайп влево/вправо на телефоне */
+  let touchX = null;
+  card.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches[0]) touchX = e.touches[0].clientX;
+  }, { passive: true });
+  card.addEventListener('touchend', (e) => {
+    if (touchX === null || !e.changedTouches || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    touchX = null;
+    if (!s.revealed && Math.abs(dx) > 40) { reveal(); return; }
+    if (s.revealed && dx < -65) grade(false);
+    else if (s.revealed && dx > 65) grade(true);
+  }, { passive: true });
+
   renderActions();
 }
 
@@ -871,9 +1130,10 @@ function renderWriteCard(host) {
   canvas.width = size * 2; canvas.height = size * 2;
   canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
   const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
+  if (ctx) ctx.scale(2, 2);
 
   function grid() {
+    if (!ctx) return;
     ctx.clearRect(0, 0, size, size);
     ctx.fillStyle = '#fffdf7'; ctx.fillRect(0, 0, size, size);
     ctx.strokeStyle = '#e3b9a8'; ctx.lineWidth = 1;
@@ -889,36 +1149,95 @@ function renderWriteCard(host) {
   }
   grid();
 
+  let demoTimer = null;
+  function playDemo() {
+    if (!ctx) return;
+    clearInterval(demoTimer);
+    grid();
+    let step = 0;
+    const total = 24;
+    demoTimer = setInterval(() => {
+      step++;
+      grid();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, size, (size * step) / total);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(208,69,58,0.68)';
+      ctx.font = `${Math.round(size * 0.82)}px "Noto Serif SC", "Songti SC", serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(item.h, size / 2, size / 2 + size * 0.03);
+      ctx.restore();
+      if (step >= total) {
+        clearInterval(demoTimer);
+        setTimeout(grid, 700);
+      }
+    }, 45);
+  }
+
   let drawing = false;
   const pos = e => {
     const r = canvas.getBoundingClientRect();
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-    return [cx * (size / r.width), cy * (size / r.height)];
+    let clientX, clientY;
+    if (e.touches && e.touches.length) {
+      clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length && !e.clientX) {
+      clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX; clientY = e.clientY;
+    }
+    return [(clientX - r.left) * (size / r.width), (clientY - r.top) * (size / r.height)];
   };
-  const start = e => { e.preventDefault(); drawing = true; const [x, y] = pos(e); ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.1, y + 0.1); ctx.stroke(); };
-  const move = e => { if (!drawing) return; e.preventDefault(); const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); };
+  const start = e => { if (!ctx) return; clearInterval(demoTimer); e.preventDefault(); drawing = true; const [x, y] = pos(e); ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.1, y + 0.1); ctx.stroke(); };
+  const move = e => { if (!drawing || !ctx) return; e.preventDefault(); const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); };
   const end = () => { drawing = false; };
-  canvas.addEventListener('mousedown', start);
-  canvas.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', end);
-  canvas.addEventListener('touchstart', start, { passive: false });
-  canvas.addEventListener('touchmove', move, { passive: false });
-  canvas.addEventListener('touchend', end);
+
+  /* Pointer-события покрывают мышь, палец и стилус одним путём.
+     mousedown/touchstart оставлены как запасной вариант для старых браузеров. */
+  if (window.PointerEvent) {
+    canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); start(e); });
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+  } else {
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  }
+
+  /* Доступность: поле письма было недостижимо с клавиатуры и не описано
+     для скринридера. Клавиатурный пользователь может пропустить знак. */
+  canvas.tabIndex = 0;
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label',
+    `Пропись иероглифа ${item.h}. Нарисуйте знак мышью, пальцем или стилусом.`);
+  canvas.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const idx = (writeState.idx + 1) % HANDWRITING.length;
+      writeState.idx = idx;
+      renderWriteCard(host);
+    }
+  });
 
   box.appendChild(canvas);
   p.appendChild(box);
 
   const ctr = el('div', 'write-ctr');
   const prev = el('button', 'btn btn-ghost', '←');
-  prev.onclick = () => { writeState.idx = (writeState.idx - 1 + HANDWRITING.length) % HANDWRITING.length; renderWriteCard(host); };
+  prev.onclick = () => { clearInterval(demoTimer); writeState.idx = (writeState.idx - 1 + HANDWRITING.length) % HANDWRITING.length; renderWriteCard(host); };
   const next = el('button', 'btn btn-primary', 'Следующий →');
-  next.onclick = () => { writeState.idx = (writeState.idx + 1) % HANDWRITING.length; renderWriteCard(host); };
+  next.onclick = () => { clearInterval(demoTimer); writeState.idx = (writeState.idx + 1) % HANDWRITING.length; renderWriteCard(host); };
+  const demo = el('button', 'btn btn-ghost', '▶ Образец');
+  demo.onclick = () => playDemo();
   const clr = el('button', 'btn btn-ghost', '🧽 Очистить');
-  clr.onclick = () => grid();
+  clr.onclick = () => { clearInterval(demoTimer); grid(); };
   const spk = el('button', 'btn btn-ghost', '🔊');
   spk.onclick = () => speak(item.h);
-  ctr.appendChild(prev); ctr.appendChild(clr); ctr.appendChild(spk); ctr.appendChild(next);
+  ctr.appendChild(prev); ctr.appendChild(demo); ctr.appendChild(clr); ctr.appendChild(spk); ctr.appendChild(next);
   p.appendChild(ctr);
   host.appendChild(p);
 
@@ -1130,6 +1449,443 @@ function renderStats(root) {
 }
 
 /* ============================================================
+   ВИДЕО-УРОКИ (встроенный интерактивный плеер + YouTube)
+   ============================================================ */
+let vidTimer = null;
+let vidState = { lessonIdx: 0, sceneIdx: 0, playing: false, subs: true };
+function videoStop() {
+  clearTimeout(vidTimer);
+  vidState.playing = false;
+}
+
+function renderVideos(root) {
+  const wrap = el('div');
+  wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
+  wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
+
+  const lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
+  if (lessons.length) {
+    const player = el('div', 'panel vid-player');
+    const stage = el('div', 'vid-stage');
+    const ctr = el('div', 'vid-ctr');
+    const list = el('div', 'vid-list');
+    player.appendChild(stage);
+    player.appendChild(ctr);
+    wrap.appendChild(player);
+    wrap.appendChild(el('h3', 'vid-sec-t', 'Выберите видео-урок'));
+    wrap.appendChild(list);
+
+    function drawToneCurve(tone) {
+      if (!tone) return '';
+      const paths = {
+        1: 'M 10 18 L 110 18',
+        2: 'M 10 46 Q 60 36 110 14',
+        3: 'M 10 34 Q 55 56 110 22',
+        4: 'M 10 12 Q 60 28 110 50'
+      };
+      const labels = { 1: '1-й тон (ровный)', 2: '2-й тон (вверх)', 3: '3-й тон (вниз-вверх)', 4: '4-й тон (резко вниз)' };
+      return `<div class="vid-tone-box">
+        <svg viewBox="0 0 120 60" class="vid-tone-svg">
+          <line x1="8" y1="30" x2="112" y2="30" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 3"/>
+          <path d="${paths[tone] || ''}" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <span>${labels[tone] || ''}</span>
+      </div>`;
+    }
+
+    function paintPlayer() {
+      const L = lessons[vidState.lessonIdx] || lessons[0];
+      const sc = L.scenes[vidState.sceneIdx] || L.scenes[0];
+      const pct = Math.round(((vidState.sceneIdx + 1) / L.scenes.length) * 100);
+
+      stage.innerHTML = `
+        <div class="vid-top">
+          <span class="vid-badge">${esc(L.level)}</span>
+          <span class="vid-time">Сцена ${vidState.sceneIdx + 1} / ${L.scenes.length} · ${esc(L.duration)}</span>
+        </div>
+        <div class="vid-main">
+          <div class="vid-hanzi">${esc(sc.hanzi)}</div>
+          <div class="vid-pinyin">${esc(sc.pinyin)}</div>
+          ${drawToneCurve(sc.tone)}
+          <div class="vid-ru">${esc(sc.ru)}</div>
+          ${vidState.subs ? `<div class="vid-sub">${esc(sc.sub)}</div>` : ''}
+        </div>
+        <div class="vid-bar"><i style="width:${pct}%"></i></div>`;
+
+      ctr.innerHTML = '';
+      const playB = el('button', 'btn btn-primary', vidState.playing ? '⏸ Пауза' : '▶ Смотреть урок');
+      playB.onclick = () => {
+        if (vidState.playing) { videoStop(); paintPlayer(); return; }
+        vidState.playing = true;
+        playStep();
+      };
+      const prevB = el('button', 'btn btn-ghost', '⏮');
+      prevB.onclick = () => { videoStop(); vidState.sceneIdx = Math.max(0, vidState.sceneIdx - 1); paintPlayer(); if (sc.speak) speak(L.scenes[vidState.sceneIdx].speak); };
+      const nextB = el('button', 'btn btn-ghost', '⏭');
+      nextB.onclick = () => { videoStop(); vidState.sceneIdx = (vidState.sceneIdx + 1) % L.scenes.length; paintPlayer(); speak(L.scenes[vidState.sceneIdx].speak); };
+      const spkB = el('button', 'btn btn-ghost', '🔊 Озвучить сцену');
+      spkB.onclick = () => {
+        if (sc.tone && sc.tone >= 1 && sc.tone <= 4 && sc.hanzi.length === 1) playTone(sc.tone);
+        speak(sc.speak || sc.hanzi);
+      };
+      const subB = el('button', 'btn btn-ghost', vidState.subs ? '💬 Субтитры: вкл' : '💬 Субтитры: выкл');
+      subB.onclick = () => { vidState.subs = !vidState.subs; paintPlayer(); };
+
+      ctr.appendChild(playB); ctr.appendChild(prevB); ctr.appendChild(nextB); ctr.appendChild(spkB); ctr.appendChild(subB);
+
+      list.innerHTML = '';
+      lessons.forEach((v, i) => {
+        const card = el('button', 'vid-item' + (i === vidState.lessonIdx ? ' active' : ''), `
+          <div class="vi-num">${i + 1}</div>
+          <div class="vi-txt">
+            <b>${esc(v.title)}</b>
+            <span>${esc(v.level)} · ${esc(v.duration)} — ${esc(v.desc)}</span>
+          </div>`);
+        card.onclick = () => {
+          videoStop();
+          vidState.lessonIdx = i;
+          vidState.sceneIdx = 0;
+          vidState.playing = true;
+          playStep();
+        };
+        list.appendChild(card);
+      });
+    }
+
+    function playStep() {
+      clearTimeout(vidTimer);
+      if (!vidState.playing) return;
+      const L = lessons[vidState.lessonIdx] || lessons[0];
+      const sc = L.scenes[vidState.sceneIdx];
+      paintPlayer();
+      if (sc) {
+        if (sc.tone && sc.tone >= 1 && sc.tone <= 4 && sc.hanzi.length === 1) playTone(sc.tone);
+        speak(sc.speak || sc.hanzi);
+        vidTimer = setTimeout(() => {
+          if (!vidState.playing) return;
+          if (vidState.sceneIdx + 1 < L.scenes.length) {
+            vidState.sceneIdx++;
+            playStep();
+          } else {
+            vidState.playing = false;
+            playSfx('win');
+            paintPlayer();
+            toast('Видео-урок завершён!');
+          }
+        }, (sc.dur || 4500) * (PREFS.slow ? 1.25 : 1));
+      }
+    }
+
+    paintPlayer();
+  }
+
+  /* Внешние проверенные YouTube-видео */
+  const ext = (typeof EXTERNAL_VIDEOS !== 'undefined' && EXTERNAL_VIDEOS) || [];
+  if (ext.length) {
+    const yp = el('div', 'panel');
+    yp.appendChild(el('h3', '', '📺 Бесплатные уроки на YouTube'));
+    yp.appendChild(el('p', 'page-sub', 'Открываются в новой вкладке YouTube.'));
+    const yg = el('div', 'yt-grid');
+    ext.forEach(v => {
+      const a = el('a', 'yt-card', `
+        <div class="yt-top"><span class="yt-badge">${esc(v.lang)}</span><span>${esc(v.channel)}</span></div>
+        <b>${esc(v.title)}</b>
+        <p>${esc(v.note)}</p>
+        <span class="yt-go">Смотреть на YouTube ↗</span>`);
+      a.href = v.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      yg.appendChild(a);
+    });
+    yp.appendChild(yg);
+    wrap.appendChild(yp);
+  }
+  root.appendChild(wrap);
+}
+
+/* ============================================================
+   ВНУТРЕННИЙ ИИ-АГЕНТ (Сяо Мин · 小明)
+   ============================================================ */
+let tutorHistory = [];
+let tutorContext = { mode: 'chat', step: 0, quiz: null };
+
+function tutorAllVocab() {
+  const list = [];
+  const seen = new Set();
+  const push = (w, src) => {
+    if (!w || !w.h || seen.has(w.h + '|' + w.r)) return;
+    seen.add(w.h + '|' + w.r);
+    list.push({ h: w.h, p: w.p || '', r: w.r || '', lesson: src || '' });
+  };
+  Object.entries(LESSONS).forEach(([lid, l]) => l.vocab.forEach(w => push(w, l.title)));
+  if (typeof PHRASES !== 'undefined') PHRASES.forEach(cat => (cat.items || []).forEach(w => push(w, cat.title)));
+  if (typeof TEXTS !== 'undefined') TEXTS.forEach(t => (t.gloss || []).forEach(w => push(w, t.title)));
+  if (typeof HANDWRITING !== 'undefined') HANDWRITING.forEach(w => push(w, 'Пропись'));
+  [
+    { h: '茶', p: 'chá', r: 'чай' },
+    { h: '绿茶', p: 'lǜchá', r: 'зелёный чай' },
+    { h: '爱', p: 'ài', r: 'любить' },
+    { h: '中文', p: 'Zhōngwén', r: 'китайский язык' },
+    { h: '汉语', p: 'Hànyǔ', r: 'китайский язык (путунхуа)' },
+    { h: '加油', p: 'jiāyóu', r: 'не сдавайся! вперёд!' },
+    { h: '老师', p: 'lǎoshī', r: 'учитель' },
+    { h: '同学', p: 'tóngxué', r: 'одноклассник; ученик' }
+  ].forEach(w => push(w, 'Базовый словарь'));
+  return list;
+}
+
+function tutorReplyLocal(raw) {
+  const q = (raw || '').trim();
+  const low = q.toLowerCase();
+  const vocab = tutorAllVocab();
+
+  /* 1) Совет по личному прогрессу */
+  if (/прогресс|повторить|совет|что учить|план|ошибк/.test(low)) {
+    const done = doneCount(), total = allLessonIds().length;
+    const due = dueCards().length;
+    const nxt = LESSONS[nextLesson()];
+    const hard = cardPool().filter(c => state.cards[c.h]?.wrong > 0).slice(0, 4);
+    let txt = `Ваш прогресс: пройдено <b>${done} из ${total}</b> уроков, точность <b>${accuracy()}%</b>, серия <b>${state.streak}</b> дн.<br><br>`;
+    if (due) txt += `🗂️ У вас <b>${due}</b> карточек ждут повторения — загляните в <a href="#/cards">Карточки</a>.<br>`;
+    if (hard.length) txt += `🎯 Сложные слова: ${hard.map(c => `<b>${esc(c.h)}</b> (${esc(c.p)} — ${esc(c.r)})`).join(', ')}.<br>`;
+    txt += `📚 Следующий рекомендуемый урок: <b>«${esc(nxt.title)}»</b> — <a href="#/lesson/${nextLesson()}">открыть урок →</a>`;
+    return { html: txt };
+  }
+
+  /* 2) Мини-тест по китайскому прямо в чате */
+  if (/тест|проверь|викторин|экзамен|задани/.test(low)) {
+    const pool = vocab.filter(w => w.h && w.p && w.r);
+    const target = pool[Math.floor(Math.random() * pool.length)];
+    const decoys = shuffle(pool.filter(w => w.r !== target.r)).slice(0, 3);
+    const opts = shuffle([target, ...decoys]);
+    return {
+      html: `Проверьте себя! Как переводится слово <b class="zh" style="font-size:22px">${esc(target.h)}</b> <span style="color:var(--gold)">(${esc(target.p)})</span>?`,
+      speak: target.h,
+      quiz: { target, opts }
+    };
+  }
+
+  /* 3) Интерактивный мини-диалог */
+  if (/диалог|поговор|практик|общен|привет/.test(low) && !/[\u4e00-\u9fff]/.test(q)) {
+    tutorContext.mode = 'dialogue';
+    tutorContext.step = 1;
+    return {
+      html: `Отлично, потренируем живой диалог! Я начинаю:<br>
+        <b class="zh" style="font-size:20px">你好！你叫什么名字？</b><br>
+        <span style="color:var(--gold)">Nǐ hǎo! Nǐ jiào shénme míngzi?</span> — Привет! Как тебя зовут?<br>
+        <i>Ответьте по-китайски (например: <code>我叫Али</code> или <code>你好</code>)</i>`,
+      speak: '你好！你叫什么名字？'
+    };
+  }
+  if (tutorContext.mode === 'dialogue' && /[\u4e00-\u9fff]|nihao|wo|jiao|xie|hao/i.test(low)) {
+    if (tutorContext.step === 1) {
+      tutorContext.step = 2;
+      return {
+        html: `Супер ответ! 👍 Продолжаем:<br>
+          <b class="zh" style="font-size:20px">很高兴认识你！你喜欢喝茶还是咖啡？</b><br>
+          <span style="color:var(--gold)">Hěn gāoxìng rènshi nǐ! Nǐ xǐhuan hē chá háishi kāfēi?</span> — Рад познакомиться! Ты любишь чай или кофе?`,
+        speak: '很高兴认识你！你喜欢喝茶还是咖啡？'
+      };
+    }
+    tutorContext.mode = 'chat';
+    return {
+      html: `Отлично звучит! 👏 Вы уверенно держите диалог.<br>
+        <b class="zh" style="font-size:20px">你中文说得很好！继续加油！</b><br>
+        <span style="color:var(--gold)">Nǐ Zhōngwén shuō de hěn hǎo! Jìxù jiāyóu!</span> — Вы хорошо говорите по-китайски! Так держать!`,
+      speak: '你中文说得很好！继续加油！'
+    };
+  }
+
+  /* 4) Объяснение грамматики */
+  const grammarKB = [
+    { re: /吗|\bma\b|вопрос/, title: 'Вопросительная частица 吗 (ma)',
+      body: 'Ставится в самом конце утверждения, чтобы получился вопрос «да/нет».<br>Пример: <b class="zh">你喝茶吗？</b> (Nǐ hē chá ma?) — Ты пьёшь чай?', speak: '你喝茶吗' },
+    { re: /不|没|отрицан/, title: 'Отрицание 不 (bù) и 没 (méi)',
+      body: '<b>不 (bù)</b> — отрицание в настоящем/будущем или привычке (<b class="zh">我不喝咖啡</b> — Я не пью кофе).<br><b>没 (méi)</b> — отрицание в прошлом или с глаголом 有 (<b class="zh">我没有时间</b> — У меня нет времени; <b class="zh">我昨天没去</b> — Вчера я не ходил).', speak: '我不喝咖啡' },
+    { re: /了|\ble\b|прошед/, title: 'Частица 了 (le)',
+      body: 'Показывает завершённое действие или новое состояние.<br>Пример: <b class="zh">我买了茶</b> (Wǒ mǎi le chá) — Я купил чай. / <b class="zh">下雨了</b> — Пошёл дождь.', speak: '我买了茶' },
+    { re: /的|\bde\b|притяж/, title: 'Частица 的 (de)',
+      body: 'Связывает определение или владельца с предметом: «чей» или «какой».<br>Пример: <b class="zh">我的书</b> (wǒ de shū) — моя книга; <b class="zh">好喝的茶</b> — вкусный чай.', speak: '我的书' },
+    { re: /把|\bba\b/, title: 'Конструкция 把 (bǎ)',
+      body: 'Выносит объект перед глаголом, когда с предметом что-то сделали или переместили его.<br>Схема: Подлежащее + 把 + Объект + Глагол + Результат.<br>Пример: <b class="zh">请把门关上</b> — Пожалуйста, закрой дверь.', speak: '请把门关上' },
+    { re: /тон|пиньинь|сандх|произнош/, title: 'Тоны и сандхи (изменение тонов)',
+      body: '1) Два 3-х тона подряд читаются как 2-й + 3-й: <b class="zh">你好</b> (nǐ hǎo → ní hǎo).<br>2) <b>不 (bù)</b> перед 4-м тоном становится <b>bú</b>: <b class="zh">不是</b> (bú shì).<br>Загляните также в раздел <a href="#/tones">Тоны</a> и <a href="#/videos">Видео-уроки</a>.', speak: '你好，不是' },
+    { re: /счетн|счётн|个|本|杯|классификатор/, title: 'Счётные слова (个, 本, 杯)',
+      body: 'Между числом и предметом в китайском всегда ставится счётное слово:<br>• <b>个 (gè)</b> — универсальное (一个人 — один человек)<br>• <b>本 (běn)</b> — для книг (一本书)<br>• <b>杯 (bēi)</b> — чашка/стакан (一杯茶)', speak: '一杯茶' }
+  ];
+  for (const g of grammarKB) {
+    if (g.re.test(low)) {
+      return { html: `<b>📖 ${g.title}</b><br><br>${g.body}`, speak: g.speak };
+    }
+  }
+
+  /* 5) Разбор китайских иероглифов / перевод из словаря курса */
+  const clean = q.replace(/[？?！!。.,，\s]/g, '');
+  const exact = vocab.find(w => w.h === clean || w.r.toLowerCase() === low || w.p.toLowerCase() === low);
+  if (exact) {
+    return {
+      html: `<b class="zh" style="font-size:26px">${esc(exact.h)}</b> <span style="color:var(--gold)">[${esc(exact.p)}]</span><br>
+        Перевод: <b>${esc(exact.r)}</b><br>
+        <span style="color:var(--txt3);font-size:12.5px">Раздел курса: ${esc(exact.lesson || '')}</span>`,
+      speak: exact.h
+    };
+  }
+
+  /* Частичное совпадение по русски или по иероглифам */
+  const hasHanzi = /[\u4e00-\u9fff]/.test(q);
+  if (hasHanzi) {
+    const chars = [...q.match(/[\u4e00-\u9fff]+/g).join('')];
+    const parts = [];
+    let i = 0;
+    while (i < chars.length) {
+      let found = null;
+      for (let len = Math.min(4, chars.length - i); len >= 1; len--) {
+        const sub = chars.slice(i, i + len).join('');
+        const hit = vocab.find(w => w.h === sub);
+        if (hit) { found = hit; i += len; break; }
+      }
+      if (found) parts.push(found);
+      else { parts.push({ h: chars[i], p: '?', r: 'нет в базовом словаре курса' }); i++; }
+    }
+    return {
+      html: `<b>🔍 Разбор фразы:</b><br><br>` +
+        parts.map(w => `• <b class="zh" style="font-size:18px">${esc(w.h)}</b> <span style="color:var(--gold)">${esc(w.p)}</span> — ${esc(w.r)}`).join('<br>'),
+      speak: chars.join('')
+    };
+  }
+
+  const hits = vocab.filter(w =>
+    w.r.toLowerCase().includes(low) || w.p.toLowerCase().replace(/[^a-z]/g, '').includes(low.replace(/[^a-z]/g, ''))
+  ).slice(0, 6);
+  if (hits.length) {
+    return {
+      html: `Вот что нашлось по запросу «${esc(q)}»:<br><br>` +
+        hits.map(w => `• <b class="zh" style="font-size:18px">${esc(w.h)}</b> <span style="color:var(--gold)">${esc(w.p)}</span> — ${esc(w.r)}`).join('<br>'),
+      speak: hits[0].h
+    };
+  }
+
+  return {
+    html: `Я ваш внутренний ИИ-репетитор <b>Сяо Мин (小明)</b>! Могу помочь с:<br>
+      • <b>Переводом и разбором</b>: напишите любое слово по-русски или иероглифами (например: <i>чай</i>, <i>спасибо</i> или <i>我想喝茶</i>)<br>
+      • <b>Грамматикой</b>: спросите про <i>吗, 不/没, 了, 的, 把, тоны, счётные слова</i><br>
+      • <b>Практикой</b>: напишите <i>«диалог»</i> или <i>«проверь меня»</i>!`
+  };
+}
+
+function renderTutor(root) {
+  const wrap = el('div', 'tutor-wrap');
+  wrap.appendChild(el('h1', 'page-title', '🤖 ИИ-репетитор Сяо Мин (小明)'));
+  wrap.appendChild(el('p', 'page-sub', 'Внутренний помощник по китайскому языку: перевод, разбор иероглифов, грамматика, диалоги и мини-тесты.'));
+
+  const chips = el('div', 't-chips');
+  [
+    ['🔍 Как сказать «спасибо»?', 'спасибо'],
+    ['📖 Что такое частица 了?', 'объясни частицу 了'],
+    ['🎵 Как меняются тоны?', 'объясни тоны и сандхи'],
+    ['💬 Потренируем диалог', 'давай поговорим в диалоге'],
+    ['🎯 Что мне повторить?', 'что мне повторить сейчас'],
+    ['🎲 Проверь меня', 'проверь меня тестом']
+  ].forEach(([label, query]) => {
+    const b = el('button', 'btn btn-sm btn-ghost', label);
+    b.onclick = () => sendMsg(query);
+    chips.appendChild(b);
+  });
+  wrap.appendChild(chips);
+
+  const box = el('div', 'panel tutor-box');
+  const feed = el('div', 'tutor-feed');
+  box.appendChild(feed);
+
+  if (!tutorHistory.length) {
+    tutorHistory.push({
+      role: 'assistant',
+      html: '你好! Я <b>Сяо Мин (小明)</b> — ваш персональный ИИ-помощник по китайскому. Спросите перевод, грамматику или выберите подсказку выше!',
+      speak: '你好！我是小明。'
+    });
+  }
+
+  function paintFeed() {
+    feed.innerHTML = '';
+    tutorHistory.forEach(m => {
+      const row = el('div', 't-msg ' + (m.role === 'user' ? 't-user' : 't-bot'));
+      const bubble = el('div', 't-bubble', m.html || esc(m.content || ''));
+      if (m.speak) {
+        const sp = el('div', 't-sp', `${toneBtn(m.speak, 'speak sm')} <span>прослушать</span>`);
+        bubble.appendChild(sp);
+      }
+      if (m.quiz) {
+        const qz = el('div', 't-quiz');
+        m.quiz.opts.forEach(opt => {
+          const ob = el('button', 'btn btn-sm btn-ghost', opt.r);
+          ob.onclick = () => {
+            if (qz.dataset.done) return;
+            qz.dataset.done = '1';
+            const ok = opt.h === m.quiz.target.h;
+            ob.classList.remove('btn-ghost');
+            ob.classList.add(ok ? 'btn-primary' : 'btn-danger');
+            playSfx(ok ? 'ok' : 'bad');
+            toast(ok ? 'Верно! 🎉' : `Правильно: ${m.quiz.target.r}`);
+          };
+          qz.appendChild(ob);
+        });
+        bubble.appendChild(qz);
+      }
+      row.appendChild(bubble);
+      feed.appendChild(row);
+    });
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  const form = el('form', 'tutor-form');
+  const inp = el('input', 't-input');
+  inp.placeholder = 'Напишите вопрос, русское слово или иероглиф…';
+  const send = el('button', 'btn btn-primary', 'Отправить →');
+  send.type = 'submit';
+  form.appendChild(inp); form.appendChild(send);
+  box.appendChild(form);
+  wrap.appendChild(box);
+  root.appendChild(wrap);
+
+  async function sendMsg(text) {
+    const q = (text || '').trim();
+    if (!q) return;
+    tutorHistory.push({ role: 'user', content: q });
+    paintFeed();
+    send.disabled = true;
+
+    let replyObj = null;
+    if (window.Auth && Auth.online) {
+      try {
+        const res = await fetch('/api/tutor/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: q,
+            history: tutorHistory.slice(-6).map(x => ({ role: x.role, content: x.content || '' })),
+            context: `Пройдено уроков: ${doneCount()}/15, точность: ${accuracy()}%`
+          })
+        });
+        const d = await res.json();
+        if (d && d.mode === 'ai' && d.reply) {
+          replyObj = { html: esc(d.reply).replace(/\n/g, '<br>') };
+        }
+      } catch (e) { }
+    }
+    if (!replyObj) replyObj = tutorReplyLocal(q);
+    tutorHistory.push({ role: 'assistant', content: q, ...replyObj });
+    send.disabled = false;
+    paintFeed();
+  }
+
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const val = inp.value;
+    inp.value = '';
+    sendMsg(val);
+  };
+  paintFeed();
+}
+
+/* ============================================================
    ЗАПУСК
    ============================================================ */
 function initNav() {
@@ -1140,6 +1896,8 @@ function initNav() {
     ['plan', '📚', 'Уроки'],
     ['diag', '🎯', 'Уровень'],
     ['cards', '🗂️', 'Карточки'],
+    ['videos', '🎬', 'Видео'],
+    ['tutor', '🤖', 'ИИ-агент'],
     ['tones', '🎵', 'Тоны'],
     ['write', '✍️', 'Пропись'],
     ['read', '📄', 'Чтение'],
@@ -1154,7 +1912,8 @@ function initNav() {
     ['home', '🏠', 'Главная'],
     ['plan', '📚', 'Уроки'],
     ['cards', '🗂️', 'Карточки'],
-    ['tones', '🎵', 'Тоны'],
+    ['videos', '🎬', 'Видео'],
+    ['tutor', '🤖', 'ИИ'],
     ['class', '👨‍🏫', 'Класс'],
     ['account', '👤', 'Профиль']
   ];
@@ -1177,6 +1936,14 @@ function initNav() {
   nav.appendChild(foot);
   paintAccountFoot();
   updateNavRoles();
+
+  if (!$('#tutorFab')) {
+    const fab = el('a', 'tutor-fab', '🤖');
+    fab.id = 'tutorFab';
+    fab.href = '#/tutor';
+    fab.title = 'ИИ-репетитор Сяо Мин';
+    document.body.appendChild(fab);
+  }
 }
 function updateNavRoles() {
   const can = !!(Auth.user && (Auth.user.role === 'owner' || Auth.user.role === 'teacher'));
@@ -1186,8 +1953,19 @@ function paintAccountFoot() {
   const foot = $('#navFoot');
   if (!foot) return;
   const u = Auth.user;
+  foot.innerHTML = '';
+  const quick = el('div', 'nav-quick');
+  const spd = el('button', 'btn btn-sm btn-ghost', PREFS.slow ? '🐢 0.7×' : '🐇 1.0×');
+  spd.title = 'Скорость озвучки';
+  spd.onclick = () => { PREFS.slow = !PREFS.slow; toast(PREFS.slow ? 'Медленная озвучка (0.7×)' : 'Обычная озвучка (1.0×)'); paintAccountFoot(); };
+  const thm = el('button', 'btn btn-sm btn-ghost', PREFS.theme === 'light' ? '🌙' : '☀️');
+  thm.title = 'Переключить тему';
+  thm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); };
+  quick.appendChild(spd); quick.appendChild(thm);
+
   if (!u) {
-    foot.innerHTML = `<div>${Auth.online ? (Auth.hasUsers ? 'Вы не вошли в аккаунт' : '👑 Первый запуск') : 'Локальный режим'}<br><b>${Auth.online ? 'сервер подключён ✓' : 'нет связи с сервером'}</b></div>`;
+    const info = el('div', '', `${Auth.online ? (Auth.hasUsers ? 'Вы не вошли в аккаунт' : '👑 Первый запуск') : 'Локальный режим'}<br><b>${Auth.online ? 'сервер подключён ✓' : 'нет связи с сервером'}</b>`);
+    foot.appendChild(info);
     if (Auth.online) {
       const b = el('button', 'btn btn-sm btn-primary', Auth.hasUsers ? '🔑 Войти' : '👑 Стать владельцем');
       b.style.marginTop = '8px';
@@ -1195,14 +1973,17 @@ function paintAccountFoot() {
       b.onclick = () => window.__showAuth();
       foot.appendChild(b);
     }
+    foot.appendChild(quick);
     return;
   }
-  foot.innerHTML = `<div class="nav-user">
+  const ubox = el('div', '', `<div class="nav-user">
       <b>${esc(u.display_name)}</b>
       <span>${esc(Auth.ROLE_RU[u.role] || u.role)} · @${esc(u.username)}</span>
     </div>
     <a class="btn btn-sm btn-ghost" href="#/account">Профиль и синхронизация</a>
-    <button class="btn btn-sm btn-ghost" id="logoutBtn" style="margin-top:6px">Выйти</button>`;
+    <button class="btn btn-sm btn-ghost" id="logoutBtn" style="margin-top:6px">Выйти</button>`);
+  foot.appendChild(ubox);
+  foot.appendChild(quick);
   const lo = $('#logoutBtn');
   if (lo) lo.onclick = async () => { await Auth.logout(); window.__guest = false; paintAccountFoot(); updateNavRoles(); location.hash = '#/home'; route(); };
 }
@@ -1243,6 +2024,71 @@ function renderAccount(root) {
   }
   wrap.appendChild(p);
 
+  /* Смена пароля. Без неё забытый пароль означал бы потерю аккаунта:
+     ученик не мог бы войти, а учитель — помочь. */
+  if (u) {
+    const pw = el('div', 'panel');
+    pw.appendChild(el('h3', '', '🔑 Пароль'));
+    pw.appendChild(el('p', 'pw-note', 'Минимум 8 символов. После смены остальные устройства выйдут из аккаунта.'));
+    const pform = el('div', 'pw-form');
+    const curInp = el('input', 'gap-input');
+    const newInp = el('input', 'gap-input');
+    const repInp = el('input', 'gap-input');
+    [[curInp, 'Текущий пароль', 'current-password'],
+     [newInp, 'Новый пароль (мин. 8)', 'new-password'],
+     [repInp, 'Повторите новый', 'new-password']].forEach(([inp, ph, ac]) => {
+      inp.type = 'password'; inp.placeholder = ph; inp.autocomplete = ac;
+      inp.setAttribute('aria-label', ph);
+    });
+    const go = el('button', 'btn btn-primary', 'Сменить');
+    go.onclick = async () => {
+      if (newInp.value.length < 8) return toast('Новый пароль — минимум 8 символов');
+      if (newInp.value !== repInp.value) return toast('Новые пароли не совпадают');
+      if (!curInp.value) return toast('Введите текущий пароль');
+      go.disabled = true;
+      const label = go.textContent;
+      go.textContent = 'Меняем…';
+      try {
+        await Auth.changePassword(curInp.value, newInp.value);
+        curInp.value = newInp.value = repInp.value = '';
+        toast('Пароль изменён ✓');
+      } catch (e) {
+        toast(e.message === 'bad_password' ? 'Текущий пароль указан неверно'
+          : e.message === 'weak_password' ? 'Пароль короче 8 символов'
+          : 'Не удалось сменить пароль');
+      } finally {
+        go.disabled = false;
+        go.textContent = label;
+      }
+    };
+    pform.append(curInp, newInp, repInp, go);
+    pw.appendChild(pform);
+    wrap.appendChild(pw);
+  }
+
+  if (u && Auth.grade && (Auth.grade.grade || Auth.grade.comment)) {
+    const gp = el('div', 'panel grade-panel');
+    gp.appendChild(el('h3', '', '🎓 Оценка и отзыв учителя'));
+    gp.appendChild(el('div', 'grade-box', `
+      ${Auth.grade.grade ? `<div class="grade-num">${esc(Auth.grade.grade)}</div>` : ''}
+      <div>${Auth.grade.comment ? esc(Auth.grade.comment) : 'Комментарий пока не добавлен'}</div>`));
+    wrap.appendChild(gp);
+  }
+
+  /* настройки обучения (работают и на телефоне, и на компьютере) */
+  const prefsPanel = el('div', 'panel');
+  prefsPanel.appendChild(el('h3', '', '⚙️ Настройки обучения'));
+  const pr = el('div', 'btn-row');
+  const bSpd = el('button', 'btn btn-ghost', PREFS.slow ? '🐢 Озвучка: медленно (0.7×)' : '🐇 Озвучка: обычно (1.0×)');
+  bSpd.onclick = () => { PREFS.slow = !PREFS.slow; paintAccountFoot(); route(); };
+  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '☀️ Тема: светлая (бумага)' : '🌙 Тема: тёмная');
+  bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
+  const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
+  bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
+  pr.appendChild(bSpd); pr.appendChild(bThm); pr.appendChild(bSfx);
+  prefsPanel.appendChild(pr);
+  wrap.appendChild(prefsPanel);
+
   if (Auth.user && (Auth.user.role === 'owner' || Auth.user.role === 'teacher')) {
     const c = el('div', 'panel');
     c.appendChild(el('h3', '', '👨‍🏫 Учительские инструменты'));
@@ -1254,6 +2100,16 @@ function renderAccount(root) {
   }
   root.appendChild(wrap);
 }
+
+/* Сессия истекла: показываем это явно и уводим на экран входа,
+   вместо прежнего «тихого» отказа сохранений. */
+window.addEventListener('auth:expired', () => {
+  window.__guest = false;
+  toast('Сессия истекла — войдите снова. Прогресс в браузере сохранён.');
+  paintAccountFoot();
+  updateNavRoles();
+  route();
+});
 
 document.addEventListener('DOMContentLoaded', boot);
 async function boot() {

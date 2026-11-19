@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Проверка синтаксиса Python
+        run: python -m compileall -q server.py build.py tests
+
+      - name: Регрессионные тесты
+        run: python -m unittest discover -s tests -v
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Синтаксис клиентского JS
+        run: |
+          node --check src/app.js
+          node --check src/auth.js
+          node --check src/data.js
+
+      - name: index.html должен собираться из src без расхождений
+        run: |
+          python build.py
+          git diff --exit-code index.html

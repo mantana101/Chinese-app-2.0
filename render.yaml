@@ -7,6 +7,15 @@ services:
     envVars:
       - key: DB_PATH
         value: /app/data/app.db
+      # Render стоит за прокси, который проставляет X-Forwarded-For.
+      - key: TRUST_PROXY
+        value: "1"
+      # Сайт отдаётся по HTTPS — cookie сессии должна иметь флаг Secure.
+      - key: SECURE_COOKIES
+        value: "1"
+      # Необязательно: ключ для ИИ-репетитора (без него — локальный режим).
+      # - key: AI_API_KEY
+      #   sync: false
     disk:
       name: chinese-app-data
       mountPath: /app/data
