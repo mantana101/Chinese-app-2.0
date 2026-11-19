@@ -93,11 +93,66 @@ const Auth = (() => {
   }
 
   /* ---------- запуск ---------- */
+  let serverBuild = '';
+
+  /* Версия этой страницы — метка, которую вписал build.py при сборке. */
+  function pageBuild() {
+    try {
+      const m = document.querySelector('meta[name="app-build"]');
+      return (m && m.getAttribute('content')) || '';
+    } catch (e) { return ''; }
+  }
+
+  /* Браузер мог открыть старую страницу из кэша. Если сервер отдаёт другую
+     сборку — предупреждаем и даём кнопку «Обновить» (одна, чтобы не мешать). */
+  function checkBuildFreshness() {
+    const mine = pageBuild();
+    if (!mine || !serverBuild || mine === serverBuild) return;
+    if (document.getElementById('buildOutdated')) return;
+    const bar = document.createElement('div');
+    bar.id = 'buildOutdated';
+    bar.className = 'frame-banner build-outdated';
+    bar.innerHTML = `<span>🔄 <b>Доступна новая версия программы.</b> Вы смотрите сохранённую копию (${mine}), на сервере уже ${serverBuild}.</span>`;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-primary';
+    btn.textContent = 'Обновить';
+    btn.onclick = () => {
+      btn.disabled = true;
+      btn.textContent = 'Обновляем…';
+      hardReload();
+    };
+    bar.appendChild(btn);
+    document.body.prepend(bar);
+  }
+
+  /* Полная перезагрузка в обход кэша браузера. */
+  function hardReload() {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('v', (serverBuild || Date.now().toString(36)));
+      location.replace(url.toString());
+    } catch (e) {
+      location.reload();
+    }
+  }
+
+  /* Лёгкая проверка версии без полной перезагрузки состояния. */
+  async function checkBuild() {
+    if (!online) return;
+    try {
+      const st = await api('/api/auth/status');
+      serverBuild = st.build || '';
+      checkBuildFreshness();
+    } catch (e) { }
+  }
+
   async function boot() {
     try {
       const st = await api('/api/auth/status');
       online = true;
       hasUsers = !!st.has_users;
+      serverBuild = st.build || '';
+      checkBuildFreshness();
     } catch (e) {
       online = false;
       hasUsers = false;
@@ -535,7 +590,9 @@ const Auth = (() => {
         <div><b>${fmtBytes(sys.db_size_bytes)}</b><span>размер базы app.db</span></div>
         <div><b>${c.users || 0}</b><span>пользователей (${c.students || 0} уч.)</span></div>
         <div><b>${c.sessions_active || 0}</b><span>активных сессий</span></div>
-        <div><b class="${(c.errors || 0) ? 'bad' : 'ok'}">${c.errors || 0}</b><span>ошибок в журнале</span></div>`;
+        <div><b class="${(c.errors || 0) ? 'bad' : 'ok'}">${c.errors || 0}</b><span>ошибок в журнале</span></div>
+        <div><b>${esc(sys.build || '—')}</b><span>версия сборки на сервере</span></div>
+        <div><b>${esc(pageBuild() || '—')}</b><span>версия страницы в браузере</span></div>`;
       sp.appendChild(grid);
 
       const act = el2('div', 'btn-row');
@@ -719,6 +776,7 @@ const Auth = (() => {
 
   return {
     boot, needsAuth, renderAuth, renderClass, persist,
+    build: pageBuild, serverBuild: () => serverBuild, hardReload, checkBuild,
     login, logout, register, changePassword,
     get user() { return user; },
     get grade() { return myGrade; },

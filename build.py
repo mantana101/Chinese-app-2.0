@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
-"""Сборка единого автономного HTML-файла из исходников в src/."""
+"""Сборка единого автономного HTML-файла из исходников в src/.
 
+Скрипт проставляет в сборку «метку версии» (хеш содержимого src/ и время
+сборки). По ней сервер и браузер понимают, что на диске уже новая сборка,
+и не показывают старую страницу из кэша.
+"""
+
+import hashlib
+import json
 import pathlib
 import sys
+import time
 
 base = pathlib.Path(__file__).parent
 src = base / "src"
+
+SOURCE_FILES = ("styles.css", "data.js", "auth.js", "app.js", "index.template.html")
 
 styles = (src / "styles.css").read_text(encoding="utf-8")
 data = (src / "data.js").read_text(encoding="utf-8")
@@ -19,15 +29,33 @@ def safe(js: str) -> str:
     return js.replace("</script>", "<\\/script>")
 
 
+# Версия сборки = хеш всех исходников. Меняется только при реальной правке кода,
+# поэтому пересборка без изменений даёт тот же идентификатор.
+digest = hashlib.sha256()
+for name in SOURCE_FILES:
+    digest.update(name.encode("utf-8"))
+    digest.update((src / name).read_bytes())
+    digest.update(b"\0")
+BUILD_ID = digest.hexdigest()[:12]
+BUILD_TIME = time.strftime("%d.%m.%Y %H:%M", time.localtime())
+BUILD_META = json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME}, ensure_ascii=False)
+
 out = (
-    tpl.replace("{{STYLES}}", styles)
+    tpl.replace("{{BUILD_META}}", BUILD_META)
+    .replace("{{BUILD_ID}}", BUILD_ID)
+    .replace("{{BUILD_TIME}}", BUILD_TIME)
+    .replace("{{STYLES}}", styles)
     .replace("{{DATA}}", safe(data))
     .replace("{{AUTH}}", safe(auth))
     .replace("{{APP}}", safe(app))
 )
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
-leftovers = [p for p in ("{{STYLES}}", "{{DATA}}", "{{AUTH}}", "{{APP}}") if p in out]
+leftovers = [
+    p for p in ("{{BUILD_META}}", "{{BUILD_ID}}", "{{BUILD_TIME}}",
+                "{{STYLES}}", "{{DATA}}", "{{AUTH}}", "{{APP}}")
+    if p in out
+]
 if leftovers:
     sys.exit(f"ОШИБКА: в шаблоне остались плейсхолдеры: {', '.join(leftovers)}")
 
@@ -37,4 +65,13 @@ if out.count("<script>") != out.count("</script>"):
 
 target = base / "index.html"
 target.write_bytes(out.encode("utf-8"))
-print(f"OK  {target}  ({len(out.encode('utf-8')) / 1024:.1f} KB)")
+
+# Рядом кладём метку сборки: сервер пересобирает index.html, если исходники
+# в src/ новее этой метки. Так забытый build.py больше не выдаёт старую версию.
+(base / "build-info.json").write_text(
+    json.dumps({"id": BUILD_ID, "built_at": BUILD_TIME, "built_ts": int(time.time())},
+               ensure_ascii=False, indent=2),
+    encoding="utf-8",
+)
+
+print(f"OK  {target}  ({len(out.encode('utf-8')) / 1024:.1f} KB)  build {BUILD_ID} · {BUILD_TIME}")

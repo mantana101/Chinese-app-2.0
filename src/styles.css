@@ -758,3 +758,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .pw-form .btn { flex: 0 0 auto; }
 .pw-note { font-size: 12.5px; color: var(--dim, #8a857c); margin: 6px 0 0; }
+
+/* Плашка «доступна новая версия» — заметная, но не мешает работе. */
+.build-outdated { background: rgba(106,159,212,.16); border-bottom-color: rgba(106,159,212,.45); color: #dceafa; }
+.build-outdated .btn { flex: none; }

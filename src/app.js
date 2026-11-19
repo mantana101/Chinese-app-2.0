@@ -2005,6 +2005,13 @@ function renderAccount(root) {
     rows.appendChild(el('div', 'pr-row', `<span>Статус сервера</span><b class="ok">${Auth.online ? 'подключено ✓' : 'нет соединения'}</b>`));
     rows.appendChild(el('div', 'pr-row', `<span>Прогресс на сервере</span><b>${Auth.user ? 'синхронизируется автоматически' : '—'}</b>`));
     rows.appendChild(el('div', 'pr-row', `<span>Режим</span><b>${window.__guest ? 'локальный (без аккаунта)' : 'аккаунт подключён'}</b>`));
+    const bId = (window.Auth && Auth.build) ? Auth.build() : '';
+    rows.appendChild(el('div', 'pr-row', `<span>Версия программы</span><b>${esc(bId || '—')}</b>`));
+    if (bId && Auth.serverBuild && Auth.serverBuild() && Auth.serverBuild() !== bId) {
+      const upd = el('button', 'btn btn-sm btn-primary', '🔄 Есть новая версия — обновить');
+      upd.onclick = () => Auth.hardReload();
+      rows.appendChild(upd);
+    }
     p.appendChild(rows);
     const btnRow = el('div', 'btn-row');
     const sync = el('button', 'btn btn-primary', '⇅ Синхронизировать сейчас');
@@ -2121,6 +2128,13 @@ async function boot() {
   updateNavRoles();
   route();
   setInterval(touchDay, 60000);
+  /* Вернулись на вкладку или в сеть — проверяем, не вышла ли новая сборка. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && window.Auth && Auth.checkBuild) Auth.checkBuild();
+  });
+  window.addEventListener('online', () => {
+    if (window.Auth && Auth.checkBuild) Auth.checkBuild();
+  });
 }
 
 /* Если открыт просмотр файла без сервера или iframe с заблокированным localStorage —

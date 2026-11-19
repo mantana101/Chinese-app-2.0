@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12100e">
+<meta name="app-build" content="4499dc89ce77">
+<meta name="app-build-time" content="19.11.2026 06:22">
 <meta name="author" content="Шамсиддин">
 <title>汉语学习 — Учим китайский язык</title>
 <meta name="description" content="Программа для изучения китайского языка: уроки, карточки, тоны, пропись иероглифов, чтение, статистика и панель учителя.">
@@ -768,6 +770,10 @@ button { font-family: inherit; cursor: pointer; }
 }
 .pw-form .btn { flex: 0 0 auto; }
 .pw-note { font-size: 12.5px; color: var(--dim, #8a857c); margin: 6px 0 0; }
+
+/* Плашка «доступна новая версия» — заметная, но не мешает работе. */
+.build-outdated { background: rgba(106,159,212,.16); border-bottom-color: rgba(106,159,212,.45); color: #dceafa; }
+.build-outdated .btn { flex: none; }
 
 </style>
 </head>
@@ -1913,11 +1919,66 @@ const Auth = (() => {
   }
 
   /* ---------- запуск ---------- */
+  let serverBuild = '';
+
+  /* Версия этой страницы — метка, которую вписал build.py при сборке. */
+  function pageBuild() {
+    try {
+      const m = document.querySelector('meta[name="app-build"]');
+      return (m && m.getAttribute('content')) || '';
+    } catch (e) { return ''; }
+  }
+
+  /* Браузер мог открыть старую страницу из кэша. Если сервер отдаёт другую
+     сборку — предупреждаем и даём кнопку «Обновить» (одна, чтобы не мешать). */
+  function checkBuildFreshness() {
+    const mine = pageBuild();
+    if (!mine || !serverBuild || mine === serverBuild) return;
+    if (document.getElementById('buildOutdated')) return;
+    const bar = document.createElement('div');
+    bar.id = 'buildOutdated';
+    bar.className = 'frame-banner build-outdated';
+    bar.innerHTML = `<span>🔄 <b>Доступна новая версия программы.</b> Вы смотрите сохранённую копию (${mine}), на сервере уже ${serverBuild}.</span>`;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-primary';
+    btn.textContent = 'Обновить';
+    btn.onclick = () => {
+      btn.disabled = true;
+      btn.textContent = 'Обновляем…';
+      hardReload();
+    };
+    bar.appendChild(btn);
+    document.body.prepend(bar);
+  }
+
+  /* Полная перезагрузка в обход кэша браузера. */
+  function hardReload() {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('v', (serverBuild || Date.now().toString(36)));
+      location.replace(url.toString());
+    } catch (e) {
+      location.reload();
+    }
+  }
+
+  /* Лёгкая проверка версии без полной перезагрузки состояния. */
+  async function checkBuild() {
+    if (!online) return;
+    try {
+      const st = await api('/api/auth/status');
+      serverBuild = st.build || '';
+      checkBuildFreshness();
+    } catch (e) { }
+  }
+
   async function boot() {
     try {
       const st = await api('/api/auth/status');
       online = true;
       hasUsers = !!st.has_users;
+      serverBuild = st.build || '';
+      checkBuildFreshness();
     } catch (e) {
       online = false;
       hasUsers = false;
@@ -2355,7 +2416,9 @@ const Auth = (() => {
         <div><b>${fmtBytes(sys.db_size_bytes)}</b><span>размер базы app.db</span></div>
         <div><b>${c.users || 0}</b><span>пользователей (${c.students || 0} уч.)</span></div>
         <div><b>${c.sessions_active || 0}</b><span>активных сессий</span></div>
-        <div><b class="${(c.errors || 0) ? 'bad' : 'ok'}">${c.errors || 0}</b><span>ошибок в журнале</span></div>`;
+        <div><b class="${(c.errors || 0) ? 'bad' : 'ok'}">${c.errors || 0}</b><span>ошибок в журнале</span></div>
+        <div><b>${esc(sys.build || '—')}</b><span>версия сборки на сервере</span></div>
+        <div><b>${esc(pageBuild() || '—')}</b><span>версия страницы в браузере</span></div>`;
       sp.appendChild(grid);
 
       const act = el2('div', 'btn-row');
@@ -2539,6 +2602,7 @@ const Auth = (() => {
 
   return {
     boot, needsAuth, renderAuth, renderClass, persist,
+    build: pageBuild, serverBuild: () => serverBuild, hardReload, checkBuild,
     login, logout, register, changePassword,
     get user() { return user; },
     get grade() { return myGrade; },
@@ -4559,6 +4623,13 @@ function renderAccount(root) {
     rows.appendChild(el('div', 'pr-row', `<span>Статус сервера</span><b class="ok">${Auth.online ? 'подключено ✓' : 'нет соединения'}</b>`));
     rows.appendChild(el('div', 'pr-row', `<span>Прогресс на сервере</span><b>${Auth.user ? 'синхронизируется автоматически' : '—'}</b>`));
     rows.appendChild(el('div', 'pr-row', `<span>Режим</span><b>${window.__guest ? 'локальный (без аккаунта)' : 'аккаунт подключён'}</b>`));
+    const bId = (window.Auth && Auth.build) ? Auth.build() : '';
+    rows.appendChild(el('div', 'pr-row', `<span>Версия программы</span><b>${esc(bId || '—')}</b>`));
+    if (bId && Auth.serverBuild && Auth.serverBuild() && Auth.serverBuild() !== bId) {
+      const upd = el('button', 'btn btn-sm btn-primary', '🔄 Есть новая версия — обновить');
+      upd.onclick = () => Auth.hardReload();
+      rows.appendChild(upd);
+    }
     p.appendChild(rows);
     const btnRow = el('div', 'btn-row');
     const sync = el('button', 'btn btn-primary', '⇅ Синхронизировать сейчас');
@@ -4675,6 +4746,13 @@ async function boot() {
   updateNavRoles();
   route();
   setInterval(touchDay, 60000);
+  /* Вернулись на вкладку или в сеть — проверяем, не вышла ли новая сборка. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && window.Auth && Auth.checkBuild) Auth.checkBuild();
+  });
+  window.addEventListener('online', () => {
+    if (window.Auth && Auth.checkBuild) Auth.checkBuild();
+  });
 }
 
 /* Если открыт просмотр файла без сервера или iframe с заблокированным localStorage —
