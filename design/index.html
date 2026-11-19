@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>汉语学习 — варианты дизайна главной</title>
+<style>
+  :root{--bg:#0d0d10;--card:#16161b;--line:#26262e;--txt:#f2f2f5;--txt2:#9a9aa8;--gold:#e0b354}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,sans-serif}
+  .head{max-width:1360px;margin:0 auto;padding:34px 24px 6px}
+  .head h1{margin:0 0 8px;font-size:26px;letter-spacing:-.6px}
+  .head p{margin:0;color:var(--txt2);font-size:14.5px;max-width:82ch;line-height:1.65}
+  .grid{max-width:1360px;margin:0 auto;padding:26px 24px 70px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(410px,1fr));gap:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .cap{padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+  .cap h2{margin:0 0 5px;font-size:15.5px;display:flex;align-items:center;gap:9px}
+  .cap .n{width:22px;height:22px;border-radius:7px;background:var(--gold);color:#221a06;
+    display:grid;place-items:center;font-size:12px;font-weight:800;flex:0 0 22px}
+  .cap p{margin:0;font-size:12.5px;color:var(--txt2);line-height:1.55}
+  .frame{position:relative;height:640px;background:#000;overflow:hidden}
+  .frame iframe{width:200%;height:200%;border:0;transform:scale(.5);transform-origin:0 0}
+  .open{display:block;padding:11px 18px;border-top:1px solid var(--line);font-size:13px;
+    color:var(--gold);text-decoration:none}
+  .open:hover{background:rgba(224,179,84,.06)}
+  .note{max-width:1360px;margin:0 auto;padding:0 24px 44px;font-size:13.5px;color:var(--txt2);line-height:1.75}
+  .note b{color:var(--txt)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}.frame{height:540px}}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Главная страница — три направления</h1>
+  <p>Все три варианта сделаны на реальном контенте приложения (15 уроков, 284 слова, карточки, оценки учителя). Прокрутите превью, чтобы увидеть страницу целиком, или откройте вариант отдельно — он полностью рабочий.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="cap">
+      <h2><span class="n">1</span> Отполированный тёмный</h2>
+      <p>Тот же тёмный «китайский» характер — золото, киноварь, тушь. Но аккуратнее: строгая сетка, больше воздуха, спокойные тени, крупная типографика. Минимальный риск, узнаваемость сохраняется.</p>
+    </div>
+    <div class="frame"><iframe src="1-polish.html" title="Вариант 1"></iframe></div>
+    <a class="open" href="1-polish.html" target="_blank" rel="noopener">Открыть вариант 1 →</a>
+  </div>
+
+  <div class="card">
+    <div class="cap">
+      <h2><span class="n">2</span> Светлый минимализм · бумага и тушь</h2>
+      <p>Рисовая бумага, красная печать, вертикальные иероглифы, тонкие линии вместо карточек. Спокойно для глаз при долгом чтении, выглядит как книга. Хорошо для уроков и текстов.</p>
+    </div>
+    <div class="frame"><iframe src="2-paper.html" title="Вариант 2"></iframe></div>
+    <a class="open" href="2-paper.html" target="_blank" rel="noopener">Открыть вариант 2 →</a>
+  </div>
+
+  <div class="card">
+    <div class="cap">
+      <h2><span class="n">3</span> Современный EdTech</h2>
+      <p>Крупные скруглённые карточки, цветные акценты, показатели сверху, заметная карточка «продолжить». Похоже на Duolingo/Notion — привычно и легко для школьников.</p>
+    </div>
+    <div class="frame"><iframe src="3-modern.html" title="Вариант 3"></iframe></div>
+    <a class="open" href="3-modern.html" target="_blank" rel="noopener">Открыть вариант 3 →</a>
+  </div>
+
+</div>
+<div class="note">
+  <b>Что можно смешать:</b> например, спокойный тёмный интерфейс (вариант 1) для телефона вечером и «бумажную» типографику (вариант 2) внутри уроков и чтения. Скажите, что понравилось или какие детали взять из разных вариантов, — и я перенесу это в настоящее приложение целиком, а не только на главную.
+</div>
+</body>
+</html>
