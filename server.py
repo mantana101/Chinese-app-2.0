@@ -38,6 +38,7 @@ STARTED_AT = int(time.time())
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("DB_PATH") or os.path.join(BASE, "data", "app.db")
 INDEX = os.path.join(BASE, "index.html")
+VIDEO_DIR = os.path.join(BASE, "video", "out")
 
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
@@ -340,12 +341,17 @@ def _as_float(value, default=0.0):
         return default
 
 
-def _safe_write(handler, body: bytes):
-    """Отправка тела клиенту, который мог уже отключиться."""
+def _safe_write(handler, body: bytes) -> bool:
+    """Отправка тела клиенту, который мог уже отключиться.
+
+    Возвращает False, если клиент ушёл: тогда длинную передачу (видео)
+    надо прервать, а не продолжать читать файл в никуда.
+    """
     try:
         handler.wfile.write(body)
+        return True
     except (BrokenPipeError, ConnectionResetError):
-        pass
+        return False
 
 
 def send_json(handler, code, obj, extra_headers=None):
@@ -732,6 +738,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             parsed = urllib.parse.urlparse(self.path)
             path = parsed.path
+            if path.startswith("/video/"):
+                return self.serve_video(path)
             if not path.startswith("/api/"):
                 return self.serve_app()
             if method == "GET":
@@ -763,6 +771,63 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return self._dispatch("DELETE")
 
     # ---------- статика ----------
+
+    def serve_video(self, path):
+        """Отдаёт готовые MP4 из video/out с поддержкой Range.
+
+        Без Range браузер не даёт перематывать видео, а Safari на iOS
+        вообще может отказаться воспроизводить файл целиком.
+        """
+        name = path[len("/video/"):]
+        # Только простые имена: никаких ../ и вложенных каталогов.
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", name or "") or not name.endswith(".mp4"):
+            return send_json(self, 404, {"error": "not_found"})
+        full = os.path.join(VIDEO_DIR, name)
+        if not os.path.isfile(full):
+            return send_json(self, 404, {"error": "not_found"})
+
+        size = os.path.getsize(full)
+        start, end = 0, size - 1
+        status = 200
+        rng = (self.headers.get("Range") or "").strip()
+        m = re.fullmatch(r"bytes=(\d*)-(\d*)", rng)
+        if m and size > 0:
+            if m.group(1):
+                start = int(m.group(1))
+                if m.group(2):
+                    end = min(int(m.group(2)), size - 1)
+            elif m.group(2):
+                start = max(0, size - int(m.group(2)))
+            if start > end or start >= size:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                send_common_headers(self)
+                self.end_headers()
+                return
+            status = 206
+
+        length = end - start + 1
+        self.send_response(status)
+        self.send_header("Content-Type", "video/mp4")
+        self.send_header("Content-Length", str(length))
+        self.send_header("Accept-Ranges", "bytes")
+        if status == 206:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        # Файл не меняется под тем же именем — можно кэшировать надолго.
+        self.send_header("Cache-Control", "public, max-age=86400")
+        send_common_headers(self)
+        self.end_headers()
+        with open(full, "rb") as f:
+            f.seek(start)
+            left = length
+            while left > 0:
+                chunk = f.read(min(262144, left))
+                if not chunk:
+                    break
+                if not _safe_write(self, chunk):
+                    return
+                left -= len(chunk)
 
     def serve_app(self):
         body = _index_cache()

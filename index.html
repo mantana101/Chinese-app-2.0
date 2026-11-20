@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12100e">
-<meta name="app-build" content="cf3e5e460333">
+<meta name="app-build" content="431bc4263eec">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1163,6 +1163,41 @@ button { font-family: inherit; cursor: pointer; }
 .tw-ru { color: var(--txt2); font-size: 13.5px; margin-top: 4px; }
 .tw-src { color: var(--txt3); font-size: 12px; margin-top: 4px; }
 .tw-note { margin-top: 10px; font-size: 12.5px; color: var(--txt3); }
+
+/* ---------- Готовые MP4: плеер и список ---------- */
+.mp4-screen {
+  margin: 12px 0 10px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b1310;
+  border: 1px solid var(--line);
+  aspect-ratio: 1280 / 672;
+}
+.mp4-video { display: block; width: 100%; height: 100%; background: #0b1310; }
+.mp4-video:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mp4-caption { font-size: 14px; color: var(--txt2); margin-bottom: 12px; }
+.mp4-loc { color: var(--txt3); font-size: 12.5px; margin-left: 6px; }
+.mp4-err { color: var(--red2); font-size: 12.5px; }
+.mp4-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+.mp4-item {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,.035); border: 1px solid var(--line);
+  color: var(--txt); font-size: 13.5px; transition: .14s;
+}
+.mp4-item:hover { background: rgba(255,255,255,.07); border-color: var(--gold); }
+.mp4-item.active { border-color: var(--gold); background: rgba(224,179,84,.12); }
+.mp4-num {
+  flex: 0 0 22px; width: 22px; height: 22px; border-radius: 6px;
+  display: grid; place-items: center; font-size: 11.5px; font-weight: 700;
+  background: rgba(255,255,255,.08); color: var(--txt2);
+}
+.mp4-item.active .mp4-num { background: var(--gold); color: #201c10; }
+.mp4-t { flex: 1; }
+.mp4-d { color: var(--txt3); font-size: 12px; }
+@media (max-width: 900px) {
+  .mp4-list { grid-template-columns: 1fr; }
+}
 
 </style>
 </head>
@@ -5245,10 +5280,89 @@ function videoStop() {
   vidState.playing = false;
 }
 
+
+/* ============================================================
+   ГОТОВЫЕ ВИДЕО (MP4 с русской озвучкой)
+   Отдельно от интерактивного плеера: это настоящие файлы, которые
+   сервер отдаёт по /video/<имя>.mp4. Их можно смотреть на телефоне,
+   перематывать и показывать в классе без интернета после загрузки.
+   ============================================================ */
+const VIDEO_FILES = [
+  { file: 'lesson-1.mp4', title: 'Серия 1 · Прилёт: первое «нихао»', dur: '1:02', loc: 'Аэропорт' },
+  { file: 'lesson-2.mp4', title: 'Серия 2 · Такси: город и цена', dur: '1:00', loc: 'Дорога в город' },
+  { file: 'lesson-3.mp4', title: 'Серия 3 · Отель: заселение', dur: '1:01', loc: 'Стойка регистрации' },
+  { file: 'lesson-4.mp4', title: 'Серия 4 · Кафе: заказ и разговор', dur: '1:00', loc: 'Кафе' },
+  { file: 'lesson-5.mp4', title: '4 тона китайского', dur: '0:45', loc: 'Фонетика' },
+  { file: 'lesson-6.mp4', title: 'Первые приветствия и вежливость', dur: '0:40', loc: 'Разговорник' },
+  { file: 'lesson-7.mp4', title: 'Счёт от 1 до 10', dur: '0:40', loc: 'Числа' },
+  { file: 'lesson-8.mp4', title: 'Порядок слов во фразе', dur: '0:34', loc: 'Грамматика' },
+  { file: 'lesson-9.mp4', title: 'Секреты иероглифов', dur: '0:32', loc: 'Письмо' }
+];
+
+function renderVideoFiles(wrap) {
+  const panel = el('div', 'panel');
+  panel.appendChild(el('h3', '', '▶️ Готовые видео с озвучкой'));
+  panel.appendChild(el('p', 'page-sub',
+    'Полные видеофайлы с русской озвучкой и субтитрами: иероглифы, пиньинь и перевод прямо на экране. ' +
+    'Можно смотреть с телефона и перематывать.'));
+
+  const screen = el('div', 'mp4-screen');
+  const video = el('video', 'mp4-video');
+  video.controls = true;
+  video.preload = 'metadata';
+  video.playsInline = true;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  screen.appendChild(video);
+
+  const caption = el('div', 'mp4-caption');
+  const list = el('div', 'mp4-list');
+  let current = -1;
+
+  function play(idx) {
+    const item = VIDEO_FILES[idx];
+    if (!item) return;
+    current = idx;
+    video.src = '/video/' + item.file;
+    caption.innerHTML = `<b>${esc(item.title)}</b> <span class="mp4-loc">${esc(item.loc)} · ${esc(item.dur)}</span>`;
+    $$('.mp4-item', list).forEach((b, i) => b.classList.toggle('active', i === idx));
+    /* Автовоспроизведение может быть запрещено браузером — это нормально,
+       пользователь нажмёт ▶ на плеере. Ловим отказ, чтобы не было ошибки. */
+    const pr = video.play();
+    if (pr && pr.catch) pr.catch(() => { });
+  }
+
+  VIDEO_FILES.forEach((it, i) => {
+    const b = el('button', 'mp4-item', `
+      <span class="mp4-num">${i + 1}</span>
+      <span class="mp4-t">${esc(it.title)}</span>
+      <span class="mp4-d">${esc(it.dur)}</span>`);
+    b.onclick = () => play(i);
+    list.appendChild(b);
+  });
+
+  /* Если файла нет на сервере (например, видео ещё не собрали),
+     честно говорим об этом вместо «вечной загрузки». */
+  video.onerror = () => {
+    const item = VIDEO_FILES[current];
+    caption.innerHTML = `<b>${esc(item ? item.title : 'Видео')}</b> ` +
+      '<span class="mp4-err">файл не найден на сервере — запустите сборку видео (см. video/README.md)</span>';
+  };
+
+  panel.appendChild(screen);
+  panel.appendChild(caption);
+  panel.appendChild(list);
+  wrap.appendChild(panel);
+  play(0);
+}
+
 function renderVideos(root) {
   const wrap = el('div');
   wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
   wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
+
+  /* Сначала — настоящие MP4: их можно смотреть целиком, с озвучкой. */
+  renderVideoFiles(wrap);
 
   let lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
 
@@ -5266,7 +5380,7 @@ function renderVideos(root) {
     player.appendChild(stage);
     player.appendChild(ctr);
     wrap.appendChild(player);
-    wrap.appendChild(el('h3', 'vid-sec-t', 'Выберите видео-урок'));
+    wrap.appendChild(el('h3', 'vid-sec-t', '🎞 Разбор по кадрам (интерактивно)'));
     wrap.appendChild(list);
 
     function drawToneCurve(tone) {

@@ -1512,10 +1512,89 @@ function videoStop() {
   vidState.playing = false;
 }
 
+
+/* ============================================================
+   ГОТОВЫЕ ВИДЕО (MP4 с русской озвучкой)
+   Отдельно от интерактивного плеера: это настоящие файлы, которые
+   сервер отдаёт по /video/<имя>.mp4. Их можно смотреть на телефоне,
+   перематывать и показывать в классе без интернета после загрузки.
+   ============================================================ */
+const VIDEO_FILES = [
+  { file: 'lesson-1.mp4', title: 'Серия 1 · Прилёт: первое «нихао»', dur: '1:02', loc: 'Аэропорт' },
+  { file: 'lesson-2.mp4', title: 'Серия 2 · Такси: город и цена', dur: '1:00', loc: 'Дорога в город' },
+  { file: 'lesson-3.mp4', title: 'Серия 3 · Отель: заселение', dur: '1:01', loc: 'Стойка регистрации' },
+  { file: 'lesson-4.mp4', title: 'Серия 4 · Кафе: заказ и разговор', dur: '1:00', loc: 'Кафе' },
+  { file: 'lesson-5.mp4', title: '4 тона китайского', dur: '0:45', loc: 'Фонетика' },
+  { file: 'lesson-6.mp4', title: 'Первые приветствия и вежливость', dur: '0:40', loc: 'Разговорник' },
+  { file: 'lesson-7.mp4', title: 'Счёт от 1 до 10', dur: '0:40', loc: 'Числа' },
+  { file: 'lesson-8.mp4', title: 'Порядок слов во фразе', dur: '0:34', loc: 'Грамматика' },
+  { file: 'lesson-9.mp4', title: 'Секреты иероглифов', dur: '0:32', loc: 'Письмо' }
+];
+
+function renderVideoFiles(wrap) {
+  const panel = el('div', 'panel');
+  panel.appendChild(el('h3', '', '▶️ Готовые видео с озвучкой'));
+  panel.appendChild(el('p', 'page-sub',
+    'Полные видеофайлы с русской озвучкой и субтитрами: иероглифы, пиньинь и перевод прямо на экране. ' +
+    'Можно смотреть с телефона и перематывать.'));
+
+  const screen = el('div', 'mp4-screen');
+  const video = el('video', 'mp4-video');
+  video.controls = true;
+  video.preload = 'metadata';
+  video.playsInline = true;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  screen.appendChild(video);
+
+  const caption = el('div', 'mp4-caption');
+  const list = el('div', 'mp4-list');
+  let current = -1;
+
+  function play(idx) {
+    const item = VIDEO_FILES[idx];
+    if (!item) return;
+    current = idx;
+    video.src = '/video/' + item.file;
+    caption.innerHTML = `<b>${esc(item.title)}</b> <span class="mp4-loc">${esc(item.loc)} · ${esc(item.dur)}</span>`;
+    $$('.mp4-item', list).forEach((b, i) => b.classList.toggle('active', i === idx));
+    /* Автовоспроизведение может быть запрещено браузером — это нормально,
+       пользователь нажмёт ▶ на плеере. Ловим отказ, чтобы не было ошибки. */
+    const pr = video.play();
+    if (pr && pr.catch) pr.catch(() => { });
+  }
+
+  VIDEO_FILES.forEach((it, i) => {
+    const b = el('button', 'mp4-item', `
+      <span class="mp4-num">${i + 1}</span>
+      <span class="mp4-t">${esc(it.title)}</span>
+      <span class="mp4-d">${esc(it.dur)}</span>`);
+    b.onclick = () => play(i);
+    list.appendChild(b);
+  });
+
+  /* Если файла нет на сервере (например, видео ещё не собрали),
+     честно говорим об этом вместо «вечной загрузки». */
+  video.onerror = () => {
+    const item = VIDEO_FILES[current];
+    caption.innerHTML = `<b>${esc(item ? item.title : 'Видео')}</b> ` +
+      '<span class="mp4-err">файл не найден на сервере — запустите сборку видео (см. video/README.md)</span>';
+  };
+
+  panel.appendChild(screen);
+  panel.appendChild(caption);
+  panel.appendChild(list);
+  wrap.appendChild(panel);
+  play(0);
+}
+
 function renderVideos(root) {
   const wrap = el('div');
   wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
   wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
+
+  /* Сначала — настоящие MP4: их можно смотреть целиком, с озвучкой. */
+  renderVideoFiles(wrap);
 
   let lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
 
@@ -1533,7 +1612,7 @@ function renderVideos(root) {
     player.appendChild(stage);
     player.appendChild(ctr);
     wrap.appendChild(player);
-    wrap.appendChild(el('h3', 'vid-sec-t', 'Выберите видео-урок'));
+    wrap.appendChild(el('h3', 'vid-sec-t', '🎞 Разбор по кадрам (интерактивно)'));
     wrap.appendChild(list);
 
     function drawToneCurve(tone) {
