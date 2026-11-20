@@ -19,8 +19,13 @@ DATA = os.path.join(ROOT, "src", "data.js")
 READ_SCRIPT = r"""
 const fs = require('fs');
 const code = fs.readFileSync(process.argv[1], 'utf8');
-const { LESSONS, DIAGNOSTIC } = new Function(code + '\nreturn { LESSONS, DIAGNOSTIC };')();
-process.stdout.write(JSON.stringify({ LESSONS, DIAGNOSTIC }));
+const { LESSONS, DIAGNOSTIC, HOMEWORK, homeworkFor } =
+  new Function(code + '\nreturn { LESSONS, DIAGNOSTIC, HOMEWORK, homeworkFor };')();
+// Функции через JSON не передать — считаем нужное прямо в node.
+process.stdout.write(JSON.stringify({
+  LESSONS, DIAGNOSTIC, HOMEWORK,
+  fallback: { known: homeworkFor('l15').length, unknown: homeworkFor('zzz').length }
+}));
 """
 
 # Типы, где ответ нужно впечатать руками. В курсе таких быть не должно.
@@ -114,6 +119,50 @@ class TestPracticeHasNoTyping(unittest.TestCase):
             self.assertGreaterEqual(
                 hits, 4, f"{lid}: в заданиях почти нет слов урока ({hits})"
             )
+
+
+class TestHomeworkContent(unittest.TestCase):
+    """Домашка каждого урока выполнима на сайте и без набора иероглифов."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = load_quiz()
+        cls.lessons = cls.data["LESSONS"]
+
+    def test_every_lesson_has_six_tasks(self):
+        for lid in self.lessons:
+            self.assertEqual(len(self.data["HOMEWORK"][lid]), 6, lid)
+
+    def test_no_typing_of_hanzi_required(self):
+        """Свободные ответы разрешают пиньинь и русский, выбора «впишите знак» нет."""
+        for lid, tasks in self.data["HOMEWORK"].items():
+            for i, task in enumerate(tasks):
+                self.assertIn(task["k"], {"mcq", "read", "order", "text"}, f"{lid}[{i}]")
+                self.assertTrue(task["q"].strip(), f"{lid}[{i}]: пустой вопрос")
+                if task["k"] in ("mcq", "read"):
+                    self.assertTrue(0 <= task["a"] < len(task["o"]), f"{lid}[{i}]: индекс")
+                    self.assertEqual(len(set(task["o"])), len(task["o"]), f"{lid}[{i}]: дубли")
+                if task["k"] == "order":
+                    self.assertEqual(sorted(task["a"]), list(range(len(task["o"]))), f"{lid}[{i}]")
+                if task["k"] == "text":
+                    self.assertGreater(task.get("n", 0), 0, f"{lid}[{i}]: нет объёма")
+
+    def test_tasks_touch_lesson_vocabulary(self):
+        for lid, lesson in self.lessons.items():
+            vocab = {w["h"] for w in lesson["vocab"]}
+            texts = []
+            for task in self.data["HOMEWORK"][lid]:
+                texts.append(task["q"])
+                texts.append(task.get("h", ""))
+                texts.extend(task.get("o", []))
+            joined = " ".join(texts)
+            hits = sum(1 for w in vocab if w in joined)
+            self.assertGreaterEqual(hits, 3, f"{lid}: в домашке нет слов урока ({hits})")
+
+    def test_fallback_for_unknown_lesson(self):
+        """Если урок добавят без ручной домашки, она собирается из l.hw."""
+        self.assertEqual(self.data["fallback"]["known"], 6)
+        self.assertEqual(self.data["fallback"]["unknown"], 0)
 
 
 if __name__ == "__main__":

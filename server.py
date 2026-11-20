@@ -54,6 +54,8 @@ LESSONS_TOTAL = int(os.environ.get("LESSONS_TOTAL", "15"))
 # Пределы размера тела запроса — защита от DoS и раздувания базы.
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", str(1_000_000)))
 MAX_PROGRESS_BYTES = int(os.environ.get("MAX_PROGRESS_BYTES", str(512_000)))
+# Одна домашняя работа: 12 заданий по ~600 символов с запасом.
+MAX_HOMEWORK_BYTES = int(os.environ.get("MAX_HOMEWORK_BYTES", str(20_000)))
 MAX_DRAIN_BYTES = int(os.environ.get("MAX_DRAIN_BYTES", str(8_000_000)))
 
 # Доверять ли X-Forwarded-For. На Render/Railway сервер стоит за прокси,
@@ -190,6 +192,22 @@ def init_db():
             user_id    INTEGER,
             created_at INTEGER NOT NULL
         );
+        -- Домашние задания: ученик делает их прямо на сайте и отправляет
+        -- учителю. Одна строка = один предмет (урок) одного ученика; ссылку
+        -- на себя ученик получает и после оценки, поэтому работу видно
+        -- целиком, а не только последний вариант.
+        CREATE TABLE IF NOT EXISTS homework (
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            lesson_id   TEXT NOT NULL,
+            answers     TEXT NOT NULL,
+            created_at  INTEGER NOT NULL,
+            updated_at  INTEGER NOT NULL,
+            score       INTEGER,
+            feedback    TEXT,
+            graded_by   INTEGER,
+            graded_at   INTEGER,
+            PRIMARY KEY (user_id, lesson_id)
+        );
         """
     )
     # Гарантия «ровно один владелец» на уровне базы: иначе одновременная
@@ -211,6 +229,12 @@ def migrate(conn):
     if version < 1:
         # v1 — базовая схема (все таблицы создаются через IF NOT EXISTS).
         conn.execute("PRAGMA user_version = 1")
+        conn.commit()
+        version = 1
+    if version < 2:
+        # v2 — домашние задания (таблица homework). Создаётся в init_db,
+        # здесь только фиксируем версию схемы.
+        conn.execute("PRAGMA user_version = 2")
         conn.commit()
 
 
@@ -895,8 +919,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 conn.close()
                 return send_json(self, 403, {"error": "forbidden"})
             rows = conn.execute(
-                "SELECT u.*, g.grade, g.comment, g.updated_at AS grade_at, p.updated_at AS prog_at, p.payload "
+                "SELECT u.*, g.grade, g.comment, g.updated_at AS grade_at, p.updated_at AS prog_at, p.payload, "
+                "h.hw_done, h.hw_waiting "
                 "FROM users u LEFT JOIN grades g ON g.user_id = u.id LEFT JOIN progress p ON p.user_id = u.id "
+                "LEFT JOIN (SELECT user_id, COUNT(*) AS hw_done, "
+                "SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) AS hw_waiting "
+                "FROM homework GROUP BY user_id) h ON h.user_id = u.id "
                 "WHERE u.role = 'student' ORDER BY u.display_name COLLATE NOCASE"
             ).fetchall()
             students = []
@@ -913,6 +941,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "created_at": r["created_at"],
                         "last_login": r["last_login"],
                         "last_active": r["prog_at"] or r["last_login"] or r["created_at"],
+                        "hw_done": r["hw_done"] or 0,
+                        "hw_waiting": r["hw_waiting"] or 0,
                     }
                 )
                 students.append(s)
@@ -924,8 +954,76 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "avg_accuracy": round(sum(s["accuracy"] for s in students) / len(students)) if students else 0,
                 "active_today": sum(1 for s in students if s["active_today"]),
                 "total_lessons": sum(s["lessons_done"] for s in students),
+                "hw_waiting": sum(s["hw_waiting"] for s in students),
+                "hw_total": sum(s["hw_done"] for s in students),
             }
             return send_json(self, 200, overview)
+
+        # --- домашние задания ---
+
+        if path == "/api/homework":
+            row = get_session(self)
+            if not row:
+                conn.close()
+                return send_json(self, 401, {"error": "not_authenticated"})
+            rows = conn.execute(
+                "SELECT lesson_id, answers, updated_at, score, feedback, graded_at "
+                "FROM homework WHERE user_id = ? ORDER BY updated_at DESC",
+                (row["id"],),
+            ).fetchall()
+            conn.close()
+            items = []
+            for r in rows:
+                try:
+                    answers = json.loads(r["answers"])
+                except Exception:
+                    answers = {}
+                items.append({
+                    "lesson_id": r["lesson_id"],
+                    "answers": answers if isinstance(answers, dict) else {},
+                    "updated_at": r["updated_at"],
+                    "score": r["score"],
+                    "feedback": r["feedback"] or "",
+                    "graded_at": r["graded_at"],
+                })
+            return send_json(self, 200, {"items": items})
+
+        if path == "/api/class/homework":
+            row = get_session(self)
+            if not row or row["role"] not in ("owner", "teacher"):
+                conn.close()
+                return send_json(self, 403, {"error": "forbidden"})
+            rows = conn.execute(
+                "SELECT h.*, u.display_name, u.username FROM homework h "
+                "JOIN users u ON u.id = h.user_id "
+                "WHERE u.role = 'student' ORDER BY h.updated_at DESC LIMIT 500"
+            ).fetchall()
+            conn.close()
+            items = []
+            for r in rows:
+                try:
+                    answers = json.loads(r["answers"])
+                except Exception:
+                    answers = {}
+                items.append({
+                    "student_id": r["user_id"],
+                    "student": r["display_name"],
+                    "username": r["username"],
+                    "lesson_id": r["lesson_id"],
+                    "answers": answers if isinstance(answers, dict) else {},
+                    "score": r["score"],
+                    "feedback": r["feedback"] or "",
+                    "graded_at": r["graded_at"],
+                    "updated_at": r["updated_at"],
+                    "created_at": r["created_at"],
+                })
+            done = [i for i in items if i["score"] is not None]
+            return send_json(self, 200, {
+                "items": items,
+                "total": len(items),
+                "graded": len(done),
+                "avg": round(sum(i["score"] for i in done) / len(done)) if done else None,
+            })
 
         if path == "/api/class/invites":
             row = get_session(self)
@@ -945,15 +1043,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 conn.close()
                 return send_json(self, 403, {"error": "forbidden"})
             rows = conn.execute(
-                "SELECT u.*, g.grade, g.comment, p.payload, p.updated_at AS prog_at FROM users u "
+                "SELECT u.*, g.grade, g.comment, p.payload, p.updated_at AS prog_at, h.hw_done, h.hw_graded "
+                "FROM users u "
                 "LEFT JOIN grades g ON g.user_id = u.id LEFT JOIN progress p ON p.user_id = u.id "
+                "LEFT JOIN (SELECT user_id, COUNT(*) AS hw_done, "
+                "SUM(CASE WHEN score IS NOT NULL THEN 1 ELSE 0 END) AS hw_graded "
+                "FROM homework GROUP BY user_id) h ON h.user_id = u.id "
                 "WHERE u.role = 'student' ORDER BY u.display_name COLLATE NOCASE"
             ).fetchall()
             buf = io.StringIO()
             w = csv.writer(buf, delimiter=";")
             w.writerow(
                 ["Имя", "Логин", "Уроки", "Средний балл", "Точность", "Карточки", "Дней подряд",
-                 "Оценка", "Комментарий", "Последняя активность", "Создан"]
+                 "Домашки", "Оценка", "Комментарий", "Последняя активность", "Создан"]
             )
             for r in rows:
                 s = summarize(json.loads(r["payload"]) if r["payload"] else {})
@@ -964,6 +1066,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         csv_safe(r["display_name"]), csv_safe(r["username"]),
                         f"{s['lessons_done']}/{s['lessons_total']}",
                         s["avg_score"], f"{s['accuracy']}%", s["cards"], s["streak"],
+                        f"{r['hw_graded'] or 0}/{r['hw_done'] or 0}",
                         csv_safe(r["grade"] or ""), csv_safe(r["comment"] or ""),
                         time.strftime("%Y-%m-%d %H:%M", time.localtime(last)) if last else "",
                         time.strftime("%Y-%m-%d", time.localtime(r["created_at"])),
@@ -992,6 +1095,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return send_json(self, 404, {"error": "not_found"})
             pr = conn.execute("SELECT payload, updated_at FROM progress WHERE user_id = ?", (sid,)).fetchone()
             gr = conn.execute("SELECT grade, comment, updated_at FROM grades WHERE user_id = ?", (sid,)).fetchone()
+            hw_rows = conn.execute(
+                "SELECT lesson_id, answers, updated_at, score, feedback FROM homework "
+                "WHERE user_id = ? ORDER BY updated_at DESC",
+                (sid,),
+            ).fetchall()
             ev = conn.execute(
                 "SELECT kind, detail, created_at FROM events WHERE user_id = ? ORDER BY created_at DESC LIMIT 60",
                 (sid,),
@@ -1006,6 +1114,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "payload": payload,
                     "summary": summarize(payload),
                     "grade": dict(gr) if gr else None,
+                    "homework": [
+                        {
+                            "lesson_id": h["lesson_id"],
+                            "answers": json.loads(h["answers"]) if h["answers"] else {},
+                            "updated_at": h["updated_at"],
+                            "score": h["score"],
+                            "feedback": h["feedback"] or "",
+                        }
+                        for h in hw_rows
+                    ],
                     "events": [dict(e) for e in ev],
                 },
             )
@@ -1321,6 +1439,93 @@ class Handler(http.server.BaseHTTPRequestHandler):
             )
             conn.commit()
             return send_json(self, 200, {"ok": True, "updated_at": stamp})
+
+        # --- домашние задания: сдача учеником ---
+
+        if path == "/api/homework/submit":
+            row = require_role(self, "owner", "teacher", "student")
+            lesson_id = _as_text(body.get("lesson_id"))[:12]
+            if not re.fullmatch(r"l(?:[1-9]|1[0-5])", lesson_id or ""):
+                raise ApiError(400, "bad_lesson")
+            answers = body.get("answers")
+            if not isinstance(answers, dict):
+                raise ApiError(400, "bad_answers")
+            if len(answers) > 40:
+                raise ApiError(400, "too_many_answers")
+            clean = {}
+            for key, value in answers.items():
+                if not re.fullmatch(r"hw[0-8]", _as_text(key)):
+                    continue
+                if not isinstance(value, str):
+                    continue
+                text = value.strip()
+                if not text:
+                    continue
+                clean[key] = text[:600]
+            if not clean:
+                raise ApiError(400, "empty_homework")
+            # Общий объём записи ограничиваем, чтобы одна работа не раздула базу.
+            if len(json.dumps(clean, ensure_ascii=False)) > MAX_HOMEWORK_BYTES:
+                raise ApiError(413, "homework_too_large")
+            stamp = now()
+            existing = conn.execute(
+                "SELECT created_at, score, graded_at FROM homework WHERE user_id = ? AND lesson_id = ?",
+                (row["id"], lesson_id),
+            ).fetchone()
+            created = existing["created_at"] if existing else stamp
+            # Исправленная работа возвращается в очередь на проверку: учитель
+            # не должен видеть старую оценку под новым ответом.
+            resubmit = bool(existing and existing["graded_at"])
+            conn.execute(
+                "INSERT INTO homework (user_id, lesson_id, answers, created_at, updated_at) "
+                "VALUES (?,?,?,?,?) "
+                "ON CONFLICT(user_id, lesson_id) DO UPDATE SET answers = excluded.answers, "
+                "updated_at = excluded.updated_at, score = NULL, feedback = NULL, "
+                "graded_by = NULL, graded_at = NULL",
+                (row["id"], lesson_id, json.dumps(clean, ensure_ascii=False), created, stamp),
+            )
+            conn.execute(
+                "INSERT INTO events (user_id, kind, detail, created_at) VALUES (?,?,?,?)",
+                (row["id"], "homework_submit", f"{lesson_id} · {len(clean)} ответов" + (" (повторно)" if resubmit else ""), stamp),
+            )
+            conn.commit()
+            return send_json(self, 200, {"ok": True, "lesson_id": lesson_id, "answers": len(clean)})
+
+        # --- домашние задания: проверка учителем ---
+
+        if path == "/api/class/homework/grade":
+            actor = require_role(self, "owner", "teacher")
+            sid = parse_id(body.get("student_id"))
+            load_target(conn, sid, actor, "grade")
+            lesson_id = _as_text(body.get("lesson_id"))[:12]
+            if not re.fullmatch(r"l(?:[1-9]|1[0-5])", lesson_id or ""):
+                raise ApiError(400, "bad_lesson")
+            score = _as_int(body.get("score"), -1)
+            if score < 0 or score > 100:
+                raise ApiError(400, "bad_score")
+            feedback = "" if body.get("feedback") is None else _as_text(body.get("feedback"))[:600]
+            row = conn.execute(
+                "SELECT updated_at FROM homework WHERE user_id = ? AND lesson_id = ?",
+                (sid, lesson_id),
+            ).fetchone()
+            if not row:
+                raise ApiError(404, "not_found")
+            stamp = now()
+            conn.execute(
+                "UPDATE homework SET score = ?, feedback = ?, graded_by = ?, graded_at = ? "
+                "WHERE user_id = ? AND lesson_id = ?",
+                (score, feedback, actor["id"], stamp, sid, lesson_id),
+            )
+            conn.execute(
+                "INSERT INTO events (user_id, kind, detail, created_at) VALUES (?,?,?,?)",
+                (sid, "homework_grade", f"{lesson_id} · {score}% · {feedback}"[:400], stamp),
+            )
+            conn.execute(
+                "INSERT INTO events (user_id, kind, detail, created_at) VALUES (?,?,?,?)",
+                (actor["id"], "homework_graded", f"ученик #{sid} · {lesson_id} · {score}%", stamp),
+            )
+            conn.commit()
+            return send_json(self, 200, {"ok": True})
 
         # --- класс: коды-приглашения ---
 

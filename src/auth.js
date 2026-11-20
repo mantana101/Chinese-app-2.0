@@ -463,10 +463,10 @@ const Auth = (() => {
       wrap.appendChild(el2('p', 'page-sub',
         `Учеников: ${data.count} · средний балл класса: ${data.avg_score}% · средняя точность: ${data.avg_accuracy}% · активны сегодня: ${data.active_today}`));
 
-      if (user?.role === 'owner') {
+      {
         const tabs = el2('div', 'tabs');
         const errN = sys?.counts?.errors || 0;
-        [['class', '📋 Ученики и коды'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
+        [['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
           const b = el2('button', 'tab' + (tab === id ? ' active' : ''), label);
           b.onclick = () => { tab = id; paint(); };
           tabs.appendChild(b);
@@ -474,6 +474,10 @@ const Auth = (() => {
         wrap.appendChild(tabs);
       }
 
+      if (tab === 'hw') {
+        paintHomework();
+        return;
+      }
       if (tab === 'system' && user?.role === 'owner') {
         paintSystem();
         return;
@@ -559,6 +563,119 @@ const Auth = (() => {
       }
       wrap.appendChild(t);
     };
+
+    /* --- домашки: проверка --- */
+    let hwCache = null;
+    async function paintHomework() {
+      const panel = el2('div', 'panel');
+      panel.appendChild(el2('h3', '', '🏠 Домашние задания учеников'));
+      panel.appendChild(el2('p', 'page-sub',
+        'Работы, которые ученики выполнили и отправили на сайте. Красным — ждут проверки.'));
+      wrap.appendChild(panel);
+
+      if (!hwCache) {
+        try { hwCache = await api('/api/class/homework'); } catch (e) { hwCache = null; }
+      }
+      if (!hwCache) {
+        panel.appendChild(el2('div', 'empty', 'Не удалось загрузить домашки.'));
+        return;
+      }
+      const head = el2('div', 'btn-row');
+      const info = el2('span', 'page-sub',
+        `Всего работ: ${hwCache.total} · проверено: ${hwCache.graded}` +
+        (hwCache.avg != null ? ` · средний балл: ${hwCache.avg}%` : ''));
+      const refresh = el2('button', 'btn btn-sm btn-ghost', '↻ Обновить');
+      refresh.onclick = async () => { hwCache = null; tab = 'hw'; paint(); };
+      head.appendChild(refresh);
+      head.appendChild(info);
+      panel.appendChild(head);
+
+      if (!hwCache.items.length) {
+        panel.appendChild(el2('div', 'empty', 'Пока никто не отправил домашку.'));
+        return;
+      }
+
+      const list = el2('div', 'hw-teach');
+      hwCache.items.forEach(it => {
+        const waiting = it.score == null;
+        const row = el2('div', 'hw-teach-row' + (waiting ? ' waiting' : ''));
+        const title = (window.LESSONS && window.LESSONS[it.lesson_id]?.title) || it.lesson_id;
+        row.innerHTML = `
+          <span><b>${esc(it.student)}</b><br><i>@${esc(it.username)}</i></span>
+          <span>${esc(title)}<br><i>${Object.keys(it.answers || {}).length} ответов · ${timeAgo(it.updated_at)}</i></span>
+          <span class="st-grade">${waiting ? '⏳ ждёт' : it.score + '%'}</span>
+          <span><i>${it.feedback ? esc(it.feedback.slice(0, 40)) : '—'}</i></span>
+          <span class="st-acts"></span>`;
+        const acts = row.querySelector('.st-acts');
+        const open = el2('button', 'btn btn-sm btn-primary', waiting ? 'Проверить' : 'Открыть');
+        open.onclick = () => openHomework(it, async () => { hwCache = null; tab = 'hw'; paint(); });
+        acts.appendChild(open);
+        list.appendChild(row);
+      });
+      panel.appendChild(list);
+    }
+
+    /* Карточка работы: все ответы ученика и выставление оценки. */
+    function openHomework(it, refresh) {
+      const tasks = (window.homeworkFor ? window.homeworkFor(it.lesson_id) : []);
+      const title = (window.LESSONS && window.LESSONS[it.lesson_id]?.title) || it.lesson_id;
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      const modal = document.createElement('div');
+      modal.className = 'panel modal';
+      const rows = tasks.map((task, i) => {
+        const raw = it.answers['hw' + i];
+        let shown = raw;
+        if ((task.k === 'mcq' || task.k === 'read') && raw !== undefined) {
+          const idx = Number(raw);
+          const chosen = (task.o || [])[idx] || '—';
+          const mark = idx === task.a ? '✅' : '❌';
+          shown = `${mark} ${chosen}` + (idx === task.a ? '' : `   (верно: ${(task.o || [])[task.a] || '—'})`);
+        }
+        if (task.k === 'order' && raw) {
+          const words = String(raw).split(',').filter(Boolean).map(x => (task.o || [])[Number(x)] || '').join(' ');
+          shown = words;
+        }
+        return `<div class="hw-answer">
+            <div class="aq">${i + 1}. ${esc(task.q)}</div>
+            <div class="aa ${shown ? '' : 'empty-ans'}">${shown ? esc(shown) : 'нет ответа'}</div>
+          </div>`;
+      }).join('');
+
+      modal.innerHTML = `
+        <div class="modal-head"><h2>${esc(it.student)} · ${esc(title)}</h2>
+        <button class="modal-x">✕</button></div>
+        <p class="page-sub">Отправлено ${timeAgo(it.updated_at)}${it.graded_at ? ' · проверено ' + timeAgo(it.graded_at) : ''}</p>
+        <div class="hw-answers">${rows || '<div class="empty">Заданий не найдено</div>'}</div>
+        <h3>Оценка работы</h3>
+        <div class="hw-graded-box">
+          <input class="g-input hw-score" type="number" min="0" max="100" placeholder="0–100"
+                 value="${it.score == null ? '' : it.score}">
+          <input class="g-input wide hw-fb" placeholder="Комментарий для ученика"
+                 value="${esc(it.feedback || '')}">
+          <button class="btn btn-primary hw-save">Сохранить оценку</button>
+        </div>
+        <div class="hw-note">Ученик увидит оценку и комментарий в разделе «Домашки» и на странице урока.</div>`;
+      ov.appendChild(modal);
+      root.appendChild(ov);
+      const close = () => ov.remove();
+      modal.querySelector('.modal-x').onclick = close;
+      ov.onclick = e => { if (e.target === ov) close(); };
+      modal.querySelector('.hw-save').onclick = async () => {
+        const score = parseInt(modal.querySelector('.hw-score').value, 10);
+        if (!(score >= 0 && score <= 100)) { toast('Оценка — число от 0 до 100'); return; }
+        const feedback = modal.querySelector('.hw-fb').value.trim();
+        try {
+          await api('/api/class/homework/grade', {
+            method: 'POST',
+            body: { student_id: it.student_id, lesson_id: it.lesson_id, score, feedback }
+          });
+          toast('Оценка сохранена');
+          close();
+          refresh();
+        } catch (e) { toast('Не удалось сохранить'); }
+      };
+    }
 
     function fmtDur(sec) {
       sec = Math.max(0, Number(sec || 0));
@@ -702,6 +819,14 @@ const Auth = (() => {
           <input class="g-input wide" placeholder="Комментарий учителя" value="${esc(d.grade?.comment || '')}">
           <button class="btn btn-primary g-save">Сохранить</button>
         </div>
+        <h3>Домашние задания</h3>
+        <div class="hw-answers">${(d.homework || []).map(h => {
+          const t = window.LESSONS && window.LESSONS[h.lesson_id] ? window.LESSONS[h.lesson_id].title : h.lesson_id;
+          const n = Object.keys(h.answers || {}).length;
+          const mark = h.score == null ? '⏳ ждёт проверки' : '✓ ' + h.score + '%';
+          return `<div class="hw-answer"><div class="aq">${esc(t)} · ${n} ответов · ${timeAgo(h.updated_at)}</div>
+            <div class="aa">${esc(mark)}${h.feedback ? ' — ' + esc(h.feedback) : ''}</div></div>`;
+        }).join('') || '<span class="empty">Домашек пока нет</span>'}</div>
         <h3>Активность</h3>
         <div class="events">${(d.events || []).slice(0, 12).map(e =>
           `<div class="ev"><span>${esc(e.kind)}</span><span>${esc(e.detail || '')}</span><i>${timeAgo(e.created_at)}</i></div>`).join('') || '<span class="empty">Пока пусто</span>'}</div>
