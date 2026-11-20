@@ -10,6 +10,9 @@ WORKDIR /app
 
 COPY build.py server.py docker-entrypoint.py ./
 COPY src ./src
+# Готовые MP4 из video/out — они отдаются по /video/<файл>.
+# Тяжёлые исходники (звук, инструменты, сам ffmpeg) в образ не нужны.
+COPY video/out ./video/out
 
 # Собираем index.html на этапе образа и готовим каталог для базы.
 RUN python3 build.py \
