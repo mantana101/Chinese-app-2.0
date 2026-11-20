@@ -22,15 +22,23 @@
 
 ## Как пересобрать
 
-Нужны Node 18+, Python 3 с `fonttools` и `brotli`, статический `ffmpeg`.
+Нужны Node 18+, Python 3 с `fonttools` и `brotli` и `ffmpeg` в PATH
+(или переменная `FFMPEG=/путь/ffmpeg`).
 
 ```bash
-# 1. шрифт с нужными иероглифами (Noto Sans SC, подмножество)
-python3 tools/mkfont.py
+cd video
+npm install --no-save jsdom @resvg/resvg-js @fontsource/noto-sans-sc
+python3 -m pip install fonttools brotli
 
-# 2. кадры + звук + сборка
-node tools/render-all.js
+# 1. шрифт с нужными иероглифами (Noto Sans SC, подмножество)
+python3 tools/mkfont.py "$(cat tools/hzchars.txt)"
+
+# 2. кадры + звук + сборка всех девяти уроков
+FFMPEG=$(command -v ffmpeg) node tools/all.js
 ```
+
+Результат появится в `video/out/`. Озвучка лежит в `video/audio/` — если
+заменить mp3, тайминг сцен пересчитается сам.
 
 `tools/mkfont.py` собирает TTF из woff2-подмножеств `@fontsource/noto-sans-sc`:
 resvg не умеет woff2, поэтому без этого шага иероглифы выходят квадратиками.

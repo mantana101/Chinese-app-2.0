@@ -16,10 +16,11 @@ import time
 base = pathlib.Path(__file__).parent
 src = base / "src"
 
-SOURCE_FILES = ("styles.css", "data.js", "auth.js", "app.js", "index.template.html")
+SOURCE_FILES = ("styles.css", "data.js", "pinyin.js", "auth.js", "app.js", "index.template.html")
 
 styles = (src / "styles.css").read_text(encoding="utf-8")
 data = (src / "data.js").read_text(encoding="utf-8")
+pinyin_src = (src / "pinyin.js").read_text(encoding="utf-8")
 auth = (src / "auth.js").read_text(encoding="utf-8")
 app = (src / "app.js").read_text(encoding="utf-8")
 tpl = (src / "index.template.html").read_text(encoding="utf-8")
@@ -56,17 +57,31 @@ out = (
     tpl.replace("{{BUILD_ID}}", BUILD_ID)
     .replace("{{STYLES}}", styles)
     .replace("{{DATA}}", safe(data))
+    .replace("{{PINYIN}}", safe(pinyin_src))
     .replace("{{AUTH}}", safe(auth))
     .replace("{{APP}}", safe(app))
 )
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
     sys.exit(f"ОШИБКА: в шаблоне остались плейсхолдеры: {', '.join(leftovers)}")
+
+# Каждый иероглиф курса должен иметь чтение: иначе ученик увидит значок
+# без пиньиня — ровно та проблема, из-за которой пиньинь и добавляли.
+import re
+
+py_chars = set(re.findall(r'"([\u3400-\u9fff])":"', pinyin_src))
+data_chars = set(re.findall(r"[\u3400-\u9fff]", data))
+missing = sorted(data_chars - py_chars)
+if missing:
+    sys.exit(
+        "ОШИБКА: нет пиньиня для иероглифов: " + " ".join(missing[:40])
+        + "\nОбновите src/pinyin.js (python3 tools/make-pinyin.py)."
+    )
 
 # Проверка баланса тегов <script>
 if out.count("<script>") != out.count("</script>"):

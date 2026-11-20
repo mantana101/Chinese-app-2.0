@@ -440,11 +440,15 @@ function renderLesson(root, args) {
 
   /* --- Словарь --- */
   const v = el('div', 'panel');
-  v.appendChild(el('div', 'panel-head', `<h3>📖 Новые слова (${l.vocab.length})</h3><button class="btn btn-sm" id="playAll">🔊 Прослушать все</button>`));
+  v.appendChild(el('div', 'panel-head', `<h3>📖 Новые слова (${l.vocab.length})</h3>
+    <div class="btn-row">
+      <button class="btn btn-sm" id="toggleRuby">${state.hideRuby ? 'Показать пиньинь' : 'Скрыть пиньинь'}</button>
+      <button class="btn btn-sm" id="playAll">🔊 Прослушать все</button>
+    </div>`));
   const tbl = el('div', 'vocab');
   l.vocab.forEach(w => {
     const card = el('div', 'vcard', `
-      <div class="vc-h">${esc(w.h)}</div>
+      <div class="vc-h">${ruby(w.h)}</div>
       <div class="vc-p">${esc(w.p)}</div>
       <div class="vc-r">${esc(w.r)}</div>
       <div class="vc-tools">${toneBtn(w.h, 'speak sm')}<button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки" aria-label="Добавить ${esc(w.h)} в карточки">＋</button></div>`);
@@ -452,6 +456,15 @@ function renderLesson(root, args) {
   });
   v.appendChild(tbl);
   root.appendChild(v);
+  /* Пиньинь по умолчанию включён, но кто уже читает иероглифы — может скрыть. */
+  $('#toggleRuby').onclick = () => {
+    state.hideRuby = !state.hideRuby;
+    document.body.classList.toggle('hide-ruby', !!state.hideRuby);
+    save();
+    renderLesson(root, args);
+  };
+  $('#toggleRuby').textContent = state.hideRuby ? 'Показать пиньинь' : 'Скрыть пиньинь';
+  document.body.classList.toggle('hide-ruby', !!state.hideRuby);
 
   /* --- Грамматика --- */
   const g = el('div', 'panel');
@@ -520,7 +533,7 @@ function renderQuestion(host) {
   host.appendChild(head);
 
   const body = el('div', 'q-body');
-  body.appendChild(el('div', 'q-text', esc(q.q)));
+  body.appendChild(el('div', 'q-text', ruby(q.q)));
   const fb = el('div', 'q-feedback');
   const controls = el('div', 'q-controls');
 
@@ -547,7 +560,7 @@ function renderQuestion(host) {
   if (q.k === 'mcq' || q.k === 'listen') {
     const opts = el('div', 'opts');
     q.o.forEach((o, i) => {
-      const b = el('button', 'opt', `<span class="opt-k">${'ABCD'[i]}</span><span>${esc(o)}</span>`);
+      const b = el('button', 'opt', `<span class="opt-k">${'ABCD'[i]}</span><span>${ruby(o)}</span>`);
       b.onclick = () => {
         const ok = i === q.a;
         $$('.opt', opts).forEach((x, xi) => {
@@ -555,7 +568,7 @@ function renderQuestion(host) {
           if (xi === q.a) x.classList.add('right');
           if (xi === i && !ok) x.classList.add('wrong');
         });
-        check(ok, ok ? '' : `Правильный ответ: <b>${esc(q.o[q.a])}</b>`);
+        check(ok, ok ? '' : `Правильный ответ: <b>${ruby(q.o[q.a])}</b>`);
       };
       opts.appendChild(b);
     });
@@ -594,7 +607,7 @@ function renderQuestion(host) {
       const ok = q.a.some(a => norm(a) === val);
       inp.disabled = true; sub.disabled = true;
       inp.classList.add(ok ? 'right' : 'wrong');
-      check(ok, ok ? '' : `Правильно: <b>${esc(q.a[0])}</b>${q.h ? ' — ' + esc(q.h) : ''}`);
+      check(ok, ok ? '' : `Правильно: <b>${ruby(q.a[0])}</b>${q.h ? ' — ' + esc(q.h) : ''}`);
     }
     sub.onclick = submit;
     const row = el('div', 'gap-row');
@@ -605,13 +618,13 @@ function renderQuestion(host) {
     const pool = el('div', 'order-pool');
     const line = el('div', 'order-line');
     q.o.forEach((w, i) => {
-      const b = el('button', 'ow', esc(w));
+      const b = el('button', 'ow', ruby(w));
       b.dataset.i = i;
       b.onclick = () => {
         if (b.classList.contains('used')) return;
         b.classList.add('used');
         picked.push({ w, i });
-        line.appendChild(el('button', 'ow used-inline', esc(w)));
+        line.appendChild(el('button', 'ow used-inline', ruby(w)));
       };
       pool.appendChild(b);
     });
@@ -625,7 +638,7 @@ function renderQuestion(host) {
       const seq = picked.map(x => x.i);
       const ok = JSON.stringify(seq) === JSON.stringify(q.a);
       sub.disabled = true; back.disabled = true;
-      check(ok, ok ? '' : `Правильно: <b>${esc(q.a.map(i => q.o[i]).join(''))}</b>`);
+      check(ok, ok ? '' : `Правильно: <b>${ruby(q.a.map(i => q.o[i]).join(''))}</b>`);
     };
     body.appendChild(line);
     body.appendChild(pool);
@@ -1333,7 +1346,7 @@ function renderText(host) {
     '💡 Нажмите на любую строку — услышите её. Наведите на иероглиф, чтобы увидеть пиньинь и перевод.');
   p.appendChild(hint);
   const gl = el('div', 'gloss');
-  t.glossary.forEach(g => gl.appendChild(el('div', 'gl-row', `<b>${esc(g.h)}</b><span class="gl-p">${esc(g.p)}</span><span>${esc(g.r)}</span>`)));
+  t.glossary.forEach(g => gl.appendChild(el('div', 'gl-row', `<b>${ruby(g.h)}</b><span class="gl-p">${esc(g.p)}</span><span>${esc(g.r)}</span>`)));
   p.appendChild(el('h3', '', 'Словарь к тексту'));
   p.appendChild(gl);
   host.appendChild(p);
@@ -1365,7 +1378,7 @@ function renderPhrases(root) {
     const list = el('div', 'ph-list');
     cat.items.forEach(it => {
       list.appendChild(el('div', 'ph-row', `
-        <span class="ph-h">${esc(it.h)}</span>
+        <span class="ph-h">${ruby(it.h)}</span>
         <span class="ph-p">${esc(it.p)}</span>
         <span class="ph-r">${esc(it.r)}</span>
         ${toneBtn(it.h, 'speak sm')}`));
@@ -1409,7 +1422,7 @@ function renderDict(root) {
     list.innerHTML = '';
     found.slice(0, 300).forEach(w => {
       list.appendChild(el('div', 'dict-row', `
-        <span class="d-h">${esc(w.h)}</span>
+        <span class="d-h">${ruby(w.h)}</span>
         <span class="d-p">${esc(w.p)}</span>
         <span class="d-r">${esc(w.r)}</span>
         <span class="d-src">${esc(w.src || '')}</span>
@@ -1649,6 +1662,75 @@ function renderVideos(root) {
   root.appendChild(wrap);
 }
 
+
+/* ============================================================
+   ПИНЬИНЬ ПОД КАЖДЫМ СЛОВОМ
+   Ученики читают с пиньинем, поэтому иероглифы всегда идут с
+   подсказкой сверху: в словаре, в заданиях, в текстах и в чате ИИ.
+   ============================================================ */
+const PY_LESSON = (() => {
+  const map = {};
+  const put = (h, p) => {
+    if (!h || !p) return;
+    if (!(h in map)) map[h] = p;
+  };
+  try {
+    Object.values(LESSONS).forEach(l => l.vocab.forEach(w => put(w.h, w.p)));
+    if (typeof PHRASES !== 'undefined') PHRASES.forEach(c => c.items.forEach(w => put(w.h, w.p)));
+    if (typeof TEXTS !== 'undefined') TEXTS.forEach(t => t.glossary.forEach(w => put(w.h, w.p)));
+    if (typeof HANDWRITING !== 'undefined') HANDWRITING.forEach(w => put(w.h, w.p));
+  } catch (e) { }
+  return map;
+})();
+
+/* Пиньинь слова: сначала ищем готовое чтение в курсе,
+   иначе собираем по слогам из таблицы иероглифов. */
+function pinyinOf(word) {
+  const w = String(word || '').trim();
+  if (!w) return '';
+  if (PY_LESSON[w]) return PY_LESSON[w];
+  if (typeof PY_CHAR === 'undefined') return '';
+  const out = [];
+  for (const ch of w) {
+    if (/[\u3400-\u9fff]/.test(ch)) out.push(PY_CHAR[ch] || '');
+    else out.push(ch);
+  }
+  return out.join(' ').replace(/\s+([，。？！、；：,.?!;:])/g, '$1').trim();
+}
+
+/* Иероглифы + пиньинь сверху. addClass — дополнительный класс обёртки. */
+function ruby(hanzi, cls = '') {
+  const text = String(hanzi == null ? '' : hanzi);
+  let html = '', i = 0;
+  const re = /[\u3400-\u9fff]+/g;
+  let m;
+  while ((m = re.exec(text))) {
+    if (m.index > i) html += esc(text.slice(i, m.index));
+    const chunk = m[0];
+    /* подбираем самое длинное известное слово в курсе — так пиньинь точнее */
+    let j = 0;
+    while (j < chunk.length) {
+      let hit = '';
+      for (let len = Math.min(6, chunk.length - j); len >= 1; len--) {
+        const sub = chunk.substr(j, len);
+        if (PY_LESSON[sub]) { hit = sub; break; }
+      }
+      if (hit) {
+        html += `<span class="rw${cls ? ' ' + cls : ''}"><span class="rw-p">${esc(PY_LESSON[hit])}</span><span class="rw-h">${esc(hit)}</span></span>`;
+        j += hit.length;
+      } else {
+        const ch = chunk[j];
+        const py = (typeof PY_CHAR !== 'undefined' && PY_CHAR[ch]) || '';
+        html += `<span class="rw${cls ? ' ' + cls : ''}"><span class="rw-p">${esc(py)}</span><span class="rw-h">${esc(ch)}</span></span>`;
+        j++;
+      }
+    }
+    i = m.index + chunk.length;
+  }
+  if (i < text.length) html += esc(text.slice(i));
+  return html;
+}
+
 /* ============================================================
    ВНУТРЕННИЙ ИИ-АГЕНТ (Сяо Мин · 小明)
    ============================================================ */
@@ -1680,12 +1762,149 @@ function tutorAllVocab() {
   return list;
 }
 
-function tutorReplyLocal(raw) {
-  const q = (raw || '').trim();
-  const low = q.toLowerCase();
-  const vocab = tutorAllVocab();
+/* ---------- Русские названия грамматических явлений ----------
+   Ученикам проще, когда вместо «частица 了» написано ещё и по-русски,
+   что она делает. */
+const GRAMMAR_TIPS = {
+  '吗': 'частица вопроса «да/нет», ставится в самом конце',
+  '呢': 'частица «а ты?» — заменяет повтор вопроса',
+  '吧': 'частица предположения: «наверное, да?»',
+  '了': 'действие завершено (после глагола) ИЛИ ситуация изменилась (в конце)',
+  '的': 'притяжательная частица: «чей, какой» — перед существительным',
+  '得': 'стоит после глагола: «как именно сделано» — 跑得快',
+  '把': 'выносит объект перед глаголом, когда у действия есть результат',
+  '在': 'находиться в (месте); также «сейчас в процессе» перед глаголом',
+  '不': 'отрицание в настоящем и будущем; перед 4-м тоном читается bú',
+  '没': 'отрицание в прошлом; с 有 — «не иметь»',
+  '要': 'хочу (сильное намерение); нужно',
+  '想': 'хочу (мягче); думаю; скучаю',
+  '会': 'умею (навык); также «будет» о будущем',
+  '能': 'могу (есть возможность прямо сейчас)',
+  '可以': 'можно, разрешено',
+  '应该': 'следует, стоило бы',
+  '个': 'самое частое счётное слово: 一个人, 一个朋友',
+  '都': 'все, всё — всегда перед глаголом',
+  '也': 'тоже — всегда перед глаголом',
+  '很': 'очень; в утверждении делает фразу законченной',
+  '是': 'быть, являться — связка между «кто» и «кто он»',
+  '有': 'у меня есть; иметь. Отрицание — 没有',
+  '和': 'и (между существительными)',
+  '还是': 'или — в вопросе с выбором',
+  '或者': 'или — в утверждении',
+  '因为': 'потому что',
+  '所以': 'поэтому',
+  '但是': 'но',
+  '如果': 'если',
+  '太': 'слишком — с ним в конце обычно 了',
+  '比': 'сравнение: A 比 B 冷 — A холоднее B',
+  '最': 'самый',
+  '更': 'ещё более',
+  '给': 'давать; для (кого-то)',
+  '跟': 'с (кем-то)',
+  '从': 'от, из (откуда)',
+  '到': 'до, прибывать',
+  '再': 'ещё раз',
+  '还': 'ещё, всё ещё',
+  '才': 'только тогда, лишь',
+  '就': 'уже, сразу',
+  '别': 'не надо (делать)',
+  '请': 'пожалуйста (просьба)',
+  '吧': 'давай; наверное',
+  '个': 'счётное слово'
+};
 
-  /* 1) Совет по личному прогрессу */
+/* Короткие переводы частых слов: нужны, чтобы собранная из словаря фраза
+   не выглядела набором иероглифов. */
+const RU_HINT = (() => {
+  const m = {};
+  const nums = ['ноль', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять'];
+  const numHan = '零一二三四五六七八九十';
+  [...numHan].forEach((ch, i) => { m[ch] = nums[i]; });
+  Object.assign(m, {
+    '我': 'я', '你': 'ты', '您': 'вы (вежливо)', '他': 'он', '她': 'она', '我们': 'мы', '他们': 'они',
+    '是': 'быть', '不': 'не', '没': 'не (прошлое)', '有': 'есть, иметь', '没有': 'нет, не иметь',
+    '要': 'хочу', '想': 'хочу', '会': 'умею', '能': 'могу', '可以': 'можно', '应该': 'следует',
+    '喝': 'пить', '吃': 'есть, кушать', '喝茶': 'пить чай', '茶': 'чай', '水': 'вода', '咖啡': 'кофе',
+    '饭': 'еда, рис', '面': 'лапша', '菜': 'блюдо', '肉': 'мясо', '牛肉': 'говядина', '鸡': 'курица',
+    '去': 'идти, ехать', '来': 'приходить', '回': 'возвращаться', '走': 'идти', '坐': 'сидеть, ехать',
+    '看': 'смотреть', '听': 'слушать', '说': 'говорить', '学': 'учить', '学习': 'учиться',
+    '买': 'покупать', '卖': 'продавать', '做': 'делать', '工作': 'работа', '写': 'писать', '读': 'читать',
+    '喜欢': 'нравиться', '爱': 'любить', '知道': 'знать (факт)', '认识': 'знать (человека)',
+    '好': 'хорошо', '很好': 'очень хорошо', '不好': 'плохо', '大': 'большой', '小': 'маленький',
+    '多': 'много', '少': 'мало', '贵': 'дорого', '便宜': 'дёшево', '新': 'новый', '旧': 'старый',
+    '今天': 'сегодня', '明天': 'завтра', '昨天': 'вчера', '现在': 'сейчас', '以后': 'потом', '以前': 'раньше',
+    '家': 'дом, семья', '公司': 'компания', '学校': 'школа', '老师': 'учитель', '学生': 'студент',
+    '朋友': 'друг', '人': 'человек', '名字': 'имя', '中国': 'Китай', '中文': 'китайский язык',
+    '汉语': 'китайский язык', '钱': 'деньги', '块': 'юань', '多少钱': 'сколько стоит',
+    '谢谢': 'спасибо', '你好': 'здравствуйте', '再见': 'до свидания', '对不起': 'извините',
+    '没关系': 'ничего страшного', '不客气': 'не за что', '请问': 'извините, скажите пожалуйста',
+    '什么': 'что', '谁': 'кто', '哪里': 'где', '哪儿': 'где', '为什么': 'почему', '怎么': 'как',
+    '怎么样': 'как (дела)', '什么时候': 'когда', '几点': 'который час', '多少': 'сколько',
+    '个': '(счётное слово)', '本': '(счётное слово для книг)', '杯': 'чашка', '份': 'порция', '碗': 'пиала',
+    '很': 'очень', '也': 'тоже', '都': 'все', '和': 'и', '在': 'в, находиться', '和': 'и',
+    '也': 'тоже', '一下': 'немного, разок', '一点': 'немного'
+  });
+  return m;
+})();
+
+/* Собрать из словаря курса всё, что знаем о слове */
+function tutorLookup(word) {
+  const w = String(word || '').trim();
+  if (!w) return null;
+  const vocab = tutorAllVocab();
+  return vocab.find(x => x.h === w) ||
+    vocab.find(x => x.r.toLowerCase() === w.toLowerCase()) ||
+    vocab.find(x => x.p && x.p.toLowerCase().replace(/\s+/g, '') === w.toLowerCase().replace(/\s+/g, '')) ||
+    null;
+}
+
+/* Разбор фразы по словам: самое длинное совпадение, остальное — по символам */
+function tutorSegment(text) {
+  const vocab = tutorAllVocab();
+  const chars = [...String(text)].filter(c => /[\u3400-\u9fff]/.test(c));
+  const parts = [];
+  let i = 0;
+  while (i < chars.length) {
+    let found = null;
+    for (let len = Math.min(6, chars.length - i); len >= 1; len--) {
+      const sub = chars.slice(i, i + len).join('');
+      const hit = vocab.find(x => x.h === sub);
+      if (hit) { found = hit; break; }
+    }
+    if (found) { parts.push(found); i += found.h.length; }
+    else {
+      const ch = chars[i];
+      parts.push({ h: ch, p: (typeof PY_CHAR !== 'undefined' && PY_CHAR[ch]) || '', r: RU_HINT[ch] || '' });
+      i++;
+    }
+  }
+  return parts;
+}
+
+function tutorWordHtml(w) {
+  const ru = w.r || RU_HINT[w.h] || '';
+  return `<span class="tw-row"><span class="tw-h">${ruby(w.h)}</span>` +
+    (ru ? `<span class="tw-r">${esc(ru)}</span>` : '') + '</span>';
+}
+
+function tutorReplyLocal(raw) {
+  const q = String(raw || '').trim();
+  const low = q.toLowerCase();
+
+  /* ---------- 0) Что умеет помощник ---------- */
+  if (/что ты (умеешь|можешь)|твои возможности|помощь|команды|что умеет/.test(low)) {
+    return {
+      html: 'Я помогаю по-русски — иероглифы не нужны. Просто спросите:<br><br>' +
+        '• <b>Как сказать «спасибо»?</b> — дам иероглиф, пиньинь и перевод<br>' +
+        '• <b>разбери 我想喝茶</b> — разложу фразу по словам с чтением<br>' +
+        '• <b>объясни 了</b> — расскажу правило простыми словами и дам примеры<br>' +
+        '• <b>тоны</b> — напомню про 4 тона и как они меняются<br>' +
+        '• <b>проверь меня</b> — задам вопрос по пройденному<br>' +
+        '• <b>что мне повторить</b> — посмотрю ваши ошибки и прогресс'
+    };
+  }
+
+  /* ---------- 1) Совет по личному прогрессу ---------- */
   if (/прогресс|повторить|совет|что учить|план|ошибк/.test(low)) {
     const done = doneCount(), total = allLessonIds().length;
     const due = dueCards().length;
@@ -1694,70 +1913,127 @@ function tutorReplyLocal(raw) {
     let txt = `Ваш прогресс: пройдено <b>${done} из ${total}</b> уроков, точность <b>${accuracy()}%</b>, серия <b>${state.streak}</b> дн.<br><br>`;
     if (due) txt += `🗂️ У вас <b>${due}</b> карточек ждут повторения — загляните в <a href="#/cards">Карточки</a>.<br>`;
     if (hard.length) txt += `🎯 Сложные слова: ${hard.map(c => `<b>${esc(c.h)}</b> (${esc(c.p)} — ${esc(c.r)})`).join(', ')}.<br>`;
-    txt += `📚 Следующий рекомендуемый урок: <b>«${esc(nxt.title)}»</b> — <a href="#/lesson/${nextLesson()}">открыть урок →</a>`;
+    txt += `📚 Следующий урок: <b>«${esc(nxt.title)}»</b> — <a href="#/lesson/${nextLesson()}">открыть урок →</a>`;
     return { html: txt };
   }
 
-  /* 2) Мини-тест по китайскому прямо в чате */
+  /* ---------- 2) Мини-тест ---------- */
   if (/тест|проверь|викторин|экзамен|задани/.test(low)) {
-    const pool = vocab.filter(w => w.h && w.p && w.r);
+    const pool = tutorAllVocab().filter(w => w.h && w.p && w.r);
     const target = pool[Math.floor(Math.random() * pool.length)];
     const decoys = shuffle(pool.filter(w => w.r !== target.r)).slice(0, 3);
     const opts = shuffle([target, ...decoys]);
     return {
-      html: `Проверьте себя! Как переводится слово <b class="zh" style="font-size:22px">${esc(target.h)}</b> <span style="color:var(--gold)">(${esc(target.p)})</span>?`,
+      html: `Проверьте себя: как переводится <b class="zh" style="font-size:20px">${ruby(target.h)}</b>` +
+        `<span style="color:var(--gold)"> (${esc(target.p)})</span>?`,
       speak: target.h,
       quiz: { target, opts }
     };
   }
 
-  /* 3) Интерактивный мини-диалог */
-  if (/диалог|поговор|практик|общен|привет/.test(low) && !/[\u4e00-\u9fff]/.test(q)) {
-    tutorContext.mode = 'dialogue';
-    tutorContext.step = 1;
-    return {
-      html: `Отлично, потренируем живой диалог! Я начинаю:<br>
-        <b class="zh" style="font-size:20px">你好！你叫什么名字？</b><br>
-        <span style="color:var(--gold)">Nǐ hǎo! Nǐ jiào shénme míngzi?</span> — Привет! Как тебя зовут?<br>
-        <i>Ответьте по-китайски (например: <code>我叫Али</code> или <code>你好</code>)</i>`,
-      speak: '你好！你叫什么名字？'
-    };
-  }
-  if (tutorContext.mode === 'dialogue' && /[\u4e00-\u9fff]|nihao|wo|jiao|xie|hao/i.test(low)) {
-    if (tutorContext.step === 1) {
-      tutorContext.step = 2;
+  /* ---------- 3) «Как сказать X» — перевод с русского ---------- */
+  const sayMatch = q.match(/(?:как\s+(?:будет|сказать|перевести|спросить|пишется)|переведи(?:те)?|перевод)\s*[:\-—]?\s*(.+)/i);
+  if (sayMatch) {
+    const phrase = sayMatch[1].replace(/[«»"'.?!]+$/g, '').trim();
+    const need = phrase.toLowerCase();
+    const vocab = tutorAllVocab();
+    /* 1. точное совпадение по русскому переводу */
+    let hits = vocab.filter(w => w.r.toLowerCase() === need);
+    /* 2. перевод начинается с этого слова */
+    if (!hits.length) hits = vocab.filter(w => w.r.toLowerCase().split(/[;,/]/)[0].trim() === need);
+    /* 3. вхождение */
+    if (!hits.length) hits = vocab.filter(w => w.r.toLowerCase().includes(need) && need.length > 2);
+    if (hits.length) {
+      const best = hits.slice(0, 4);
       return {
-        html: `Супер ответ! 👍 Продолжаем:<br>
-          <b class="zh" style="font-size:20px">很高兴认识你！你喜欢喝茶还是咖啡？</b><br>
-          <span style="color:var(--gold)">Hěn gāoxìng rènshi nǐ! Nǐ xǐhuan hē chá háishi kāfēi?</span> — Рад познакомиться! Ты любишь чай или кофе?`,
-        speak: '很高兴认识你！你喜欢喝茶还是咖啡？'
+        html: `«${esc(phrase)}» по-китайски:<br><br>` +
+          best.map(w => `<div class="tw-card"><b class="zh" style="font-size:22px">${ruby(w.h)}</b>` +
+            `<div class="tw-ru">${esc(w.r)}</div></div>`).join('') +
+          (best[0].lesson ? `<div class="tw-src">Из раздела: ${esc(best[0].lesson)}</div>` : ''),
+        speak: best[0].h
       };
     }
-    tutorContext.mode = 'chat';
+    /* 4. не нашли готового — честно говорим и предлагаем похожее */
+    const words = need.split(/\s+/).filter(Boolean);
+    const near = words.map(wd => vocab.find(x => x.r.toLowerCase().includes(wd.slice(0, Math.max(4, wd.length - 2))))).filter(Boolean);
     return {
-      html: `Отлично звучит! 👏 Вы уверенно держите диалог.<br>
-        <b class="zh" style="font-size:20px">你中文说得很好！继续加油！</b><br>
-        <span style="color:var(--gold)">Nǐ Zhōngwén shuō de hěn hǎo! Jìxù jiāyóu!</span> — Вы хорошо говорите по-китайски! Так держать!`,
-      speak: '你中文说得很好！继续加油！'
+      html: `Готового перевода «${esc(phrase)}» в словаре курса нет` +
+        (near.length ? `, но вот близкие по смыслу слова:<br><br>${near.slice(0, 4).map(tutorWordHtml).join('')}` : '.') +
+        `<br><br>Загляните в <a href="#/dict">Словарь</a> — там можно искать по русскому слову.`
     };
   }
 
-  /* 4) Объяснение грамматики */
+  /* ---------- 4) Разбор фразы / предложения по словам ---------- */
+  const hasHanzi = /[\u3400-\u9fff]/.test(q);
+  const askParse = /разбер|разложи|по\s+словам|что\s+значит|переведи|как\s+читать|чтение/i.test(low);
+  if (hasHanzi && (askParse || q.replace(/[^\u3400-\u9fff]/g, '').length >= 2)) {
+    const hanziOnly = q.match(/[\u3400-\u9fff]+/g).join('');
+    const parts = tutorSegment(hanziOnly);
+    const exact = tutorLookup(hanziOnly);
+    const pinyin = pinyinOf(hanziOnly);
+    const words = parts.map(p => `${esc(p.h)} (${esc(p.p || pinyinOf(p.h))})`).join(' · ');
+    let html = '';
+    if (exact) {
+      html += `<div class="tw-card"><b class="zh" style="font-size:22px">${ruby(exact.h)}</b>` +
+        `<div class="tw-ru">${esc(exact.r)}</div></div>`;
+      if (exact.lesson) html += `<div class="tw-src">Из раздела: ${esc(exact.lesson)}</div>`;
+      html += '<br>';
+    }
+    html += `<b>Разбор по словам</b> <span style="color:var(--txt3)">(${esc(pinyin)})</span>:<br>` +
+      parts.map(tutorWordHtml).join('');
+    const known = parts.filter(p => p.r).length;
+    if (!exact && parts.length > 1 && known === 0) {
+      html += `<br><div class="tw-note">Точного перевода в курсе нет. Добавьте слово в <a href="#/cards">карточки</a> — и оно попадёт в повторение.</div>`;
+    }
+    return { html, speak: hanziOnly };
+  }
+
+  /* ---------- 5) Объяснение грамматики ---------- */
   const grammarKB = [
-    { re: /吗|\bma\b|вопрос/, title: 'Вопросительная частица 吗 (ma)',
-      body: 'Ставится в самом конце утверждения, чтобы получился вопрос «да/нет».<br>Пример: <b class="zh">你喝茶吗？</b> (Nǐ hē chá ma?) — Ты пьёшь чай?', speak: '你喝茶吗' },
-    { re: /不|没|отрицан/, title: 'Отрицание 不 (bù) и 没 (méi)',
-      body: '<b>不 (bù)</b> — отрицание в настоящем/будущем или привычке (<b class="zh">我不喝咖啡</b> — Я не пью кофе).<br><b>没 (méi)</b> — отрицание в прошлом или с глаголом 有 (<b class="zh">我没有时间</b> — У меня нет времени; <b class="zh">我昨天没去</b> — Вчера я не ходил).', speak: '我不喝咖啡' },
-    { re: /了|\ble\b|прошед/, title: 'Частица 了 (le)',
-      body: 'Показывает завершённое действие или новое состояние.<br>Пример: <b class="zh">我买了茶</b> (Wǒ mǎi le chá) — Я купил чай. / <b class="zh">下雨了</b> — Пошёл дождь.', speak: '我买了茶' },
-    { re: /的|\bde\b|притяж/, title: 'Частица 的 (de)',
-      body: 'Связывает определение или владельца с предметом: «чей» или «какой».<br>Пример: <b class="zh">我的书</b> (wǒ de shū) — моя книга; <b class="zh">好喝的茶</b> — вкусный чай.', speak: '我的书' },
-    { re: /把|\bba\b/, title: 'Конструкция 把 (bǎ)',
-      body: 'Выносит объект перед глаголом, когда с предметом что-то сделали или переместили его.<br>Схема: Подлежащее + 把 + Объект + Глагол + Результат.<br>Пример: <b class="zh">请把门关上</b> — Пожалуйста, закрой дверь.', speak: '请把门关上' },
-    { re: /тон|пиньинь|сандх|произнош/, title: 'Тоны и сандхи (изменение тонов)',
-      body: '1) Два 3-х тона подряд читаются как 2-й + 3-й: <b class="zh">你好</b> (nǐ hǎo → ní hǎo).<br>2) <b>不 (bù)</b> перед 4-м тоном становится <b>bú</b>: <b class="zh">不是</b> (bú shì).<br>Загляните также в раздел <a href="#/tones">Тоны</a> и <a href="#/videos">Видео-уроки</a>.', speak: '你好，不是' },
-    { re: /счетн|счётн|个|本|杯|классификатор/, title: 'Счётные слова (个, 本, 杯)',
-      body: 'Между числом и предметом в китайском всегда ставится счётное слово:<br>• <b>个 (gè)</b> — универсальное (一个人 — один человек)<br>• <b>本 (běn)</b> — для книг (一本书)<br>• <b>杯 (bēi)</b> — чашка/стакан (一杯茶)', speak: '一杯茶' }
+    { re: /吗|\bma\b|вопрос.*да.?нет|общий вопрос/, title: '吗 — вопрос «да или нет»',
+      body: 'Ставится в <b>самый конец</b> утверждения, порядок слов не меняется.<br>' +
+        '<b>你喝茶。</b> — Ты пьёшь чай. → <b>你喝茶吗？</b> — Ты пьёшь чай?<br>' +
+        'Ответ: <b>喝。</b> (пью) или <b>不喝。</b> (не пью).', speak: '你喝茶吗' },
+    { re: /了|\ble\b|прошед|заверш/, title: '了 — «уже сделано» или «ситуация изменилась»',
+      body: 'Два места — два смысла.<br>' +
+        '• После глагола — действие завершено: <b>我吃了早饭。</b> — Я позавтракал.<br>' +
+        '• В конце — новое состояние: <b>我饿了。</b> — Я проголодался.<br>' +
+        'Отрицание с 了 — через <b>没</b>: <b>我没吃早饭。</b>', speak: '我吃了早饭' },
+    { re: /不.*没|没.*不|отрицан/, title: '不 и 没 — два разных «не»',
+      body: '<b>不 (bù)</b> — настоящее и будущее, привычка: <b>我不喝咖啡</b> — я не пью кофе.<br>' +
+        '<b>没 (méi)</b> — прошлое и «не иметь»: <b>我没去</b> — я не ходил, <b>我没有时间</b> — у меня нет времени.<br>' +
+        'Прилагательные отрицаем только через 不: <b>不好</b>, <b>不贵</b>.', speak: '我不喝咖啡' },
+    { re: /的|\bde\b.*(притяж|частиц)/, title: '的 — «чей, какой»',
+      body: 'Ставится <b>перед существительным</b>: <b>我的书</b> — моя книга, <b>中国的茶</b> — китайский чай.<br>' +
+        'Не путать с <b>得</b> — она идёт <b>после глагола</b>: <b>跑得快</b> — бегает быстро.', speak: '我的书' },
+    { re: /把|ba.*конструк/, title: '把 — объект перед глаголом',
+      body: 'Нужна, когда с предметом что-то сделали и есть результат.<br>' +
+        'Схема: <b>кто + 把 + что + глагол + результат</b><br>' +
+        '<b>我把书放在桌上。</b> — Я положил книгу на стол.<br>' +
+        'Если результата нет — 把 не нужна: <b>我买书。</b>', speak: '我把书放在桌上' },
+    { re: /тон|пиньинь|сандх|произнош|4 тона|четыре тона/, title: 'Тоны: как не путать',
+      body: 'Один слог — четыре смысла: <b>mā</b> (мама), <b>má</b> (конопля), <b>mǎ</b> (лошадь), <b>mà</b> (ругать).<br><br>' +
+        '1-й — ровно высоко (ма-а-а).<br>2-й — снизу вверх, как переспрос.<br>' +
+        '3-й — вниз и чуть вверх.<br>4-й — резко вниз.<br><br>' +
+        'Два 3-х тона подряд: первый читается 2-м — <b>nǐ hǎo → ní hǎo</b>.', speak: '妈麻马骂' },
+    { re: /счетн|счётн|классификатор|个|本|杯|份|碗/, title: 'Счётные слова',
+      body: 'Между числом и предметом всегда стоит счётное слово:<br>' +
+        '• <b>个</b> — универсальное: 一个人 (один человек)<br>' +
+        '• <b>本</b> — книги: 一本书<br>• <b>杯</b> — чашки: 一杯茶<br>' +
+        '• <b>份</b> — порции: 一份牛肉面<br>• <b>碗</b> — пиалы: 一碗面', speak: '一杯茶' },
+    { re: /在|место.*врем|где/, title: '在 — где находится',
+      body: '<b>我在学校。</b> — Я в школе.<br>Вопрос: <b>你在哪里？</b> — Где ты?<br>' +
+        'Ещё 在 перед глаголом значит «сейчас делаю»: <b>我在吃饭。</b> — Я сейчас ем.', speak: '我在学校' },
+    { re: /还是|或者|или/, title: '还是 и 或者 — «или»',
+      body: 'В вопросе — <b>还是</b>: <b>你喝茶还是咖啡？</b><br>' +
+        'В утверждении — <b>或者</b>: <b>我喝茶或者咖啡都行。</b>', speak: '你喝茶还是咖啡' },
+    { re: /要.*想|хочу|модальн/, title: '要 и 想 — «хочу»',
+      body: '<b>我要</b> — твёрдое намерение: <b>我要学中文。</b> (я буду учить)<br>' +
+        '<b>我想</b> — мягче, «мне хочется»: <b>我想喝茶。</b><br>' +
+        '<b>会</b> — умею (навык), <b>能</b> — могу (есть возможность), <b>可以</b> — разрешено.', speak: '我想喝茶' },
+    { re: /比|сравн/, title: 'Сравнение с 比',
+      body: 'Схема: <b>A + 比 + B + прилагательное</b>.<br><b>今天比昨天冷。</b> — Сегодня холоднее, чем вчера.<br>' +
+        'После 比 нельзя ставить 很. «Намного» — <b>得多</b>: <b>今天比昨天冷得多。</b>', speak: '今天比昨天冷' }
   ];
   for (const g of grammarKB) {
     if (g.re.test(low)) {
@@ -1765,57 +2041,87 @@ function tutorReplyLocal(raw) {
     }
   }
 
-  /* 5) Разбор китайских иероглифов / перевод из словаря курса */
-  const clean = q.replace(/[？?！!。.,，\s]/g, '');
-  const exact = vocab.find(w => w.h === clean || w.r.toLowerCase() === low || w.p.toLowerCase() === low);
+  /* ---------- 6) Разбор отдельного иероглифа ---------- */
+  const singleHan = q.match(/^[\u3400-\u9fff]$/);
+  if (singleHan) {
+    const ch = singleHan[0];
+    const py = (typeof PY_CHAR !== 'undefined' && PY_CHAR[ch]) || '';
+    const known = GRAMMAR_TIPS[ch];
+    const look = tutorLookup(ch);
+    let html = `<b class="zh" style="font-size:30px">${ruby(ch)}</b>`;
+    if (py) html += ` <span style="color:var(--gold)">[${esc(py)}]</span>`;
+    if (look) html += `<br>Перевод: <b>${esc(look.r)}</b>`;
+    if (known) html += `<br>В грамматике: ${esc(known)}`;
+    if (!look && !known) html += '<br><span style="color:var(--txt3)">Такого слова пока нет в курсе — спросите про него иначе или добавьте в карточки.</span>';
+    return { html, speak: ch };
+  }
+
+  /* ---------- 7) Поиск по словарю ---------- */
+  const vocab = tutorAllVocab();
+  const plain = q.replace(/[？?！!。.,，\s]/g, '');
+  const exact = vocab.find(w => w.h === plain || w.r.toLowerCase() === low || w.p.toLowerCase() === low);
   if (exact) {
     return {
-      html: `<b class="zh" style="font-size:26px">${esc(exact.h)}</b> <span style="color:var(--gold)">[${esc(exact.p)}]</span><br>
-        Перевод: <b>${esc(exact.r)}</b><br>
-        <span style="color:var(--txt3);font-size:12.5px">Раздел курса: ${esc(exact.lesson || '')}</span>`,
+      html: `<b class="zh" style="font-size:24px">${ruby(exact.h)}</b><br>` +
+        `Перевод: <b>${esc(exact.r)}</b>` +
+        (exact.lesson ? `<br><span style="color:var(--txt3);font-size:12.5px">Раздел курса: ${esc(exact.lesson)}</span>` : ''),
       speak: exact.h
     };
   }
 
-  /* Частичное совпадение по русски или по иероглифам */
-  const hasHanzi = /[\u4e00-\u9fff]/.test(q);
-  if (hasHanzi) {
-    const chars = [...q.match(/[\u4e00-\u9fff]+/g).join('')];
-    const parts = [];
-    let i = 0;
-    while (i < chars.length) {
-      let found = null;
-      for (let len = Math.min(4, chars.length - i); len >= 1; len--) {
-        const sub = chars.slice(i, i + len).join('');
-        const hit = vocab.find(w => w.h === sub);
-        if (hit) { found = hit; i += len; break; }
-      }
-      if (found) parts.push(found);
-      else { parts.push({ h: chars[i], p: '?', r: 'нет в базовом словаре курса' }); i++; }
-    }
-    return {
-      html: `<b>🔍 Разбор фразы:</b><br><br>` +
-        parts.map(w => `• <b class="zh" style="font-size:18px">${esc(w.h)}</b> <span style="color:var(--gold)">${esc(w.p)}</span> — ${esc(w.r)}`).join('<br>'),
-      speak: chars.join('')
-    };
-  }
-
-  const hits = vocab.filter(w =>
-    w.r.toLowerCase().includes(low) || w.p.toLowerCase().replace(/[^a-z]/g, '').includes(low.replace(/[^a-z]/g, ''))
-  ).slice(0, 6);
+  const hits = vocab.filter(w => {
+    const ru = w.r.toLowerCase();
+    const py = w.p.toLowerCase().replace(/[^a-z]/g, '');
+    const needle = low.replace(/[^a-zа-яё]/g, '');
+    return needle.length > 1 && (ru.includes(low) || (py && py.includes(needle)));
+  }).slice(0, 6);
   if (hits.length) {
     return {
-      html: `Вот что нашлось по запросу «${esc(q)}»:<br><br>` +
-        hits.map(w => `• <b class="zh" style="font-size:18px">${esc(w.h)}</b> <span style="color:var(--gold)">${esc(w.p)}</span> — ${esc(w.r)}`).join('<br>'),
+      html: `Вот что есть по запросу «${esc(q)}»:<br>` + hits.map(tutorWordHtml).join(''),
       speak: hits[0].h
     };
   }
 
+  /* ---------- 8) Диалог ---------- */
+  if (/давай поговорим|диалог|потренир|попрактик/.test(low)) {
+    tutorContext.mode = 'dialogue';
+    tutorContext.step = 1;
+    return {
+      html: 'Отлично, потренируем диалог. Я начинаю:<br><br>' +
+        `<b class="zh" style="font-size:19px">${ruby('你好！你叫什么名字？')}</b><br>` +
+        '<span style="color:var(--gold)">Nǐ hǎo! Nǐ jiào shénme míngzi?</span><br>— Привет! Как тебя зовут?<br><br>' +
+        '<i>Ответьте по-китайски, например: 我叫阿里 — «меня зовут Али».</i>',
+      speak: '你好！你叫什么名字？'
+    };
+  }
+  if (tutorContext.mode === 'dialogue' && hasHanzi) {
+    if (tutorContext.step === 1) {
+      tutorContext.step = 2;
+      return {
+        html: 'Хорошо! Продолжаем:<br><br>' +
+          `<b class="zh" style="font-size:19px">${ruby('很高兴认识你！你喝茶还是咖啡？')}</b><br>` +
+          '<span style="color:var(--gold)">Hěn gāoxìng rènshi nǐ! Nǐ hē chá háishi kāfēi?</span><br>' +
+          '— Рад познакомиться! Ты пьёшь чай или кофе?',
+        speak: '很高兴认识你！你喝茶还是咖啡？'
+      };
+    }
+    tutorContext.mode = 'chat';
+    return {
+      html: 'Отлично, диалог получился! 👏<br><br>' +
+        `<b class="zh" style="font-size:19px">${ruby('你中文说得很好！继续加油！')}</b><br>` +
+        '<span style="color:var(--gold)">Nǐ Zhōngwén shuō de hěn hǎo! Jìxù jiāyóu!</span><br>' +
+        '— Ты хорошо говоришь по-китайски! Так держать!',
+      speak: '你中文说得很好！继续加油！'
+    };
+  }
+
+  /* ---------- 9) Подсказка, а не стена иероглифов ---------- */
   return {
-    html: `Я ваш внутренний ИИ-репетитор <b>Сяо Мин (小明)</b>! Могу помочь с:<br>
-      • <b>Переводом и разбором</b>: напишите любое слово по-русски или иероглифами (например: <i>чай</i>, <i>спасибо</i> или <i>我想喝茶</i>)<br>
-      • <b>Грамматикой</b>: спросите про <i>吗, 不/没, 了, 的, 把, тоны, счётные слова</i><br>
-      • <b>Практикой</b>: напишите <i>«диалог»</i> или <i>«проверь меня»</i>!`
+    html: 'Я не уверен, что понял вопрос. Спросите иначе, например:<br>' +
+      '• <b>как сказать спасибо</b><br>' +
+      '• <b>объясни 了</b><br>' +
+      '• <b>разбери 我想喝茶</b><br>' +
+      '• <b>что мне повторить</b>'
   };
 }
 
@@ -1826,7 +2132,8 @@ function renderTutor(root) {
 
   const chips = el('div', 't-chips');
   [
-    ['🔍 Как сказать «спасибо»?', 'спасибо'],
+    ['🔎 Разбери фразу', 'разбери фразу 我想喝茶'],
+    ['🔍 Как сказать «спасибо»?', 'как сказать спасибо'],
     ['📖 Что такое частица 了?', 'объясни частицу 了'],
     ['🎵 Как меняются тоны?', 'объясни тоны и сандхи'],
     ['💬 Потренируем диалог', 'давай поговорим в диалоге'],
@@ -1846,7 +2153,7 @@ function renderTutor(root) {
   if (!tutorHistory.length) {
     tutorHistory.push({
       role: 'assistant',
-      html: '你好! Я <b>Сяо Мин (小明)</b> — ваш персональный ИИ-помощник по китайскому. Спросите перевод, грамматику или выберите подсказку выше!',
+      html: ruby('你好') + '! Я <b>Сяо Мин (小明)</b> — ваш помощник по китайскому. Спросите перевод, грамматику или нажмите подсказку выше.',
       speak: '你好！我是小明。'
     });
   }
@@ -1885,7 +2192,7 @@ function renderTutor(root) {
 
   const form = el('form', 'tutor-form');
   const inp = el('input', 't-input');
-  inp.placeholder = 'Напишите вопрос, русское слово или иероглиф…';
+  inp.placeholder = 'Спросите по-русски: «как сказать спасибо», «объясни 了», «разбери 我想喝茶»';
   const send = el('button', 'btn btn-primary', 'Отправить →');
   send.type = 'submit';
   form.appendChild(inp); form.appendChild(send);
@@ -1914,7 +2221,8 @@ function renderTutor(root) {
         });
         const d = await res.json();
         if (d && d.mode === 'ai' && d.reply) {
-          replyObj = { html: esc(d.reply).replace(/\n/g, '<br>') };
+          const text = esc(d.reply).replace(/\n/g, '<br>');
+          replyObj = { html: text.replace(/([\u3400-\u9fff]+)/g, (m) => ruby(m)), speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0] };
         }
       } catch (e) { }
     }
