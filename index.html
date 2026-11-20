@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12100e">
-<meta name="app-build" content="5804d10542de">
+<meta name="app-build" content="55dc7509a65d">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1329,6 +1329,51 @@ button { font-family: inherit; cursor: pointer; }
   .hw-layout { grid-template-columns: 1fr; }
   .hw-side { position: static; max-height: none; }
   .hw-teach-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ---------- закрытая домашка ----------
+   Домашка открывается после пройденного урока: пока практика не сделана,
+   вместо заданий показываем замок и кнопку к практике. */
+.hw-badge.lock, .hw-pill.hw-locked { background: rgba(255,255,255,.05); color: var(--txt3); border-color: var(--line); }
+.hw-side-row.hw-locked { opacity: .62; }
+.hw-side-row.hw-locked:hover { opacity: .9; }
+.hw-locked {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 16px; margin-top: 4px; border-radius: 12px;
+  background: rgba(255,255,255,.03); border: 1px dashed var(--line);
+}
+.hw-locked-ic { font-size: 26px; line-height: 1; flex: 0 0 auto; }
+.hw-locked-body b { display: block; font-size: 14.5px; margin-bottom: 5px; }
+.hw-locked-body span { display: block; color: var(--txt2); font-size: 13.5px; line-height: 1.55; }
+
+/* итоги практики: урок засчитан — домашка открыта */
+.qd-unlock {
+  display: inline-block; margin: 2px 0 18px; padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; color: #a9e0cd;
+  background: rgba(90,168,143,.14); border: 1px solid rgba(90,168,143,.4);
+}
+.qd-actions { flex-wrap: wrap; }
+
+/* блок домашки, который только что открылся */
+.hw-just-unlocked {
+  animation: hwUnlock 1.4s ease;
+  border-color: rgba(90,168,143,.55) !important;
+  box-shadow: 0 0 0 3px rgba(90,168,143,.14);
+}
+@keyframes hwUnlock {
+  0% { transform: scale(.985); box-shadow: 0 0 0 0 rgba(90,168,143,.45); }
+  60% { transform: scale(1); box-shadow: 0 0 0 10px rgba(90,168,143,0); }
+  100% { box-shadow: 0 0 0 3px rgba(90,168,143,.14); }
+}
+
+/* к практике из закрытой домашки */
+.quiz-focus {
+  animation: quizFocus 1.4s ease;
+  border-color: rgba(224,179,84,.5) !important;
+}
+@keyframes quizFocus {
+  0% { box-shadow: 0 0 0 0 rgba(224,179,84,.45); }
+  100% { box-shadow: 0 0 0 12px rgba(224,179,84,0); }
 }
 
 </style>
@@ -3236,9 +3281,14 @@ const HOMEWORK = {
   ]
 };
 
+/* Домашка к уроку открывается только после того, как урок пройден:
+   ученик должен сначала разобрать словарь, грамматику и практику.
+   Проверка доступа живёт в src/homework.js (lessonDone), здесь — только
+   данные: задание не зависит от того, открыто оно или нет. */
+
 /* Запасная домашка для диагностики и на случай нового урока в данных:
    текст заданий берём из списка hw самого урока, поэтому структура
-   домашки не зависит от HANDWRITTEN выше. */
+   домашки не зависит от собранных выше списков. */
 function homeworkFor(id) {
   const l = LESSONS[id];
   if (!l) return [];
@@ -4861,17 +4911,49 @@ function finishQuiz(host) {
   state.quizLog = state.quizLog.slice(-500);
   save();
   if (score >= 0.6) { playSfx('win'); launchConfetti(); }
+  /* Практика пройдена — урок засчитан, домашка открылась. Сразу ведём
+     ученика к ней: раньше после итогов он уходил «к плану» и домашку
+     приходилось искать самому. */
+  const lessonId = quizState.lesson;
+  const nextId = (allLessonIds()[allLessonIds().indexOf(lessonId) + 1]) || null;
+  setTimeout(() => {
+    // scroll: false — сразу после итогов ученик всё равно уходит в раздел
+    // «Домашки», прокручивать урок к блоку домашки уже незачем.
+    if (window.hwUnlock) window.hwUnlock(lessonId, nextId, { scroll: false });
+  }, 0);
+
   host.innerHTML = `<div class="quiz-done">
       <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
       <h3>Результат: ${quizState.correct} из ${l.quiz.length} (${Math.round(score * 100)}%)</h3>
       <p>${score >= 0.8 ? 'Отличная работа! Этот урок засчитан.'
         : score >= 0.5 ? 'Хорошо, но есть что подтянуть. Посмотрите ошибки выше и повторите урок.'
         : 'Пройдите урок ещё раз после повторения грамматики — и держите темп!'}</p>
+      <div class="qd-unlock">🔓 Домашка к этому уроку открыта — переходим к ней…</div>
       <div class="qd-actions">
-        <a class="btn btn-ghost" href="#/lesson/${quizState.lesson}">↻ Повторить</a>
-        <a class="btn btn-primary" href="#/plan">К плану →</a>
+        <a class="btn btn-primary" id="goHomework" href="#/homework/${lessonId}">🏠 К домашке →</a>
+        <a class="btn btn-ghost" href="#/lesson/${lessonId}">↻ Повторить урок</a>
+        <a class="btn btn-ghost" href="#/plan">К плану →</a>
       </div>
     </div>`;
+
+  /* Через несколько секунд сами переходим к домашке, но только если
+     ученик ещё не ушёл со страницы итогов и не нажал свою кнопку. */
+  const goBtn = host.querySelector('#goHomework');
+  const cancel = () => {
+    clearTimeout(finishQuiz._t);
+    finishQuiz._t = null;
+    window.removeEventListener('hashchange', cancel);
+  };
+  const go = () => {
+    window.removeEventListener('hashchange', cancel);
+    // Если ученик уже ушёл на другую страницу — не перетаскиваем его.
+    if (!document.body.contains(goBtn)) return;
+    location.hash = '#/homework/' + lessonId;
+  };
+  clearTimeout(finishQuiz._t);
+  finishQuiz._t = setTimeout(go, 3500);
+  window.addEventListener('hashchange', cancel);
+  if (goBtn) goBtn.addEventListener('click', cancel);
 }
 
 /* ============================================================
@@ -6999,6 +7081,30 @@ function maybeFrameBanner() {
     return typeof window.homeworkFor === 'function' ? window.homeworkFor(id) : [];
   }
 
+  /* ---------- доступ к домашке ----------
+     Домашка открывается только после того, как урок пройден: сначала
+     ребёнок читает словарь и грамматику, отвечает на всю практику, и лишь
+     потом получает домашнее задание. Так «сделать домашку» не превращается
+     в угадывание без подготовки. */
+  function lessonDone(id) {
+    const st = window.__state ? window.__state() : null;
+    return !!(st && st.lessons && st.lessons[id] && st.lessons[id].done);
+  }
+  function lessonProgress(id) {
+    const st = window.__state ? window.__state() : null;
+    const rec = st && st.lessons ? st.lessons[id] : null;
+    return rec ? Math.round((Number(rec.score) || 0) * 100) : 0;
+  }
+  /* Следующий урок в курсе — чтобы после домашкu было понятно, куда идти. */
+  function nextLesson(id) {
+    const ids = lessonIds();
+    const i = ids.indexOf(id);
+    return i >= 0 && i + 1 < ids.length ? ids[i + 1] : null;
+  }
+  function unlockedLessons() {
+    return lessonIds().filter(lessonDone);
+  }
+
   const KIND_RU = {
     mcq: 'Выбор ответа',
     read: 'Понимание фразы',
@@ -7008,6 +7114,9 @@ function maybeFrameBanner() {
 
   function statusOf(id) {
     const it = state.items[id];
+    if (!lessonDone(id) && !it) {
+      return { code: 'locked', label: 'Сначала пройдите урок', it: null };
+    }
     const has = !!(it && Object.keys(it.answers || {}).length);
     if (!has) {
       const draft = draftOf(id);
@@ -7031,9 +7140,40 @@ function maybeFrameBanner() {
         ? '<span class="hw-badge wait">⏳ на проверке</span>'
         : st.code === 'draft'
           ? '<span class="hw-badge draft">✎ черновик</span>'
-          : '<span class="hw-badge">не начата</span>';
+          : st.code === 'locked'
+            ? '<span class="hw-badge lock">🔒 закрыта</span>'
+            : '<span class="hw-badge">не начата</span>';
     panel.appendChild(el('div', 'panel-head',
       `<h3>🏠 Домашка</h3><div class="hw-head-right">${badge}</div>`));
+
+    /* Закрытая домашка: вместо заданий — объяснение и кнопка на практику.
+       Пока урок не пройден, задания не показываем: иначе ребёнок берётся
+       за домашку, не разобрав слова и грамматику. */
+    if (st.code === 'locked') {
+      panel.appendChild(el('div', 'hw-locked', `
+        <div class="hw-locked-ic">🔒</div>
+        <div class="hw-locked-body">
+          <b>Домашка откроется после урока</b>
+          <span>Сначала пройдите всю практику в этом уроке — отвечайте на вопросы в блоке «Практика» выше.
+          Как только урок будет пройден, домашка откроется здесь же, и мы сразу перейдём к ней.</span>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn btn-primary hw-go-quiz">К практике урока →</button>
+          </div>
+        </div>`));
+      const go = panel.querySelector('.hw-go-quiz');
+      if (go) {
+        go.onclick = () => {
+          const quiz = document.getElementById('quiz');
+          if (quiz) {
+            quiz.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            quiz.classList.add('quiz-focus');
+            setTimeout(() => quiz.classList.remove('quiz-focus'), 1600);
+          }
+        };
+      }
+      root.appendChild(panel);
+      return;
+    }
 
     if (st.code === 'graded' && st.it.feedback) {
       panel.appendChild(el('div', 'hw-feedback', `💬 <b>Учитель:</b> ${esc(st.it.feedback)}`));
@@ -7054,7 +7194,7 @@ function maybeFrameBanner() {
     const bar = el('div', 'hw-actions');
     const save = el('button', 'btn btn-ghost', '💾 Сохранить черновик');
     save.onclick = () => { saveDrafts(); toast('Черновик сохранён в браузере'); };
-    const send = el('button', 'btn btn-primary', st.code === 'empty' ? '📤 Отправить учителю' : '📤 Отправить учителю');
+    const send = el('button', 'btn btn-primary', '📤 Отправить учителю');
     send.onclick = () => submit(panel, lessonId);
     bar.appendChild(send);
     bar.appendChild(save);
@@ -7221,14 +7361,29 @@ function maybeFrameBanner() {
     await load();
 
     const ids = lessonIds();
-    const sel = (args && args[0] && window.LESSONS[args[0]]) ? args[0] : (state.selected || ids[0]);
+    const open = unlockedLessons();
+    // По умолчанию — первый открытый урок, иначе первый в курсе.
+    const fallback = open.length ? open[0] : (state.selected || ids[0]);
+    const sel = (args && args[0] && window.LESSONS[args[0]]) ? args[0] : fallback;
     state.selected = sel;
 
     wrap.innerHTML = '';
     wrap.appendChild(el('h1', 'page-title', '🏠 Домашние задания'));
     const done = submittedCount();
     wrap.appendChild(el('p', 'page-sub',
-      `Выполняйте здесь и отправляйте учителю одной кнопкой. Сдано работ: ${done} из ${ids.length}.`));
+      `Выполняйте здесь и отправляйте учителю одной кнопкой. Сдано работ: ${done} из ${ids.length}. `
+      + `Открыто домашков: ${open.length} — по одному на каждый пройденный урок.`));
+
+    if (!open.length) {
+      wrap.appendChild(el('div', 'panel hw-locked',
+        `<div class="hw-locked-ic">🔒</div><div class="hw-locked-body">
+          <b>Домашки пока закрыты</b>
+          <span>Домашнее задание открывается после того, как урок пройден: словарь, грамматика и вся практика.
+          Начните с первого урока — как только пройдёте практику, вас сразу перебросит на домашка.</span>
+          <div class="btn-row" style="margin-top:12px">
+            <a class="btn btn-primary" href="#/lesson/${ids[0]}">Открыть урок ${ids[0].replace('l', '')} →</a>
+          </div></div>`));
+    }
 
     if (!loggedIn()) {
       wrap.appendChild(el('div', 'panel hw-login',
@@ -7241,9 +7396,11 @@ function maybeFrameBanner() {
     list.appendChild(el('h3', '', 'Уроки'));
     ids.forEach(id => {
       const st = statusOf(id);
+      const locked = st.code === 'locked';
       const a = el('a', 'hw-side-row' + (id === sel ? ' active' : '') + ' hw-' + st.code);
-      a.href = '#/homework/' + id;
-      a.innerHTML = `<span class="hs-num">${id.replace('l', '')}</span>
+      // Закрытая домашка ведёт туда, где её открывают, — в урок.
+      a.href = locked ? ('#/lesson/' + id) : ('#/homework/' + id);
+      a.innerHTML = `<span class="hs-num">${locked ? '🔒' : id.replace('l', '')}</span>
         <span class="hs-body"><b>${esc(lessonTitle(id))}</b><i>${esc(st.label)}</i></span>
         <span class="hs-dot"></span>`;
       list.appendChild(a);
@@ -7255,6 +7412,23 @@ function maybeFrameBanner() {
     const panel = el('div', 'panel');
     panel.appendChild(el('div', 'panel-head',
       `<h3>${esc(lessonTitle(sel))}</h3><span class="hw-pill hw-${st.code}">${esc(st.label)}</span>`));
+
+    if (st.code === 'locked') {
+      panel.appendChild(el('div', 'hw-locked', `
+        <div class="hw-locked-ic">🔒</div>
+        <div class="hw-locked-body">
+          <b>Эта домашка ещё закрыта</b>
+          <span>Сначала пройдите урок «${esc(lessonTitle(sel))}»: словарь, грамматику и практику.
+          Когда практика будет пройдена, домашка откроется, и приложение само переведёт вас сюда.</span>
+          <div class="btn-row" style="margin-top:12px">
+            <a class="btn btn-primary" href="#/lesson/${sel}">Открыть урок →</a>
+          </div>
+        </div>`));
+      main.appendChild(panel);
+      layout.appendChild(main);
+      wrap.appendChild(layout);
+      return;
+    }
 
     if (st.code === 'graded') {
       panel.appendChild(el('div', 'hw-score-card', `
@@ -7293,16 +7467,54 @@ function maybeFrameBanner() {
       'Домашка есть и в самом уроке — внизу страницы, сразу после практики.'));
   }
 
+  /* ============================================================
+     ОТКРЫТИЕ ДОМАШКИ ПОСЛЕ УРОКА
+     ============================================================
+     Вызывается из app.js, когда ученик прошёл практику урока.
+     Домашка к уроку считается открытой (это видно в списке и в меню),
+     а если ученик всё ещё в этом уроке — блок домашки перерисовывается
+     из «закрыт» в задания и страница плавно прокручивается к нему. */
+  function unlock(lessonId, nextId, opts) {
+    const scroll = !(opts && opts.scroll === false);
+    // Перерисовываем блок в уроке, если он открыт на экране.
+    const cur = document.getElementById('homework');
+    if (cur && document.querySelector('#view')) {
+      const fresh = freshBlock(lessonId);
+      cur.replaceWith(fresh);
+      fresh.classList.add('hw-just-unlocked');
+      // Прокручиваем только если ученик остаётся в уроке. Когда приложение
+      // уводит его в раздел «Домашки», прыжок по странице был бы лишним.
+      if (scroll) {
+        setTimeout(() => {
+          if (document.body.contains(fresh)) {
+            fresh.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 120);
+      }
+      setTimeout(() => fresh.classList.remove('hw-just-unlocked'), 2600);
+    }
+    // Счётчик в меню тоже пересчитываем: домашка стала доступной.
+    refreshBadge().catch(() => {});
+    if (nextId) state.nextAfterUnlock = nextId;
+  }
+
   /* ---------- счётчик для меню/главной ---------- */
+  /* Бейдж в меню: сколько домашек уже открыто (урок пройден), но ещё не
+     отправлено. Раньше показывал только «ждут проверки» — ученик не видел,
+     что у него есть что сделать. */
   async function refreshBadge() {
+    const badge = document.getElementById('hwBadge');
+    const open = unlockedLessons();
+    const todo = open.filter(id => !state.items[id]).length;
+    if (badge) {
+      badge.textContent = todo ? String(todo) : '';
+      badge.style.display = todo ? 'inline-grid' : 'none';
+      badge.title = todo
+        ? `Открыто домашек: ${todo} — сделайте и отправьте`
+        : 'Домашки по пройденным урокам отправлены';
+    }
     if (!loggedIn()) return;
     await load();
-    const waiting = pendingCount();
-    const badge = document.getElementById('hwBadge');
-    if (badge) {
-      badge.textContent = waiting ? String(waiting) : '';
-      badge.style.display = waiting ? 'inline-grid' : 'none';
-    }
   }
 
   function toast(msg) {
@@ -7314,6 +7526,9 @@ function maybeFrameBanner() {
   window.hwPending = pendingCount;
   window.hwRefresh = refreshBadge;
   window.hwStatus = statusOf;
+  window.hwUnlock = unlock;
+  window.hwIsOpen = lessonDone;
+  window.hwOpenCount = () => unlockedLessons().length;
 })();
 
 </script>

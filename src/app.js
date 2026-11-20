@@ -689,17 +689,49 @@ function finishQuiz(host) {
   state.quizLog = state.quizLog.slice(-500);
   save();
   if (score >= 0.6) { playSfx('win'); launchConfetti(); }
+  /* Практика пройдена — урок засчитан, домашка открылась. Сразу ведём
+     ученика к ней: раньше после итогов он уходил «к плану» и домашку
+     приходилось искать самому. */
+  const lessonId = quizState.lesson;
+  const nextId = (allLessonIds()[allLessonIds().indexOf(lessonId) + 1]) || null;
+  setTimeout(() => {
+    // scroll: false — сразу после итогов ученик всё равно уходит в раздел
+    // «Домашки», прокручивать урок к блоку домашки уже незачем.
+    if (window.hwUnlock) window.hwUnlock(lessonId, nextId, { scroll: false });
+  }, 0);
+
   host.innerHTML = `<div class="quiz-done">
       <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
       <h3>Результат: ${quizState.correct} из ${l.quiz.length} (${Math.round(score * 100)}%)</h3>
       <p>${score >= 0.8 ? 'Отличная работа! Этот урок засчитан.'
         : score >= 0.5 ? 'Хорошо, но есть что подтянуть. Посмотрите ошибки выше и повторите урок.'
         : 'Пройдите урок ещё раз после повторения грамматики — и держите темп!'}</p>
+      <div class="qd-unlock">🔓 Домашка к этому уроку открыта — переходим к ней…</div>
       <div class="qd-actions">
-        <a class="btn btn-ghost" href="#/lesson/${quizState.lesson}">↻ Повторить</a>
-        <a class="btn btn-primary" href="#/plan">К плану →</a>
+        <a class="btn btn-primary" id="goHomework" href="#/homework/${lessonId}">🏠 К домашке →</a>
+        <a class="btn btn-ghost" href="#/lesson/${lessonId}">↻ Повторить урок</a>
+        <a class="btn btn-ghost" href="#/plan">К плану →</a>
       </div>
     </div>`;
+
+  /* Через несколько секунд сами переходим к домашке, но только если
+     ученик ещё не ушёл со страницы итогов и не нажал свою кнопку. */
+  const goBtn = host.querySelector('#goHomework');
+  const cancel = () => {
+    clearTimeout(finishQuiz._t);
+    finishQuiz._t = null;
+    window.removeEventListener('hashchange', cancel);
+  };
+  const go = () => {
+    window.removeEventListener('hashchange', cancel);
+    // Если ученик уже ушёл на другую страницу — не перетаскиваем его.
+    if (!document.body.contains(goBtn)) return;
+    location.hash = '#/homework/' + lessonId;
+  };
+  clearTimeout(finishQuiz._t);
+  finishQuiz._t = setTimeout(go, 3500);
+  window.addEventListener('hashchange', cancel);
+  if (goBtn) goBtn.addEventListener('click', cancel);
 }
 
 /* ============================================================
