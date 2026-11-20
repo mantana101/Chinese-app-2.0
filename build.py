@@ -16,11 +16,12 @@ import time
 base = pathlib.Path(__file__).parent
 src = base / "src"
 
-SOURCE_FILES = ("styles.css", "data.js", "pinyin.js", "auth.js", "app.js", "index.template.html")
+SOURCE_FILES = ("styles.css", "data.js", "pinyin.js", "homework.js", "auth.js", "app.js", "index.template.html")
 
 styles = (src / "styles.css").read_text(encoding="utf-8")
 data = (src / "data.js").read_text(encoding="utf-8")
 pinyin_src = (src / "pinyin.js").read_text(encoding="utf-8")
+hw = (src / "homework.js").read_text(encoding="utf-8")
 auth = (src / "auth.js").read_text(encoding="utf-8")
 app = (src / "app.js").read_text(encoding="utf-8")
 tpl = (src / "index.template.html").read_text(encoding="utf-8")
@@ -58,13 +59,14 @@ out = (
     .replace("{{STYLES}}", styles)
     .replace("{{DATA}}", safe(data))
     .replace("{{PINYIN}}", safe(pinyin_src))
+    .replace("{{HOMEWORK}}", safe(hw))
     .replace("{{AUTH}}", safe(auth))
     .replace("{{APP}}", safe(app))
 )
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
@@ -83,9 +85,17 @@ if missing:
         + "\nОбновите src/pinyin.js (python3 tools/make-pinyin.py)."
     )
 
-# Проверка баланса тегов <script>
-if out.count("<script>") != out.count("</script>"):
-    sys.exit("ОШИБКА: дисбаланс тегов script")
+# Проверка баланса тегов <script>. Считаем только реальные теги шаблона:
+# в комментариях кода слово «<script>» тоже встречается и раньше давало
+# ложное срабатывание.
+_tpl_open = tpl.count("<script>")
+_tpl_close = tpl.count("</script>")
+if _tpl_open != _tpl_close:
+    sys.exit(f"ОШИБКА: дисбаланс тегов script в шаблоне ({_tpl_open} против {_tpl_close})")
+if out.count("</script>") != _tpl_close + sum(
+    f.count("</script>") for f in (styles, data, pinyin_src, hw, auth, app)
+):
+    sys.exit("ОШИБКА: в собранной странице потерян закрывающий тег script")
 
 target = base / "index.html"
 target.write_bytes(out.encode("utf-8"))

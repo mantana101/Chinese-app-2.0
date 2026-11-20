@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12100e">
-<meta name="app-build" content="b9d64efd8908">
+<meta name="app-build" content="5804d10542de">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1198,6 +1198,137 @@ button { font-family: inherit; cursor: pointer; }
 .mp4-d { color: var(--txt3); font-size: 12px; }
 @media (max-width: 900px) {
   .mp4-list { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   ДОМАШНИЕ ЗАДАНИЯ
+   Ученик выполняет работу на сайте, учитель проверяет в «Классе».
+   ============================================================ */
+.hw-head-right { margin-left: auto; }
+.hw-badge, .hw-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+  background: rgba(255,255,255,.06); color: var(--txt2); border: 1px solid var(--line);
+}
+.hw-badge.ok, .hw-pill.hw-graded { background: rgba(90,168,143,.16); color: #a9e0cd; border-color: rgba(90,168,143,.4); }
+.hw-badge.wait, .hw-pill.hw-waiting { background: rgba(224,179,84,.14); color: #ffdfa3; border-color: rgba(224,179,84,.4); }
+.hw-badge.draft, .hw-pill.hw-draft { background: rgba(255,255,255,.06); color: var(--txt3); }
+
+.hw-list { display: flex; flex-direction: column; gap: 16px; margin: 6px 0 4px; }
+.hw-task {
+  padding: 13px 15px; border-radius: 12px;
+  background: rgba(255,255,255,.028); border: 1px solid var(--line);
+}
+.hw-task-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; flex-wrap: wrap; }
+.hw-num {
+  width: 21px; height: 21px; flex: 0 0 21px; border-radius: 6px;
+  display: grid; place-items: center; font-size: 11.5px; font-weight: 700;
+  background: rgba(224,179,84,.16); color: var(--gold);
+}
+.hw-kind { font-size: 11.5px; color: var(--txt3); text-transform: uppercase; letter-spacing: .05em; }
+.hw-need { font-size: 11.5px; color: var(--txt3); margin-left: auto; font-style: italic; }
+.hw-q { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.hw-hint { font-size: 12.5px; color: var(--txt3); margin-bottom: 10px; }
+
+.hw-opts { display: flex; flex-direction: column; gap: 7px; }
+.hw-opt {
+  text-align: left; padding: 9px 12px; border-radius: 9px; cursor: pointer;
+  background: rgba(255,255,255,.035); border: 1px solid var(--line);
+  color: var(--txt); font-size: 14px; transition: .14s;
+}
+.hw-opt:hover { border-color: var(--gold); background: rgba(255,255,255,.06); }
+.hw-opt.on { border-color: var(--gold); background: rgba(224,179,84,.14); color: #ffe9c4; }
+
+.hw-line {
+  min-height: 44px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
+  background: rgba(0,0,0,.22); border: 1px dashed var(--line);
+}
+.hw-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.hw-chip {
+  padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  background: rgba(255,255,255,.05); border: 1px solid var(--line);
+  color: var(--txt); font-size: 14.5px; font-family: "Noto Serif SC", serif;
+}
+.hw-chip:hover { border-color: var(--gold); }
+.hw-placeholder { color: var(--txt3); font-size: 12.5px; font-style: italic; }
+.hw-row { display: flex; gap: 8px; }
+
+.hw-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; resize: vertical;
+  background: rgba(0,0,0,.25); border: 1px solid var(--line);
+  color: var(--txt); font-size: 14.5px; font-family: inherit; line-height: 1.55;
+}
+.hw-input:focus { outline: none; border-color: var(--gold); }
+.hw-count { display: block; margin-top: 5px; font-size: 11.5px; color: var(--txt3); }
+.hw-count.ok { color: #a9e0cd; }
+
+.hw-live { margin-top: 9px; font-size: 13px; padding: 7px 11px; border-radius: 8px; }
+.hw-live.ok { background: rgba(90,168,143,.12); border-left: 3px solid var(--jade); color: #a9e0cd; }
+.hw-live.bad { background: rgba(208,69,58,.12); border-left: 3px solid var(--red); color: #f0b5af; }
+
+.hw-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+.hw-feedback {
+  margin-bottom: 12px; padding: 10px 13px; border-radius: 10px; font-size: 13.5px;
+  background: rgba(90,168,143,.1); border-left: 3px solid var(--jade); color: #cdeade;
+}
+
+.hw-layout { display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start; }
+.hw-side { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; }
+.hw-side-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px;
+  color: var(--txt); text-decoration: none; border: 1px solid transparent;
+}
+.hw-side-row:hover { background: rgba(255,255,255,.05); }
+.hw-side-row.active { background: rgba(224,179,84,.1); border-color: rgba(224,179,84,.35); }
+.hs-num {
+  width: 22px; height: 22px; flex: 0 0 22px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 700; background: rgba(255,255,255,.07); color: var(--txt2);
+}
+.hs-body { flex: 1; min-width: 0; }
+.hs-body b { display: block; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-body i { display: block; font-size: 11.5px; color: var(--txt3); font-style: normal; }
+.hs-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.hw-waiting .hs-dot { background: var(--gold); }
+.hw-graded .hs-dot { background: var(--jade); }
+.hw-draft .hs-dot { background: var(--txt3); }
+.hw-score-card {
+  display: flex; gap: 14px; align-items: center; margin-bottom: 16px;
+  padding: 12px 15px; border-radius: 12px;
+  background: rgba(90,168,143,.1); border: 1px solid rgba(90,168,143,.3);
+}
+.hw-score-value { font-size: 30px; font-weight: 700; color: #a9e0cd; line-height: 1; }
+.hw-score-body b { display: block; font-size: 14px; }
+.hw-score-body span { color: var(--txt2); font-size: 13px; }
+.hw-login { border-color: rgba(224,179,84,.4); }
+
+/* счётчик на пункте меню */
+.ni-badge {
+  display: none; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 4px;
+  border-radius: 999px; background: var(--gold); color: #201c10;
+  font-size: 10.5px; font-weight: 800; place-items: center; line-height: 16px;
+}
+
+/* проверка домашек учителем */
+.hw-teach { display: flex; flex-direction: column; gap: 10px; }
+.hw-teach-row {
+  display: grid; grid-template-columns: 1.2fr 1.4fr .9fr .8fr auto; gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid var(--line);
+}
+.hw-teach-row.waiting { border-color: rgba(224,179,84,.4); background: rgba(224,179,84,.06); }
+.hw-teach-row b { font-size: 13.5px; }
+.hw-teach-row i { font-size: 12px; color: var(--txt3); font-style: normal; }
+.hw-answers { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 14px; }
+.hw-answer { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid var(--line); }
+.hw-answer .aq { font-size: 13px; color: var(--txt2); margin-bottom: 5px; }
+.hw-answer .aa { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+.hw-answer .aa.empty-ans { color: var(--txt3); font-style: italic; }
+.hw-graded-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+@media (max-width: 900px) {
+  .hw-layout { grid-template-columns: 1fr; }
+  .hw-side { position: static; max-height: none; }
+  .hw-teach-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
 </style>
@@ -2965,6 +3096,155 @@ const EXTERNAL_VIDEOS = [
   }
 ];
 
+/* ============================================================
+   ДОМАШНИЕ ЗАДАНИЯ
+   ============================================================
+   Ученик выполняет работу прямо на сайте и отправляет её учителю:
+   она появляется в разделе «Класс» и в карточке ученика.
+
+   Типы заданий (набирать иероглифы не нужно):
+     mcq   — выбрать перевод / верный вариант;
+     read  — выбрать, что значит фраза;
+     order — собрать предложение из плиток;
+     text  — свободный ответ по-русски (своя фраза о себе).
+
+   Каждый урок — 6 заданий: 3 с проверкой на сайте и 3 для учителя.
+   Поля задания: k (тип), q (вопрос), h (подсказка перед ответом),
+   o / a (варианты и индекс верного ответа), n (сколько слов ждём
+   в свободном ответе).
+   ============================================================ */
+const HOMEWORK = {
+  l1: [
+    { k: 'mcq', q: 'Как поздороваться?', o: ['你好', '再见', '谢谢'], a: 0, h: '你好 — nǐ hǎo.' },
+    { k: 'read', q: 'Что значит «我叫阿里»?', o: ['Меня зовут Али', 'Я из Китая', 'Я не Али'], a: 0, h: '叫 — звать.' },
+    { k: 'order', q: 'Соберите: «Я — студент»', o: ['我', '是', '学生'], a: [0, 1, 2] },
+    { k: 'text', q: 'Напишите по-китайски, как вас зовут (можно пиньинем).', h: 'Модель: 我叫 … (wǒ jiào …)', n: 4 },
+    { k: 'mcq', q: 'Что ответить на «谢谢»?', o: ['没关系', '对不起', '再见'], a: 0, h: '没关系 — «не за что».' },
+    { k: 'text', q: 'Напишите 2 фразы о себе: имя и что вы студент.', h: 'Модель: 我叫 … 我是学生。', n: 8 }
+  ],
+  l2: [
+    { k: 'mcq', q: '«Сколько стоит?» — как спросить?', o: ['多少钱？', '几岁？', '几点？'], a: 0, h: '多少钱 — duō shao qián.' },
+    { k: 'read', q: 'Что значит «太贵了»?', o: ['Слишком дорого', 'Очень вкусно', 'Очень дёшево'], a: 0, h: '贵 — дорого, 太…了 — «слишком».' },
+    { k: 'order', q: 'Соберите: «Я покупаю три книги»', o: ['我', '买', '三', '本', '书'], a: [0, 1, 2, 3, 4] },
+    { k: 'text', q: 'Запишите цифрами и пиньинем: 三十五, 七十八, 一百.', h: 'Подсказка: 十 — десять, 百 — сто.', n: 6 },
+    { k: 'mcq', q: 'Дёшево — это…', o: ['便宜', '贵', '多少钱'], a: 0, h: '便宜 — pián yi.' },
+    { k: 'text', q: 'Напишите по-китайски: «У меня 35 юаней».', h: 'Модель: 我有三十五块。', n: 6 }
+  ],
+  l3: [
+    { k: 'mcq', q: '«Мама» — это…', o: ['妈妈', '爸爸', '妹妹'], a: 0, h: '妈妈 — mā ma.' },
+    { k: 'read', q: 'Что значит «我有姐姐»?', o: ['У меня есть старшая сестра', 'У меня есть младший брат', 'У меня нет сестры'], a: 0, h: '姐姐 — старшая сестра, 有 — иметь.' },
+    { k: 'order', q: 'Соберите: «Это моя книга»', o: ['这', '是', '我', '的', '书'], a: [0, 1, 2, 3, 4] },
+    { k: 'text', q: 'Расскажите о семье: 5–6 предложений по-китайски (можно пиньинем).', h: 'Модели: 我家有四个人。 我有一个哥哥。 我爸爸是老师。', n: 30 },
+    { k: 'mcq', q: 'Выберите пропущенное: 他 ___ 是学生。', o: ['也', '都', '很'], a: 0, h: '也 — «тоже».' },
+    { k: 'text', q: 'Напишите 3 предложения с 的 (мой, твой, его).', h: 'Модели: 我的书。 你的朋友。 他的家。', n: 12 }
+  ],
+  l4: [
+    { k: 'mcq', q: 'Как попросить счёт?', o: ['买单', '点菜', '好吃'], a: 0, h: '买单 — рассчитаться.' },
+    { k: 'read', q: 'Что значит «太辣了»?', o: ['Слишком остро', 'Очень вкусно', 'Слишком дорого'], a: 0, h: '辣 — острый.' },
+    { k: 'order', q: 'Соберите: «Я хочу лапшу с говядиной»', o: ['我', '要', '牛肉面'], a: [0, 1, 2] },
+    { k: 'text', q: 'Закажите еду: 4 фразы официанту по-китайски.', h: 'Модели: 服务员！ 我要一碗牛肉面。 不要葱。 买单。', n: 24 },
+    { k: 'mcq', q: '«Не остро» — это…', o: ['不辣', '太辣了', '好吃'], a: 0, h: '不辣 — bù là.' },
+    { k: 'text', q: 'Опишите любимое блюдо в 3 предложениях.', h: 'Модель: 我喜欢牛肉面。 很好吃。 不太贵。', n: 14 }
+  ],
+  l5: [
+    { k: 'mcq', q: '«Где школа?» — как спросить?', o: ['学校在哪里？', '学校多少钱？', '学校几点？'], a: 0, h: '在哪里 — «где находится».' },
+    { k: 'read', q: 'Что значит «我在家»?', o: ['Я дома', 'Я иду домой', 'Я не дома'], a: 0, h: '在 — находиться в.' },
+    { k: 'order', q: 'Соберите: «Сейчас я в школе»', o: ['我', '现在', '在', '学校'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Опишите 5 мест, где вы бываете, с 在.', h: 'Модели: 我在学校。 我在家。 我在公司。', n: 20 },
+    { k: 'mcq', q: '«Завтра» — это…', o: ['明天', '今天', '昨天'], a: 0, h: '明天 — míng tiān.' },
+    { k: 'text', q: 'Напишите своё расписание на завтра: 3 фразы со временем.', h: 'Модели: 明天我八点上课。 晚上我在家。', n: 16 }
+  ],
+  l6: [
+    { k: 'mcq', q: '«Я уже поел» — как сказать?', o: ['我吃午饭了。', '我吃午饭。', '我不吃午饭。'], a: 0, h: '了 — действие уже состоялось.' },
+    { k: 'read', q: 'Что значит «我还没下班»?', o: ['Я ещё не закончил работу', 'Я уже дома', 'Я не работаю'], a: 0, h: '还没 — «ещё не».' },
+    { k: 'order', q: 'Соберите: «Я уже пообедал»', o: ['我', '已经', '吃午饭', '了'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Расскажите, что вы делали вчера: 6–8 предложений с 了.', h: 'Модели: 昨天我七点起床。 我吃了早饭。 我去上班了。', n: 36 },
+    { k: 'mcq', q: '«Раньше» — это…', o: ['以前', '以后', '刚刚'], a: 0, h: '以前 — yǐ qián.' },
+    { k: 'text', q: 'Напишите 3 предложения «раньше — сейчас».', h: 'Модель: 以前我不住这儿，现在我住这儿。', n: 16 }
+  ],
+  l7: [
+    { k: 'mcq', q: '«Я не понял на слух» — как сказать?', o: ['我没听懂。', '我不听懂。', '我没听了。'], a: 0, h: 'Прошлое отрицаем через 没.' },
+    { k: 'read', q: 'Что значит «我没有时间»?', o: ['У меня нет времени', 'Я не хочу времени', 'Время есть'], a: 0, h: '没有 — не иметь.' },
+    { k: 'order', q: 'Соберите: «Я не умею говорить по-китайски»', o: ['我', '不会', '说', '中文'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Напишите 8 предложений: 6 с 不 и 2 с 没.', h: 'Модели: 我不去。 我不吃辣。 昨天我没上班。', n: 40 },
+    { k: 'mcq', q: 'Попросить говорить медленнее:', o: ['你说得慢一点。', '你说得快一点。', '你别说话。'], a: 0, h: '慢 — медленно.' },
+    { k: 'text', q: 'Что вы умеете и не умеете по-китайски? 4 предложения.', h: 'Модели: 我会说一点中文。 我不会写汉字。', n: 20 }
+  ],
+  l8: [
+    { k: 'mcq', q: 'Превратить «你喝茶» в вопрос:', o: ['你喝茶吗？', '你喝茶呢？', '你喝茶吧？'], a: 0, h: '吗 в конце — обычный вопрос.' },
+    { k: 'read', q: 'Что значит «你呢？»', o: ['А ты?', 'Ты кто?', 'Ты где?'], a: 0, h: '呢 заменяет целую фразу.' },
+    { k: 'order', q: 'Соберите: «Что это?»', o: ['这', '是', '什么'], a: [0, 1, 2] },
+    { k: 'text', q: 'Задайте другу 8 вопросов по-китайски.', h: 'Модели: 你叫什么名字？ 你几点上课？ 你喜欢中国菜吗？', n: 40 },
+    { k: 'mcq', q: '«Или» в вопросе — это…', o: ['还是', '或者', '和'], a: 0, h: '还是 — выбор в вопросе.' },
+    { k: 'text', q: 'Напишите диалог из 6 реплик: вопросы времени и ответы.', h: 'Модели: 现在几点？ 今天几号？', n: 24 }
+  ],
+  l9: [
+    { k: 'mcq', q: '«Я умею водить машину» — как сказать?', o: ['我会开车。', '我能开车吗。', '我要开车会。'], a: 0, h: '会 — навык, 开车 — водить машину.' },
+    { k: 'read', q: 'Что значит «这里不可以吃饭»?', o: ['Здесь нельзя есть', 'Здесь можно есть', 'Здесь всегда пусто'], a: 0, h: '不可以 — запрещено.' },
+    { k: 'order', q: 'Соберите: «Я хочу учить китайский»', o: ['我', '想', '学', '中文'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Напишите 6 предложений с 要 и 想 — и объясните разницу.', h: 'Модели: 我要学中文 (твёрдо)。 我想喝茶 (мягко)。', n: 36 },
+    { k: 'mcq', q: '«Должен, необходимо» — это…', o: ['必须', '可以', '愿意'], a: 0, h: '必须 — bì xū.' },
+    { k: 'text', q: 'Расскажите о себе: что умеете, что любите, что планируете (5 фраз).', h: 'Модели: 我会做饭。 我喜欢音乐。 我打算去中国。', n: 24 }
+  ],
+  l10: [
+    { k: 'mcq', q: 'Где стоит объект в 把-конструкции?', o: ['我把书放在桌上。', '我放书把在桌上。', '我把放在桌上书。'], a: 0, h: '把 + объект + действие + результат.' },
+    { k: 'read', q: 'Что значит «我把门关上了»?', o: ['Я закрыл дверь', 'Я открыл дверь', 'Дверь закрыта всегда'], a: 0, h: '关上 — закрыть.' },
+    { k: 'order', q: 'Соберите: «Я положил книгу в сумку»', o: ['我', '把', '书', '放进', '包里'], a: [0, 1, 2, 3, 4] },
+    { k: 'text', q: 'Переделайте в 把: 我关了门。 我打开了书。 我洗了碗。', h: 'Модель: 我把门关了。', n: 24 },
+    { k: 'mcq', q: '«Отправить письмо» — глагол…', o: ['寄', '放', '洗'], a: 0, h: '寄 — jì.' },
+    { k: 'text', q: 'Что вы сегодня сделали с вещами? 6 предложений с 把.', h: 'Модели: 我把手机放进包里。 我把水喝了。', n: 28 }
+  ],
+  l11: [
+    { k: 'mcq', q: '«Сегодня идёт дождь» — как сказать?', o: ['今天下雨。', '今天是下雨。', '今天很下雨。'], a: 0, h: 'Погодные явления без 是.' },
+    { k: 'read', q: 'Что значит «今天比昨天冷»?', o: ['Сегодня холоднее, чем вчера', 'Вчера было холоднее', 'Сегодня и вчера холодно'], a: 0, h: '比 — сравнение.' },
+    { k: 'order', q: 'Соберите: «Осенью здесь тепло»', o: ['秋天', '这里', '很', '温暖'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Опишите погоду в Душанбе на 4 сезона: 12 предложений.', h: 'Модели: 春天很温暖。 夏天很热。 冬天下雪。', n: 48 },
+    { k: 'mcq', q: 'Декабрь — это…', o: ['十二月', '十月', '十一月'], a: 0, h: 'Номер месяца + 月.' },
+    { k: 'text', q: 'Сравните погоду Душанбе и Пекина: 4 предложения с 比.', h: 'Модель: 杜尚别比北京热。', n: 20 }
+  ],
+  l12: [
+    { k: 'mcq', q: '«Как пройти?» — как спросить?', o: ['怎么走？', '多少钱？', '几点？'], a: 0, h: '怎么走 — «как идти».' },
+    { k: 'read', q: 'Что значит «一直往前走»?', o: ['Идите всё время прямо', 'Поверните налево', 'Остановитесь здесь'], a: 0, h: '一直 — всё время, 往前 — вперёд.' },
+    { k: 'order', q: 'Соберите: «Идите прямо, потом налево»', o: ['一直', '往前', '走', '然后', '左转'], a: [0, 1, 2, 3, 4] },
+    { k: 'text', q: 'Опишите дорогу от дома до учёбы: 8–10 предложений.', h: 'Модели: 我家在学校对面。 我坐地铁去。 一直走，然后右转。', n: 50 },
+    { k: 'mcq', q: 'Такси — это…', o: ['出租车', '地铁', '自行车'], a: 0, h: '出租车 — chū zū chē.' },
+    { k: 'text', q: 'Составьте 3 вопроса о маршруте и ответьте на них.', h: 'Модели: 银行在哪？ 坐地铁要多久？', n: 20 }
+  ],
+  l13: [
+    { k: 'mcq', q: '«У меня болит голова» — как сказать?', o: ['我头疼。', '我头很疼吗。', '我疼头。'], a: 0, h: 'Схема: часть тела + 疼.' },
+    { k: 'read', q: 'Что значит «你应该多喝水»?', o: ['Тебе надо больше пить воды', 'Ты много пьёшь воды', 'Ты не пей воды'], a: 0, h: '应该 — следует.' },
+    { k: 'order', q: 'Соберите: «Я простудился»', o: ['我', '感冒', '了'], a: [0, 1, 2] },
+    { k: 'text', q: 'Опишите 5 симптомов по-китайски.', h: 'Модели: 我头疼。 我发烧了。 我咳嗽。', n: 20 },
+    { k: 'mcq', q: 'Записаться на приём — это…', o: ['挂号', '打针', '休息'], a: 0, h: '挂号 — guà hào.' },
+    { k: 'text', q: 'Диалог в поликлинике: 8 реплик (ученик и врач).', h: 'Модели: 我不舒服。 你哪里疼？ 我头疼。', n: 36 }
+  ],
+  l14: [
+    { k: 'mcq', q: '«Я отвечаю за продажи» — как сказать?', o: ['我负责销售。', '我销售负责。', '我负责吗销售。'], a: 0, h: '负责 + за что.' },
+    { k: 'read', q: 'Что значит «我现在很忙»?', o: ['Я сейчас занят', 'Я всегда занят', 'Мне нечем заняться'], a: 0, h: '现 — сейчас; 很 — очень.' },
+    { k: 'order', q: 'Соберите: «У меня завтра собрание»', o: ['我', '明天', '有', '会议'], a: [0, 1, 2, 3] },
+    { k: 'text', q: 'Деловое письмо на 6–8 строк: приветствие, тема, просьба, прощание.', h: 'Модели: 您好！ 请把文件发给我。 此致敬礼。', n: 48 },
+    { k: 'mcq', q: 'Сверхурочная работа — это…', o: ['加班', '下班', '请假'], a: 0, h: '加班 — jiā bān.' },
+    { k: 'text', q: '10 предложений о своей работе или учёбе.', h: 'Модели: 我在公司工作。 我的同事很好。', n: 45 }
+  ],
+  l15: [
+    { k: 'mcq', q: '«Я планирую поехать в Китай» — как сказать?', o: ['我打算去中国。', '我打算中国去。', '我去中国打算。'], a: 0, h: '打算 + действие.' },
+    { k: 'read', q: 'Что значит «快要放假了»?', o: ['Скоро каникулы', 'Каникулы уже прошли', 'Каникул не будет'], a: 0, h: '快要…了 — «вот-вот»; 放假 — каникулы.' },
+    { k: 'order', q: 'Соберите: «В будущем я хочу работать в Китае»', o: ['将来', '我', '想', '在', '中国', '工作'], a: [0, 1, 2, 3, 4, 5] },
+    { k: 'text', q: 'Рассказ о себе на 12–15 предложений: семья, учёба, планы.', h: 'Модели: 我叫… 我住在杜尚别。 我学中文一年了。 明年我想去中国。', n: 80 },
+    { k: 'mcq', q: '«Хобби» — это…', o: ['爱好', '性格', '习惯'], a: 0, h: '爱好 — ài hào.' },
+    { k: 'text', q: '10 предложений о планах на год.', h: 'Модели: 今年我继续学中文。 我希望去中国工作。', n: 40 }
+  ]
+};
+
+/* Запасная домашка для диагностики и на случай нового урока в данных:
+   текст заданий берём из списка hw самого урока, поэтому структура
+   домашки не зависит от HANDWRITTEN выше. */
+function homeworkFor(id) {
+  const l = LESSONS[id];
+  if (!l) return [];
+  if (HOMEWORK[id]) return HOMEWORK[id];
+  return (l.hw || []).slice(0, 5).map((t, i) => ({ k: 'text', q: t, n: i === 0 ? 20 : 30 }));
+}
 
 </script>
 <script>
@@ -3438,10 +3718,10 @@ const Auth = (() => {
       wrap.appendChild(el2('p', 'page-sub',
         `Учеников: ${data.count} · средний балл класса: ${data.avg_score}% · средняя точность: ${data.avg_accuracy}% · активны сегодня: ${data.active_today}`));
 
-      if (user?.role === 'owner') {
+      {
         const tabs = el2('div', 'tabs');
         const errN = sys?.counts?.errors || 0;
-        [['class', '📋 Ученики и коды'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
+        [['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
           const b = el2('button', 'tab' + (tab === id ? ' active' : ''), label);
           b.onclick = () => { tab = id; paint(); };
           tabs.appendChild(b);
@@ -3449,6 +3729,10 @@ const Auth = (() => {
         wrap.appendChild(tabs);
       }
 
+      if (tab === 'hw') {
+        paintHomework();
+        return;
+      }
       if (tab === 'system' && user?.role === 'owner') {
         paintSystem();
         return;
@@ -3534,6 +3818,119 @@ const Auth = (() => {
       }
       wrap.appendChild(t);
     };
+
+    /* --- домашки: проверка --- */
+    let hwCache = null;
+    async function paintHomework() {
+      const panel = el2('div', 'panel');
+      panel.appendChild(el2('h3', '', '🏠 Домашние задания учеников'));
+      panel.appendChild(el2('p', 'page-sub',
+        'Работы, которые ученики выполнили и отправили на сайте. Красным — ждут проверки.'));
+      wrap.appendChild(panel);
+
+      if (!hwCache) {
+        try { hwCache = await api('/api/class/homework'); } catch (e) { hwCache = null; }
+      }
+      if (!hwCache) {
+        panel.appendChild(el2('div', 'empty', 'Не удалось загрузить домашки.'));
+        return;
+      }
+      const head = el2('div', 'btn-row');
+      const info = el2('span', 'page-sub',
+        `Всего работ: ${hwCache.total} · проверено: ${hwCache.graded}` +
+        (hwCache.avg != null ? ` · средний балл: ${hwCache.avg}%` : ''));
+      const refresh = el2('button', 'btn btn-sm btn-ghost', '↻ Обновить');
+      refresh.onclick = async () => { hwCache = null; tab = 'hw'; paint(); };
+      head.appendChild(refresh);
+      head.appendChild(info);
+      panel.appendChild(head);
+
+      if (!hwCache.items.length) {
+        panel.appendChild(el2('div', 'empty', 'Пока никто не отправил домашку.'));
+        return;
+      }
+
+      const list = el2('div', 'hw-teach');
+      hwCache.items.forEach(it => {
+        const waiting = it.score == null;
+        const row = el2('div', 'hw-teach-row' + (waiting ? ' waiting' : ''));
+        const title = (window.LESSONS && window.LESSONS[it.lesson_id]?.title) || it.lesson_id;
+        row.innerHTML = `
+          <span><b>${esc(it.student)}</b><br><i>@${esc(it.username)}</i></span>
+          <span>${esc(title)}<br><i>${Object.keys(it.answers || {}).length} ответов · ${timeAgo(it.updated_at)}</i></span>
+          <span class="st-grade">${waiting ? '⏳ ждёт' : it.score + '%'}</span>
+          <span><i>${it.feedback ? esc(it.feedback.slice(0, 40)) : '—'}</i></span>
+          <span class="st-acts"></span>`;
+        const acts = row.querySelector('.st-acts');
+        const open = el2('button', 'btn btn-sm btn-primary', waiting ? 'Проверить' : 'Открыть');
+        open.onclick = () => openHomework(it, async () => { hwCache = null; tab = 'hw'; paint(); });
+        acts.appendChild(open);
+        list.appendChild(row);
+      });
+      panel.appendChild(list);
+    }
+
+    /* Карточка работы: все ответы ученика и выставление оценки. */
+    function openHomework(it, refresh) {
+      const tasks = (window.homeworkFor ? window.homeworkFor(it.lesson_id) : []);
+      const title = (window.LESSONS && window.LESSONS[it.lesson_id]?.title) || it.lesson_id;
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      const modal = document.createElement('div');
+      modal.className = 'panel modal';
+      const rows = tasks.map((task, i) => {
+        const raw = it.answers['hw' + i];
+        let shown = raw;
+        if ((task.k === 'mcq' || task.k === 'read') && raw !== undefined) {
+          const idx = Number(raw);
+          const chosen = (task.o || [])[idx] || '—';
+          const mark = idx === task.a ? '✅' : '❌';
+          shown = `${mark} ${chosen}` + (idx === task.a ? '' : `   (верно: ${(task.o || [])[task.a] || '—'})`);
+        }
+        if (task.k === 'order' && raw) {
+          const words = String(raw).split(',').filter(Boolean).map(x => (task.o || [])[Number(x)] || '').join(' ');
+          shown = words;
+        }
+        return `<div class="hw-answer">
+            <div class="aq">${i + 1}. ${esc(task.q)}</div>
+            <div class="aa ${shown ? '' : 'empty-ans'}">${shown ? esc(shown) : 'нет ответа'}</div>
+          </div>`;
+      }).join('');
+
+      modal.innerHTML = `
+        <div class="modal-head"><h2>${esc(it.student)} · ${esc(title)}</h2>
+        <button class="modal-x">✕</button></div>
+        <p class="page-sub">Отправлено ${timeAgo(it.updated_at)}${it.graded_at ? ' · проверено ' + timeAgo(it.graded_at) : ''}</p>
+        <div class="hw-answers">${rows || '<div class="empty">Заданий не найдено</div>'}</div>
+        <h3>Оценка работы</h3>
+        <div class="hw-graded-box">
+          <input class="g-input hw-score" type="number" min="0" max="100" placeholder="0–100"
+                 value="${it.score == null ? '' : it.score}">
+          <input class="g-input wide hw-fb" placeholder="Комментарий для ученика"
+                 value="${esc(it.feedback || '')}">
+          <button class="btn btn-primary hw-save">Сохранить оценку</button>
+        </div>
+        <div class="hw-note">Ученик увидит оценку и комментарий в разделе «Домашки» и на странице урока.</div>`;
+      ov.appendChild(modal);
+      root.appendChild(ov);
+      const close = () => ov.remove();
+      modal.querySelector('.modal-x').onclick = close;
+      ov.onclick = e => { if (e.target === ov) close(); };
+      modal.querySelector('.hw-save').onclick = async () => {
+        const score = parseInt(modal.querySelector('.hw-score').value, 10);
+        if (!(score >= 0 && score <= 100)) { toast('Оценка — число от 0 до 100'); return; }
+        const feedback = modal.querySelector('.hw-fb').value.trim();
+        try {
+          await api('/api/class/homework/grade', {
+            method: 'POST',
+            body: { student_id: it.student_id, lesson_id: it.lesson_id, score, feedback }
+          });
+          toast('Оценка сохранена');
+          close();
+          refresh();
+        } catch (e) { toast('Не удалось сохранить'); }
+      };
+    }
 
     function fmtDur(sec) {
       sec = Math.max(0, Number(sec || 0));
@@ -3677,6 +4074,14 @@ const Auth = (() => {
           <input class="g-input wide" placeholder="Комментарий учителя" value="${esc(d.grade?.comment || '')}">
           <button class="btn btn-primary g-save">Сохранить</button>
         </div>
+        <h3>Домашние задания</h3>
+        <div class="hw-answers">${(d.homework || []).map(h => {
+          const t = window.LESSONS && window.LESSONS[h.lesson_id] ? window.LESSONS[h.lesson_id].title : h.lesson_id;
+          const n = Object.keys(h.answers || {}).length;
+          const mark = h.score == null ? '⏳ ждёт проверки' : '✓ ' + h.score + '%';
+          return `<div class="hw-answer"><div class="aq">${esc(t)} · ${n} ответов · ${timeAgo(h.updated_at)}</div>
+            <div class="aa">${esc(mark)}${h.feedback ? ' — ' + esc(h.feedback) : ''}</div></div>`;
+        }).join('') || '<span class="empty">Домашек пока нет</span>'}</div>
         <h3>Активность</h3>
         <div class="events">${(d.events || []).slice(0, 12).map(e =>
           `<div class="ev"><span>${esc(e.kind)}</span><span>${esc(e.detail || '')}</span><i>${timeAgo(e.created_at)}</i></div>`).join('') || '<span class="empty">Пока пусто</span>'}</div>
@@ -3892,6 +4297,12 @@ function mergeProgress(incoming) {
 }
 window.__mergeProgress = mergeProgress;
 window.__lessonTitle = (id) => (LESSONS[id] && LESSONS[id].title) || id;
+/* Модуль домашки (src/homework.js) подключается отдельным файлом и берёт
+   данные и оформление через window. Явные ссылки надёжнее, чем надежда
+   на общую область видимости: сборка кладёт каждый файл в свой <script>. */
+window.LESSONS = LESSONS;
+window.ruby = ruby;
+window.homeworkFor = homeworkFor;
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function touchDay() {
@@ -4024,6 +4435,7 @@ const ROUTES = {
   tutor: renderTutor,
   stats: renderStats,
   dict: renderDict,
+  homework: (root, rest) => (window.renderHomework ? window.renderHomework(root, rest) : root.appendChild(el('div', 'panel', 'Домашка недоступна'))),
   class: (root) => Auth.renderClass(root),
   account: renderAccount
 };
@@ -4050,7 +4462,7 @@ function renderAuthGate() {
   Auth.renderAuth(view);
 }
 window.__showAuth = () => { window.__guest = false; renderAuthGate(); };
-window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); route(); };
+window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); if (typeof refreshHomeworkBadge === 'function') refreshHomeworkBadge(); route(); };
 window.__guestMode = () => { window.__guest = true; route(); };
 window.addEventListener('hashchange', route);
 
@@ -4134,6 +4546,7 @@ function renderHome(root) {
     { r: 'write', ic: '✍️', t: 'Пропись', s: 'Иероглифы кистью' },
     { r: 'read', ic: '📄', t: 'Чтение', s: '3 текста с пиньинь' },
     { r: 'phrases', ic: '💬', t: 'Фразы', s: 'Готовые реплики' },
+    { r: 'homework', ic: '🏠', t: 'Домашки', s: 'Сделать и отправить' },
     { r: 'dict', ic: '🔎', t: 'Словарь', s: 'Поиск по всем словам' },
     { r: 'stats', ic: '📊', t: 'Статистика', s: 'Прогресс и ошибки' }
   ];
@@ -4254,12 +4667,15 @@ function renderLesson(root, args) {
   root.appendChild(qz);
   renderQuestion($('#quiz .quiz-host'));
 
-  /* --- Домашка --- */
-  const hw = el('div', 'panel hw');
-  hw.appendChild(el('h3', '', '🏠 Домашка'));
-  l.hw.forEach(h => hw.appendChild(el('div', 'hw-item', `□ ${esc(h)}`)));
-  hw.appendChild(el('div', 'hw-note', 'Отправьте домашку в чат — я проверю и дам разбор ошибок.'));
-  root.appendChild(hw);
+  /* --- Домашка: выполняется и отправляется прямо здесь --- */
+  if (typeof window.renderHomeworkPanel === 'function') {
+    window.renderHomeworkPanel(root, id);
+  } else {
+    const hw = el('div', 'panel hw');
+    hw.appendChild(el('h3', '', '🏠 Домашка'));
+    l.hw.forEach(h => hw.appendChild(el('div', 'hw-item', `□ ${esc(h)}`)));
+    root.appendChild(hw);
+  }
 
   root.appendChild(el('div', 'nav-lessons', lessonNavHTML(id)));
 }
@@ -6114,6 +6530,7 @@ function initNav() {
     ['read', '📄', 'Чтение'],
     ['phrases', '💬', 'Фразы'],
     ['dict', '🔎', 'Словарь'],
+    ['homework', '🏠', 'Домашки'],
     ['stats', '📊', 'Статистика'],
     ['class', '👨‍🏫', 'Класс'],
     ['account', '👤', 'Профиль']
@@ -6123,13 +6540,15 @@ function initNav() {
     ['home', '🏠', 'Главная'],
     ['plan', '📚', 'Уроки'],
     ['cards', '🗂️', 'Карточки'],
+    ['homework', '🏠', 'Домашки'],
     ['videos', '🎬', 'Видео'],
     ['tutor', '🤖', 'ИИ'],
     ['class', '👨‍🏫', 'Класс'],
     ['account', '👤', 'Профиль']
   ];
   items.forEach(([r, ic, t]) => {
-    const a = el('a', '', `<span class="ni">${ic}</span><span class="nt">${t}</span>`);
+    const a = el('a', '', `<span class="ni">${ic}</span><span class="nt">${t}</span>` +
+      (r === 'homework' ? '<span class="ni-badge" id="hwBadge"></span>' : ''));
     a.href = `#/${r}`;
     a.dataset.route = r;
     if (r === 'class') a.classList.add('teacher-only');
@@ -6147,6 +6566,7 @@ function initNav() {
   nav.appendChild(foot);
   paintAccountFoot();
   updateNavRoles();
+  refreshHomeworkBadge();
 
   if (!$('#tutorFab')) {
     const fab = el('a', 'tutor-fab', '🤖');
@@ -6155,6 +6575,12 @@ function initNav() {
     fab.title = 'ИИ-репетитор Сяо Мин';
     document.body.appendChild(fab);
   }
+}
+/* Бейдж «домашки ждут проверки» на пункте меню. Счётчик тянем после
+   входа и после каждой отправки — тихо, без спиннеров. */
+function refreshHomeworkBadge() {
+  if (typeof window.hwRefresh !== 'function') return;
+  window.hwRefresh().catch(() => {});
 }
 function updateNavRoles() {
   const can = !!(Auth.user && (Auth.user.role === 'owner' || Auth.user.role === 'teacher'));
@@ -6420,6 +6846,475 @@ function maybeFrameBanner() {
     document.body.prepend(b);
   }
 }
+
+</script>
+<script>
+/* ============================================================
+   汉语学习 · ДОМАШНИЕ ЗАДАНИЯ
+   ============================================================
+   Раньше домашка была просто списком текста: «отправьте в чат».
+   Теперь ученик выполняет её прямо на сайте и отправляет учителю —
+   работа попадает в раздел «Класс», где её можно посмотреть и оценить.
+
+   Модуль самостоятельный: свои запросы к API, свой рендер, свои стили
+   (.hw-*). Общается с остальным приложением через три функции:
+   window.renderHomework (маршрут), window.renderHomeworkPanel (блок
+   в уроке) и window.hwPending (счётчик для меню).
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const TOKEN_KEY = 'zh_token';
+
+  const state = {
+    items: {},        // lesson_id -> серверная запись (answers, score, feedback)
+    loaded: false,
+    loading: false,
+    answers: {},      // lesson_id -> { hw0: '...', ... }
+    drafts: {},       // lesson_id -> { hw0: 'черновик', ... } в localStorage
+    dirty: {},        // lesson_id -> true (есть неотправленные изменения)
+    selected: 'l1'
+  };
+
+  /* ---------- сеть ----------
+     Повторяем поведение Auth.api: token в заголовке, credentials omit.
+     Здесь не тянем Auth, чтобы модуль работал даже до входа. */
+  function token() {
+    try { return (window.Store ? window.Store.get(TOKEN_KEY) : null) || ''; } catch (e) { return ''; }
+  }
+  async function api(path, opts) {
+    opts = opts || {};
+    const headers = { 'Content-Type': 'application/json' };
+    const t = token();
+    if (t) headers.Authorization = 'Bearer ' + t;
+    const res = await fetch(path, Object.assign({ credentials: 'omit' }, opts, {
+      headers: Object.assign(headers, opts.headers || {}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    }));
+    let data = {};
+    try { data = await res.json(); } catch (e) { data = {}; }
+    if (!res.ok) {
+      const err = new Error(data.error || String(res.status));
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  function loggedIn() {
+    return !!(window.Auth && window.Auth.user);
+  }
+  function isTeacher() {
+    const u = window.Auth && window.Auth.user;
+    return !!(u && (u.role === 'owner' || u.role === 'teacher'));
+  }
+
+  /* ---------- локальные черновики ----------
+     Черновик живёт в localStorage: если ученик закрыл вкладку на середине,
+     текст не пропадёт. На сервер уходит только по кнопке «Отправить». */
+  const DRAFT_KEY = 'zh_hw_drafts_v1';
+
+  function loadDrafts() {
+    try {
+      const raw = window.Store ? window.Store.get(DRAFT_KEY) : null;
+      state.drafts = raw ? JSON.parse(raw) || {} : {};
+    } catch (e) { state.drafts = {}; }
+  }
+  function saveDrafts() {
+    try { if (window.Store) window.Store.set(DRAFT_KEY, JSON.stringify(state.drafts)); } catch (e) { }
+  }
+  /* Ответы урока: серверная версия + черновик сверху. Черновик важнее —
+     в нём могут быть правки, которые ещё не отправлены. */
+  function draftOf(lessonId) {
+    const server = (state.items[lessonId] && state.items[lessonId].answers) || {};
+    const draft = state.drafts[lessonId] || {};
+    if (!state.dirty[lessonId] && !Object.keys(draft).length) return server;
+    return Object.assign({}, server, draft);
+  }
+  function setAnswer(lessonId, key, value) {
+    if (!state.answers[lessonId]) {
+      state.answers[lessonId] = Object.assign({}, draftOf(lessonId));
+    }
+    state.answers[lessonId][key] = value;
+    state.drafts[lessonId] = state.answers[lessonId];
+    state.dirty[lessonId] = true;
+    saveDrafts();
+  }
+
+  /* ---------- серверные данные ---------- */
+  async function load() {
+    if (!loggedIn()) { state.loaded = true; return; }
+    if (state.loading) return;
+    state.loading = true;
+    try {
+      const r = await api('/api/homework');
+      const items = {};
+      (r.items || []).forEach(it => { items[it.lesson_id] = it; });
+      state.items = items;
+      state.loaded = true;
+      // Серверная версия — база для правки; черновик важнее, если он новее.
+      Object.keys(items).forEach(id => {
+        if (!state.answers[id] || !state.dirty[id]) {
+          state.answers[id] = Object.assign({}, items[id].answers || {});
+        }
+      });
+    } catch (e) {
+      state.loaded = true;
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  function submittedCount() {
+    return Object.keys(state.items).length;
+  }
+  function pendingCount() {
+    // Работы, которые ещё не сданы или ждут проверки — для бейджа в меню.
+    return Object.keys(state.items).filter(id => state.items[id].score == null).length;
+  }
+
+  /* ---------- разметка ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+  function el(tag, cls, html) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html !== undefined) n.innerHTML = html;
+    return n;
+  }
+  function ruby(text) {
+    return typeof window.ruby === 'function' ? window.ruby(text) : esc(text);
+  }
+  function lessonIds() {
+    return Object.keys(window.LESSONS || {});
+  }
+  function lessonTitle(id) {
+    const l = window.LESSONS && window.LESSONS[id];
+    return l ? l.title : id;
+  }
+  function tasksFor(id) {
+    return typeof window.homeworkFor === 'function' ? window.homeworkFor(id) : [];
+  }
+
+  const KIND_RU = {
+    mcq: 'Выбор ответа',
+    read: 'Понимание фразы',
+    order: 'Сборка фразы',
+    text: 'Свободный ответ'
+  };
+
+  function statusOf(id) {
+    const it = state.items[id];
+    const has = !!(it && Object.keys(it.answers || {}).length);
+    if (!has) {
+      const draft = draftOf(id);
+      const started = Object.keys(draft).length > 0;
+      return { code: started ? 'draft' : 'empty', label: started ? 'Черновик' : 'Не начата', it };
+    }
+    if (it.score == null) return { code: 'waiting', label: 'На проверке', it };
+    return { code: 'graded', label: 'Оценено · ' + it.score + '%', it };
+  }
+
+  /* ============================================================
+     БЛОК В УРОКЕ
+     ============================================================ */
+  function renderLessonBlock(root, lessonId) {
+    const panel = el('div', 'panel hw');
+    panel.id = 'homework';
+    const st = statusOf(lessonId);
+    const badge = st.code === 'graded'
+      ? `<span class="hw-badge ok">✓ ${esc(st.label)}</span>`
+      : st.code === 'waiting'
+        ? '<span class="hw-badge wait">⏳ на проверке</span>'
+        : st.code === 'draft'
+          ? '<span class="hw-badge draft">✎ черновик</span>'
+          : '<span class="hw-badge">не начата</span>';
+    panel.appendChild(el('div', 'panel-head',
+      `<h3>🏠 Домашка</h3><div class="hw-head-right">${badge}</div>`));
+
+    if (st.code === 'graded' && st.it.feedback) {
+      panel.appendChild(el('div', 'hw-feedback', `💬 <b>Учитель:</b> ${esc(st.it.feedback)}`));
+    }
+    if (st.code === 'waiting') {
+      panel.appendChild(el('div', 'hw-note',
+        'Работа отправлена учителю. Можно доработать и отправить снова — проверка начнётся заново.'));
+    }
+
+    const list = el('div', 'hw-list');
+    const tasks = tasksFor(lessonId);
+    const answers = draftOf(lessonId);
+    tasks.forEach((task, i) => {
+      list.appendChild(taskRow(lessonId, task, 'hw' + i, answers['hw' + i], i));
+    });
+    panel.appendChild(list);
+
+    const bar = el('div', 'hw-actions');
+    const save = el('button', 'btn btn-ghost', '💾 Сохранить черновик');
+    save.onclick = () => { saveDrafts(); toast('Черновик сохранён в браузере'); };
+    const send = el('button', 'btn btn-primary', st.code === 'empty' ? '📤 Отправить учителю' : '📤 Отправить учителю');
+    send.onclick = () => submit(panel, lessonId);
+    bar.appendChild(send);
+    bar.appendChild(save);
+    const openAll = el('a', 'btn btn-ghost', 'Все домашки →');
+    openAll.href = '#/homework/' + lessonId;
+    bar.appendChild(openAll);
+    panel.appendChild(bar);
+
+    panel.appendChild(el('div', 'hw-note',
+      'Работа уходит учителю и появляется в разделе «Класс». Набирать иероглифы не нужно: где надо, отвечайте пиньинем или по-русски.'));
+    root.appendChild(panel);
+  }
+
+  /* Один вопрос домашки. Возвращает узел; ответ пишется через setAnswer. */
+  function taskRow(lessonId, task, key, value, index) {
+    const row = el('div', 'hw-task');
+    const head = el('div', 'hw-task-head',
+      `<span class="hw-num">${index + 1}</span>
+       <span class="hw-kind">${esc(KIND_RU[task.k] || 'Задание')}</span>
+       ${task.n ? `<span class="hw-need">не меньше ${task.n} слов</span>` : ''}`);
+    row.appendChild(head);
+    row.appendChild(el('div', 'hw-q', ruby(task.q)));
+    if (task.h) row.appendChild(el('div', 'hw-hint', ruby(task.h)));
+
+    if (task.k === 'mcq' || task.k === 'read') {
+      const opts = el('div', 'hw-opts');
+      (task.o || []).forEach((opt, i) => {
+        const b = el('button', 'hw-opt' + (value === String(i) ? ' on' : ''), ruby(opt));
+        b.onclick = () => {
+          Array.from(opts.children).forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+          setAnswer(lessonId, key, String(i));
+          markLive(row, task, String(i));
+        };
+        opts.appendChild(b);
+      });
+      row.appendChild(opts);
+      if (value !== undefined && value !== '') markLive(row, task, value);
+    } else if (task.k === 'order') {
+      // Порядок задаётся номерами плиток через клики: без ввода текста.
+      const seq = value ? value.split(',').filter(Boolean) : [];
+      const picked = el('div', 'hw-line');
+      const pool = el('div', 'hw-pool');
+      const draw = () => {
+        picked.innerHTML = '';
+        pool.innerHTML = '';
+        if (!seq.length) picked.appendChild(el('span', 'hw-placeholder', 'Нажимайте слова по порядку'));
+        seq.forEach((idx, pos) => {
+          const chip = el('button', 'hw-chip', ruby(task.o[Number(idx)]));
+          chip.title = 'Убрать';
+          chip.onclick = () => { seq.splice(pos, 1); commit(); };
+          picked.appendChild(chip);
+        });
+        (task.o || []).forEach((word, i) => {
+          if (seq.indexOf(String(i)) !== -1) return;
+          const chip = el('button', 'hw-chip', ruby(word));
+          chip.onclick = () => { seq.push(String(i)); commit(); };
+          pool.appendChild(chip);
+        });
+        function commit() {
+          draw();
+          setAnswer(lessonId, key, seq.join(','));
+          markLive(row, task, seq.join(','));
+        }
+      };
+      draw();
+      row.appendChild(picked);
+      row.appendChild(pool);
+      const reset = el('button', 'btn btn-sm', '↺ Сбросить');
+      reset.onclick = () => { seq.length = 0; setAnswer(lessonId, key, ''); draw(); markLive(row, task, ''); };
+      row.appendChild(el('div', 'hw-row', '')).appendChild(reset);
+    } else {
+      const ta = el('textarea', 'hw-input');
+      ta.rows = task.n && task.n > 30 ? 6 : task.n && task.n > 16 ? 4 : 3;
+      ta.placeholder = 'Напишите ответ: по-китайски, пиньинем или по-русски';
+      ta.value = value || '';
+      const counter = el('span', 'hw-count', '');
+      const upd = () => {
+        const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+        counter.textContent = `${words} сл.` + (task.n ? ` / нужно ≈${task.n}` : '');
+        counter.className = 'hw-count' + (task.n && words >= task.n ? ' ok' : '');
+      };
+      ta.oninput = () => { setAnswer(lessonId, key, ta.value); upd(); };
+      ta.onblur = () => saveDrafts();
+      upd();
+      row.appendChild(ta);
+      row.appendChild(counter);
+    }
+    return row;
+  }
+
+  /* Живая проверка выбора на сайте: ученик сразу видит, верно ли.
+     Свободный ответ и сборку проверяет учитель. */
+  function markLive(row, task, value) {
+    const old = row.querySelector('.hw-live');
+    if (old) old.remove();
+    if (task.k !== 'mcq' && task.k !== 'read') return;
+    if (value === undefined || value === '') return;
+    const ok = Number(value) === task.a;
+    const box = el('div', 'hw-live ' + (ok ? 'ok' : 'bad'),
+      ok ? '✅ Верно' : `❌ Правильно: ${ruby((task.o || [])[task.a] || '')}`);
+    row.appendChild(box);
+  }
+
+  async function submit(panel, lessonId) {
+    const tasks = tasksFor(lessonId);
+    const answers = state.answers[lessonId] || {};
+    const filled = {};
+    let missing = 0;
+    tasks.forEach((task, i) => {
+      const v = answers['hw' + i];
+      if (v === undefined || v === '') { missing++; return; }
+      if (task.k === 'text' && !String(v).trim()) { missing++; return; }
+      filled['hw' + i] = String(v);
+    });
+
+    if (!Object.keys(filled).length) {
+      toast('Пока пусто: ответьте хотя бы на одно задание');
+      return;
+    }
+    if (missing && !confirm(`Не заполнено заданий: ${missing}. Отправить то, что есть?`)) return;
+    if (!loggedIn()) {
+      toast('Домашку можно отправить после входа в аккаунт');
+      return;
+    }
+
+    try {
+      await api('/api/homework/submit', {
+        method: 'POST',
+        body: { lesson_id: lessonId, answers: filled }
+      });
+      state.dirty[lessonId] = false;
+      delete state.drafts[lessonId];
+      delete state.answers[lessonId];
+      saveDrafts();
+      await load();
+      panel.replaceWith(freshBlock(lessonId));
+      toast('Отправлено учителю ✓');
+    } catch (e) {
+      if (e.status === 401) {
+        toast('Сессия истекла — войдите заново');
+        if (window.Auth && window.Auth.boot) window.Auth.boot().then(() => route()).catch(() => {});
+      } else {
+        toast('Не удалось отправить, попробуйте ещё раз');
+      }
+    }
+  }
+
+  function freshBlock(lessonId) {
+    const host = el('div');
+    renderLessonBlock(host, lessonId);
+    return host.firstChild;
+  }
+
+  /* ============================================================
+     СТРАНИЦА «ДОМАШКИ»
+     ============================================================ */
+  async function renderPage(root, args) {
+    loadDrafts();
+    const wrap = el('div');
+    root.appendChild(wrap);
+    wrap.innerHTML = '<h1 class="page-title">🏠 Домашние задания</h1><p class="page-sub">Загрузка…</p>';
+
+    await load();
+
+    const ids = lessonIds();
+    const sel = (args && args[0] && window.LESSONS[args[0]]) ? args[0] : (state.selected || ids[0]);
+    state.selected = sel;
+
+    wrap.innerHTML = '';
+    wrap.appendChild(el('h1', 'page-title', '🏠 Домашние задания'));
+    const done = submittedCount();
+    wrap.appendChild(el('p', 'page-sub',
+      `Выполняйте здесь и отправляйте учителю одной кнопкой. Сдано работ: ${done} из ${ids.length}.`));
+
+    if (!loggedIn()) {
+      wrap.appendChild(el('div', 'panel hw-login',
+        'Чтобы отправить домашку учителю, войдите в свой аккаунт. Без входа ответы сохраняются только в этом браузере.' +
+        '<div class="btn-row" style="margin-top:12px"><a class="btn btn-primary" href="#/account">Войти в аккаунт →</a></div>'));
+    }
+
+    const layout = el('div', 'hw-layout');
+    const list = el('div', 'panel hw-side');
+    list.appendChild(el('h3', '', 'Уроки'));
+    ids.forEach(id => {
+      const st = statusOf(id);
+      const a = el('a', 'hw-side-row' + (id === sel ? ' active' : '') + ' hw-' + st.code);
+      a.href = '#/homework/' + id;
+      a.innerHTML = `<span class="hs-num">${id.replace('l', '')}</span>
+        <span class="hs-body"><b>${esc(lessonTitle(id))}</b><i>${esc(st.label)}</i></span>
+        <span class="hs-dot"></span>`;
+      list.appendChild(a);
+    });
+    layout.appendChild(list);
+
+    const main = el('div', 'hw-main');
+    const st = statusOf(sel);
+    const panel = el('div', 'panel');
+    panel.appendChild(el('div', 'panel-head',
+      `<h3>${esc(lessonTitle(sel))}</h3><span class="hw-pill hw-${st.code}">${esc(st.label)}</span>`));
+
+    if (st.code === 'graded') {
+      panel.appendChild(el('div', 'hw-score-card', `
+        <div class="hw-score-value">${st.it.score}%</div>
+        <div class="hw-score-body">
+          <b>Работа проверена</b>
+          <span>${esc(st.it.feedback || 'Учитель не оставил комментарий.')}</span>
+        </div>`));
+    }
+
+    const tasks = tasksFor(sel);
+    const answers = draftOf(sel);
+    const listEl = el('div', 'hw-list');
+    tasks.forEach((task, i) => {
+      listEl.appendChild(taskRow(sel, task, 'hw' + i, answers['hw' + i], i));
+    });
+    panel.appendChild(listEl);
+
+    const bar = el('div', 'hw-actions');
+    const send = el('button', 'btn btn-primary',
+      st.code === 'waiting' ? '📤 Отправить снова' : st.code === 'graded' ? '📤 Отправить заново' : '📤 Отправить учителю');
+    send.onclick = () => submit(main.querySelector('.panel'), sel);
+    bar.appendChild(send);
+    const save = el('button', 'btn btn-ghost', '💾 Черновик');
+    save.onclick = () => { saveDrafts(); toast('Черновик сохранён'); };
+    bar.appendChild(save);
+    panel.appendChild(bar);
+    panel.appendChild(el('div', 'hw-note',
+      'Задания с выбором проверяются сразу. Свободные ответы читает учитель: можно писать по-китайски, пиньинем или по-русски.'));
+    main.appendChild(panel);
+    layout.appendChild(main);
+    wrap.appendChild(layout);
+
+    // Внутри урока удобнее видеть ту же домашку рядом с материалом.
+    wrap.appendChild(el('div', 'hw-note',
+      'Домашка есть и в самом уроке — внизу страницы, сразу после практики.'));
+  }
+
+  /* ---------- счётчик для меню/главной ---------- */
+  async function refreshBadge() {
+    if (!loggedIn()) return;
+    await load();
+    const waiting = pendingCount();
+    const badge = document.getElementById('hwBadge');
+    if (badge) {
+      badge.textContent = waiting ? String(waiting) : '';
+      badge.style.display = waiting ? 'inline-grid' : 'none';
+    }
+  }
+
+  function toast(msg) {
+    if (window.toast) window.toast(msg);
+  }
+
+  window.renderHomework = renderPage;
+  window.renderHomeworkPanel = renderLessonBlock;
+  window.hwPending = pendingCount;
+  window.hwRefresh = refreshBadge;
+  window.hwStatus = statusOf;
+})();
 
 </script>
 </body>

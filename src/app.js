@@ -125,6 +125,12 @@ function mergeProgress(incoming) {
 }
 window.__mergeProgress = mergeProgress;
 window.__lessonTitle = (id) => (LESSONS[id] && LESSONS[id].title) || id;
+/* Модуль домашки (src/homework.js) подключается отдельным файлом и берёт
+   данные и оформление через window. Явные ссылки надёжнее, чем надежда
+   на общую область видимости: сборка кладёт каждый файл в свой <script>. */
+window.LESSONS = LESSONS;
+window.ruby = ruby;
+window.homeworkFor = homeworkFor;
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function touchDay() {
@@ -257,6 +263,7 @@ const ROUTES = {
   tutor: renderTutor,
   stats: renderStats,
   dict: renderDict,
+  homework: (root, rest) => (window.renderHomework ? window.renderHomework(root, rest) : root.appendChild(el('div', 'panel', 'Домашка недоступна'))),
   class: (root) => Auth.renderClass(root),
   account: renderAccount
 };
@@ -283,7 +290,7 @@ function renderAuthGate() {
   Auth.renderAuth(view);
 }
 window.__showAuth = () => { window.__guest = false; renderAuthGate(); };
-window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); route(); };
+window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); if (typeof refreshHomeworkBadge === 'function') refreshHomeworkBadge(); route(); };
 window.__guestMode = () => { window.__guest = true; route(); };
 window.addEventListener('hashchange', route);
 
@@ -367,6 +374,7 @@ function renderHome(root) {
     { r: 'write', ic: '✍️', t: 'Пропись', s: 'Иероглифы кистью' },
     { r: 'read', ic: '📄', t: 'Чтение', s: '3 текста с пиньинь' },
     { r: 'phrases', ic: '💬', t: 'Фразы', s: 'Готовые реплики' },
+    { r: 'homework', ic: '🏠', t: 'Домашки', s: 'Сделать и отправить' },
     { r: 'dict', ic: '🔎', t: 'Словарь', s: 'Поиск по всем словам' },
     { r: 'stats', ic: '📊', t: 'Статистика', s: 'Прогресс и ошибки' }
   ];
@@ -487,12 +495,15 @@ function renderLesson(root, args) {
   root.appendChild(qz);
   renderQuestion($('#quiz .quiz-host'));
 
-  /* --- Домашка --- */
-  const hw = el('div', 'panel hw');
-  hw.appendChild(el('h3', '', '🏠 Домашка'));
-  l.hw.forEach(h => hw.appendChild(el('div', 'hw-item', `□ ${esc(h)}`)));
-  hw.appendChild(el('div', 'hw-note', 'Отправьте домашку в чат — я проверю и дам разбор ошибок.'));
-  root.appendChild(hw);
+  /* --- Домашка: выполняется и отправляется прямо здесь --- */
+  if (typeof window.renderHomeworkPanel === 'function') {
+    window.renderHomeworkPanel(root, id);
+  } else {
+    const hw = el('div', 'panel hw');
+    hw.appendChild(el('h3', '', '🏠 Домашка'));
+    l.hw.forEach(h => hw.appendChild(el('div', 'hw-item', `□ ${esc(h)}`)));
+    root.appendChild(hw);
+  }
 
   root.appendChild(el('div', 'nav-lessons', lessonNavHTML(id)));
 }
@@ -2347,6 +2358,7 @@ function initNav() {
     ['read', '📄', 'Чтение'],
     ['phrases', '💬', 'Фразы'],
     ['dict', '🔎', 'Словарь'],
+    ['homework', '🏠', 'Домашки'],
     ['stats', '📊', 'Статистика'],
     ['class', '👨‍🏫', 'Класс'],
     ['account', '👤', 'Профиль']
@@ -2356,13 +2368,15 @@ function initNav() {
     ['home', '🏠', 'Главная'],
     ['plan', '📚', 'Уроки'],
     ['cards', '🗂️', 'Карточки'],
+    ['homework', '🏠', 'Домашки'],
     ['videos', '🎬', 'Видео'],
     ['tutor', '🤖', 'ИИ'],
     ['class', '👨‍🏫', 'Класс'],
     ['account', '👤', 'Профиль']
   ];
   items.forEach(([r, ic, t]) => {
-    const a = el('a', '', `<span class="ni">${ic}</span><span class="nt">${t}</span>`);
+    const a = el('a', '', `<span class="ni">${ic}</span><span class="nt">${t}</span>` +
+      (r === 'homework' ? '<span class="ni-badge" id="hwBadge"></span>' : ''));
     a.href = `#/${r}`;
     a.dataset.route = r;
     if (r === 'class') a.classList.add('teacher-only');
@@ -2380,6 +2394,7 @@ function initNav() {
   nav.appendChild(foot);
   paintAccountFoot();
   updateNavRoles();
+  refreshHomeworkBadge();
 
   if (!$('#tutorFab')) {
     const fab = el('a', 'tutor-fab', '🤖');
@@ -2388,6 +2403,12 @@ function initNav() {
     fab.title = 'ИИ-репетитор Сяо Мин';
     document.body.appendChild(fab);
   }
+}
+/* Бейдж «домашки ждут проверки» на пункте меню. Счётчик тянем после
+   входа и после каждой отправки — тихо, без спиннеров. */
+function refreshHomeworkBadge() {
+  if (typeof window.hwRefresh !== 'function') return;
+  window.hwRefresh().catch(() => {});
 }
 function updateNavRoles() {
   const can = !!(Auth.user && (Auth.user.role === 'owner' || Auth.user.role === 'teacher'));
