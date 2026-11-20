@@ -159,6 +159,31 @@ class TestHomeworkContent(unittest.TestCase):
             hits = sum(1 for w in vocab if w in joined)
             self.assertGreaterEqual(hits, 3, f"{lid}: в домашке нет слов урока ({hits})")
 
+    def test_homework_is_locked_until_lesson_done(self):
+        """В hoc-коде домашка не показывается, пока урок не пройден.
+
+        Проверяем исходник src/homework.js: доступ закрыт по флагу
+        lessonDone, и статус «locked» ведёт обратно в урок, а не в задания.
+        """
+        src = open(os.path.join(ROOT, "src", "homework.js"), encoding="utf-8").read()
+        self.assertIn("function lessonDone(", src)
+        self.assertIn("code: 'locked'", src)
+        self.assertIn("if (st.code === 'locked')", src)
+        self.assertIn("window.hwUnlock = unlock", src)
+        # Закрытая ветка выходит раньше, чем строится список заданий:
+        # в блоке «замка» не должно быть ни taskRow, ни hw-list.
+        branch = src.split("if (st.code === 'locked') {", 1)[1]
+        branch = branch.split("root.appendChild(panel);", 1)[0]
+        self.assertNotIn("taskRow(", branch, "закрытая домашка показывает задания")
+        self.assertNotIn("hw-list", branch, "закрытая домашка строит список заданий")
+
+    def test_finishing_practice_unlocks_homework(self):
+        """После прохождения практики приложение зовёт hwUnlock и ведёт к домашке."""
+        app = open(os.path.join(ROOT, "src", "app.js"), encoding="utf-8").read()
+        self.assertIn("window.hwUnlock(lessonId, nextId", app)
+        self.assertIn("#/homework/${lessonId}", app)
+        self.assertIn("qd-unlock", app)
+
     def test_fallback_for_unknown_lesson(self):
         """Если урок добавят без ручной домашки, она собирается из l.hw."""
         self.assertEqual(self.data["fallback"]["known"], 6)
