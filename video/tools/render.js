@@ -8,7 +8,7 @@ const {compose, W, H} = require('./frame.js');
 
 const FPS = 24;
 const ROOT = path.resolve(__dirname, '..');
-const FF = process.env.FFMPEG || path.join(ROOT, 'tools/ffmpeg');
+const FF = process.env.FFMPEG || 'ffmpeg';   // можно указать свой путь: FFMPEG=/путь/ffmpeg
 const FONT = path.join(ROOT, 'tools/out/hz.ttf');
 const AUDIO = path.join(ROOT, 'audio');
 

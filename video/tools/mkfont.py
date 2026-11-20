@@ -4,8 +4,9 @@ from fontTools.merge import Merger
 
 need = set(sys.argv[1])
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-files_dir = os.path.join(ROOT, 'tools/node_modules/@fontsource/noto-sans-sc/files')
-css = open(os.path.join(ROOT, 'tools/node_modules/@fontsource/noto-sans-sc/400.css'), encoding='utf-8').read()
+REPO = os.path.abspath(os.path.join(ROOT, '..'))
+files_dir = os.path.join(REPO, 'node_modules/@fontsource/noto-sans-sc/files')
+css = open(os.path.join(REPO, 'node_modules/@fontsource/noto-sans-sc/400.css'), encoding='utf-8').read()
 
 # карта unicode-range -> файл
 subs = []
@@ -37,9 +38,10 @@ if len(paths) == 1:
 else:
     out = Merger().merge(paths)
 
-os.makedirs(os.path.join(ROOT, 'tools/out'), exist_ok=True)
-out.save(os.path.join(ROOT, 'tools/out/hz.ttf'))
-sz = os.path.getsize(os.path.join(ROOT, 'tools/out/hz.ttf'))
+OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
+os.makedirs(OUT_DIR, exist_ok=True)
+out.save(os.path.join(OUT_DIR, 'hz.ttf'))
+sz = os.path.getsize(os.path.join(OUT_DIR, 'hz.ttf'))
 print('готово:', round(sz/1048576, 2), 'МБ')
 # проверим, что иероглифы есть
 cmap = out.getBestCmap()

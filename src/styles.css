@@ -1093,3 +1093,57 @@ button { font-family: inherit; cursor: pointer; }
   .vs-mouth-closed { opacity: 1 !important; }
   .vs-mouth-open { opacity: 0 !important; }
 }
+
+/* ---------- Пиньинь над иероглифами ----------
+   Ученики читают с пиньинем, поэтому иероглиф всегда идёт с чтением
+   сверху. Работает в карточках слов, заданиях, текстах и словаре. */
+.rw {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: bottom;
+  margin: 0 1px;
+  line-height: 1.1;
+}
+.rw-p {
+  font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font-size: .46em;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: var(--gold);
+  opacity: .92;
+  white-space: nowrap;
+  line-height: 1.25;
+  margin-bottom: 1px;
+  text-transform: none;
+}
+.rw-h { white-space: nowrap; }
+/* внутри кнопок-вариантов подпись чуть тише, чтобы не спорить с текстом */
+.opt .rw-p { color: var(--gold); opacity: .8; }
+.q-text .rw-p { font-size: .52em; }
+.vcard .vc-h .rw-p { font-size: 12px; letter-spacing: 0; }
+.ph-h .rw-p, .d-h .rw-p, .gl-row .rw-p { font-size: 10px; }
+.dict-row .d-h .rw-p { font-size: 10px; }
+@media (max-width: 900px) {
+  .rw-p { font-size: .5em; }
+  .vcard .vc-h .rw-p { font-size: 11px; }
+}
+/* переключатель «скрыть пиньинь» для тех, кто уже читает иероглифы */
+.hide-ruby .rw-p { display: none; }
+
+/* Пиньинь в чате репетитора: иероглифы читаются так же, как в уроках */
+.t-bubble .rw-p { color: var(--gold); font-size: .52em; }
+.t-user .t-bubble .rw-p { color: rgba(255,255,255,.85); opacity: 1; }
+.t-bubble .rw-h { font-size: 1.02em; }
+
+/* ---------- Разбор в чате репетитора ---------- */
+.tw-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,.06); }
+.tw-row:last-child { border-bottom: none; }
+.tw-h { min-width: 92px; font-size: 17px; }
+.tw-p { color: var(--gold); font-size: 13px; min-width: 84px; }
+.tw-r { color: var(--txt2); font-size: 13.5px; }
+.tw-card { display: inline-block; margin: 2px 10px 8px 0; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.tw-py { color: var(--gold); margin-left: 9px; font-size: 13.5px; }
+.tw-ru { color: var(--txt2); font-size: 13.5px; margin-top: 4px; }
+.tw-src { color: var(--txt3); font-size: 12px; margin-top: 4px; }
+.tw-note { margin-top: 10px; font-size: 12.5px; color: var(--txt3); }

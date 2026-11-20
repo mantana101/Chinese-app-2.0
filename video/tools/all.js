@@ -5,6 +5,12 @@ const fs=require('fs');
 const path=require('path');
 const OUT=path.resolve(__dirname,'../out');
 fs.mkdirSync(OUT,{recursive:true});
+// без шрифта иероглифы выйдут квадратиками — лучше остановиться сразу
+const FONT=path.join(__dirname,'out/hz.ttf');
+if(!fs.existsSync(FONT)){
+  console.error('Нет шрифта: '+FONT+'\nСоберите его: python3 tools/mkfont.py "$(cat tools/hzchars.txt)"');
+  process.exit(1);
+}
 collect().then(async r=>{
   const done=[];
   for(let i=0;i<r.lessons.length;i++){
