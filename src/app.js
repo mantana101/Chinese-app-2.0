@@ -482,6 +482,7 @@ function renderLesson(root, args) {
   const qz = el('div', 'panel quiz-panel');
   qz.id = 'quiz';
   qz.appendChild(el('h3', '', '✏️ Практика'));
+  qz.appendChild(el('div', 'quiz-note', 'Выбирайте ответ или расставляйте слова — печатать иероглифы не нужно. В каждом вопросе есть пиньинь, а после ответа — объяснение.'));
   qz.appendChild(el('div', 'quiz-host'));
   root.appendChild(qz);
   renderQuestion($('#quiz .quiz-host'));
@@ -505,6 +506,14 @@ function lessonNavHTML(id) {
 }
 
 function quizSource() { return quizState.lesson === 'diag' ? DIAGNOSTIC : LESSONS[quizState.lesson]; }
+
+/* Плеер для аудирования. Если у задания есть поле speak (слово из словаря
+   урока), озвучиваем именно его: в вариантах стоят похожие иероглифы, и
+   прочитать их вслух было бы подсказкой. */
+function listenRow(q) {
+  const word = q.speak || q.o[q.a];
+  return el('div', 'listen-row', `${toneBtn(word, 'speak big')} <span>нажмите, чтобы услышать</span>`);
+}
 
 /* Горячие клавиши в практике: 1–4 — выбор ответа, Enter — следующий вопрос.
    Без этого на компьютере приходилось каждый раз тянуться к мыши. */
@@ -534,6 +543,10 @@ function renderQuestion(host) {
 
   const body = el('div', 'q-body');
   body.appendChild(el('div', 'q-text', ruby(q.q)));
+  // Аудирование: плеер стоит ВЫШЕ вариантов. Раньше кнопка «услышать»
+  // была под списком ответов, и ученик сначала читал иероглифы, а уже
+  // потом включал звук — то есть задание не проверяло слух.
+  if (q.k === 'listen') body.appendChild(listenRow(q));
   const fb = el('div', 'q-feedback');
   const controls = el('div', 'q-controls');
 
@@ -591,13 +604,9 @@ function renderQuestion(host) {
         if (btns[n - 1]) btns[n - 1].click();
       }
     });
-    if (q.k === 'listen') {
-      const pb = el('div', 'listen-row', `${toneBtn(q.o[q.a], 'speak big')} <span>нажмите, чтобы услышать</span>`);
-      body.appendChild(pb);
-    }
   } else if (q.k === 'gap') {
     const inp = el('input', 'gap-input');
-    inp.placeholder = 'введите ответ по-китайски';
+    inp.placeholder = 'введите ответ по-китайски';  // практика курса без этого типа заданий
     inp.onkeydown = e => { if (e.key === 'Enter') submit(); };
     const sub = el('button', 'btn btn-primary', 'Проверить');
     const norm = s => String(s).trim().replace(/[。．.，,？?！!、\s]/g, '').toLowerCase();
@@ -702,7 +711,7 @@ function levelFor(score) { return LEVELS.find(l => score >= l.min) || LEVELS[LEV
 function renderDiagnostic(root) {
   const wrap = el('div');
   wrap.appendChild(el('h1', 'page-title', 'Диагностика уровня'));
-  wrap.appendChild(el('p', 'page-sub', '50 вопросов на пиньинь, словарь, грамматику, иероглифы и перевод. Где не знаете — выберите любой ответ или оставьте поле пустым: это честнее и полезнее для разбора.'));
+  wrap.appendChild(el('p', 'page-sub', '50 вопросов на пиньинь, словарь и грамматику. Все ответы выбираются из вариантов — печатать иероглифы не нужно. Где сомневаетесь, выбирайте наугад: по ошибкам и строится разбор.'));
   const host = el('div', 'quiz-host');
   wrap.appendChild(host);
   root.appendChild(wrap);
