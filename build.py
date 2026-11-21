@@ -102,6 +102,19 @@ if out.count("</script>") != _tpl_close + sum(
 target = base / "index.html"
 target.write_bytes(out.encode("utf-8"))
 
+# PWA-обвязка: манифест и service worker копируются рядом со страницей,
+# иначе установка на телефон и офлайн-режим не работают.
+import shutil
+for name in ("manifest.json", "sw.js"):
+    shutil.copyfile(src / name, base / name)
+# Метка сборки в service worker: при обновлении страницы кэш обновится сам.
+_sw = (base / "sw.js").read_text(encoding="utf-8").replace("zh-app-v1", f"zh-app-{BUILD_ID}")
+(base / "sw.js").write_text(_sw, encoding="utf-8")
+for name in ("icon-192.png", "icon-512.png"):
+    if (base / name).exists():
+        continue
+    shutil.copyfile(base / name if (base / name).exists() else src / name, base / name)
+
 # Рядом кладём метку сборки: сервер пересобирает index.html, если исходники
 # в src/ новее этой метки. Так забытый build.py больше не выдаёт старую версию.
 (base / "build-info.json").write_text(

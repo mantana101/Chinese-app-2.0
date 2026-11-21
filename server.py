@@ -47,6 +47,10 @@ SESSION_DAYS = 30
 
 # Сколько секунд после последнего запроса человек считается «на сайте».
 ONLINE_WINDOW = int(os.environ.get("ONLINE_WINDOW", "300"))
+
+# Сжатие страницы: 620 КБ → ~180 КБ по мобильной сети.
+GZIP_ENABLED = os.environ.get("GZIP", "1").strip().lower() not in ("0", "false", "no")
+_gzip_cache = {}
 PBKDF2_ROUNDS = 200_000
 MIN_PASSWORD_LEN = 8
 
@@ -376,6 +380,25 @@ def _as_float(value, default=0.0):
         return default if num != num else num  # NaN
     except (TypeError, ValueError, OverflowError):
         return default
+
+
+def _maybe_gzip(handler, body: bytes) -> bytes:
+    """Сжимает ответ, если браузер умеет. Результат кэшируется по длине."""
+    handler._gzip_on = False
+    if not GZIP_ENABLED or len(body) < 1024:
+        return body
+    accepts = (handler.headers.get("Accept-Encoding") or "").lower()
+    if "gzip" not in accepts:
+        return body
+    key = (len(body), hash(body[:4096]))
+    cached = _gzip_cache.get(key)
+    if cached is None:
+        cached = gzip.compress(body, 6)
+        if len(_gzip_cache) > 8:
+            _gzip_cache.clear()
+        _gzip_cache[key] = cached
+    handler._gzip_on = True
+    return cached
 
 
 def _safe_write(handler, body: bytes) -> bool:
@@ -1043,20 +1066,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return self.client_address[0]
 
     def send_html(self, code, body: bytes, build: str = ""):
+        # Страница — одна большая (620 КБ), и по мобильному интернету она
+        # ехала целиком. Отдаём gzip: 620 → 180 КБ при том же содержимом.
+        payload = _maybe_gzip(self, body)
         self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Vary", "Accept-Encoding")
+        if self._gzip_on:
+            self.send_header("Content-Encoding", "gzip")
         # Страница обновляется часто, а внутри неё вся логика приложения:
         # браузер и прокси не должны отдавать старую копию из кэша.
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
         if build:
-            self.send_header("ETag", f'"{build}"')
+            # ETag зависит от кодировки: иначе браузер получит «304» на gzip
+            # и попробует прочитать его как обычный HTML.
+            suffix = "-gz" if self._gzip_on else ""
+            self.send_header("ETag", f'"{build}{suffix}"')
             self.send_header("X-App-Build", build)
         send_common_headers(self)
         self.end_headers()
-        _safe_write(self, body)
+        _safe_write(self, payload)
 
     # ---------- маршрутизация ----------
 
@@ -1072,6 +1104,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             parsed = urllib.parse.urlparse(self.path)
             path = parsed.path
             if not path.startswith("/api/"):
+                if self.serve_static(path):
+                    return
                 return self.serve_app()
             if method == "GET":
                 return self.api_get(path, urllib.parse.parse_qs(parsed.query))
@@ -1103,7 +1137,49 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # ---------- статика ----------
 
+    # Что можно попросить как файл рядом со страницей (PWA)
+    STATIC_FILES = {
+        "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8", True),
+        "/sw.js": ("sw.js", "text/javascript; charset=utf-8", False),
+        "/icon-192.png": ("icon-192.png", "image/png", False),
+        "/icon-512.png": ("icon-512.png", "image/png", False),
+    }
+
+    def serve_static(self, name: str) -> bool:
+        """Отдаёт манифест, service worker и иконки. True, если отдал."""
+        spec = self.STATIC_FILES.get(name)
+        if not spec:
+            return False
+        fname, ctype, cache_ok = spec
+        path = os.path.join(BASE, fname)
+        try:
+            with open(path, "rb") as f:
+                body = f.read()
+        except OSError:
+            return False
+        if ctype.startswith(("application/", "text/")):
+            payload = _maybe_gzip(self, body)
+        else:
+            payload = body
+            self._gzip_on = False
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(payload)))
+        if self._gzip_on:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+        # Service worker обязан обновляться сразу: иначе старая версия
+        # держит старую страницу в кэше.
+        self.send_header("Cache-Control", "no-cache" if fname == "sw.js"
+                         else ("public, max-age=604800" if cache_ok else "no-store"))
+        send_common_headers(self)
+        self.end_headers()
+        _safe_write(self, payload)
+        return True
+
     def serve_app(self):
+        if self.serve_static(urllib.parse.urlparse(self.path).path):
+            return
         body = _index_cache()
         if body is None:
             body = b"<h1>index.html not found - run build.py</h1>"
