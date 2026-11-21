@@ -1704,43 +1704,6 @@ function buildSceneStage(scene, lesson, state) {
     </div>`;
 }
 
-const EXTERNAL_VIDEOS = [
-  {
-    title: 'Китайский язык с нуля — Урок 1 (Введение, пиньинь, тоны)',
-    channel: 'YouTube · Уроки на русском',
-    lang: 'Русский',
-    note: 'Путунхуа, слоги, 4 тона и личные местоимения',
-    url: 'https://www.youtube.com/watch?v=Zr73T8qrROA'
-  },
-  {
-    title: 'Китайский язык с нуля — Пиньинь (拼音)',
-    channel: 'YouTube · Уроки на русском',
-    lang: 'Русский',
-    note: 'Подробный разбор чтения инициалей и финалей пиньиня',
-    url: 'https://www.youtube.com/watch?v=SkUjZ6gbTLM'
-  },
-  {
-    title: 'Как легко запомнить 4 китайских тона',
-    channel: 'YouTube · Yoyo Chinese',
-    lang: 'Англ. / Китайский',
-    note: 'Знаменитый наглядный разбор тонов с ассоциациями',
-    url: 'https://www.youtube.com/watch?v=UuX9F5emdk0'
-  },
-  {
-    title: 'Счёт от 1 до 10 на китайском за 3 минуты',
-    channel: 'YouTube · Yoyo Chinese',
-    lang: 'Англ. / Китайский',
-    note: 'Произношение и жесты руками от 一 до 十',
-    url: 'https://www.youtube.com/watch?v=2eLP3FuuEVs'
-  },
-  {
-    title: 'Канал «Китайский Ni hao» — фразы, тоны и HSK 1',
-    channel: 'YouTube · Китайский Ni hao',
-    lang: 'Русский',
-    note: 'Подборка бесплатных видео-уроков для начинающих',
-    url: 'https://www.youtube.com/channel/UC0E8YzIZUd5_p-0d3zJdFbA'
-  }
-];
 
 /* ============================================================
    ДОМАШНИЕ ЗАДАНИЯ

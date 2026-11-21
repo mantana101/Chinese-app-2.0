@@ -368,7 +368,7 @@ function renderHome(root) {
     { r: 'plan', ic: '📚', t: 'План курса', s: '4 модуля · 15 уроков' },
     { r: 'diag', ic: '🎯', t: 'Определить уровень', s: 'Тест из 50 вопросов' },
     { r: 'cards', ic: '🗂️', t: 'Карточки', s: due ? `${due} к повторению` : 'Все повторены — красавчик!' },
-    { r: 'videos', ic: '🎬', t: 'Видео-уроки', s: 'Мини-плеер + YouTube' },
+    { r: 'videos', ic: '🎬', t: 'Видео-уроки', s: 'Анимация со звуком' },
     { r: 'tutor', ic: '🤖', t: 'ИИ-репетитор', s: 'Спросить Сяо Мина' },
     { r: 'tones', ic: '🎵', t: 'Тоны', s: 'Тренажёр 4-го тона' },
     { r: 'write', ic: '✍️', t: 'Пропись', s: 'Иероглифы кистью' },
@@ -1555,7 +1555,7 @@ function renderStats(root) {
 }
 
 /* ============================================================
-   ВИДЕО-УРОКИ (встроенный интерактивный плеер + YouTube)
+   ВИДЕО-УРОКИ (встроенный интерактивный плеер)
    ============================================================ */
 let vidTimer = null;
 let vidState = { lessonIdx: 0, sceneIdx: 0, playing: false, subs: true };
@@ -1565,88 +1565,10 @@ function videoStop() {
 }
 
 
-/* ============================================================
-   ГОТОВЫЕ ВИДЕО (MP4 с русской озвучкой)
-   Отдельно от интерактивного плеера: это настоящие файлы, которые
-   сервер отдаёт по /video/<имя>.mp4. Их можно смотреть на телефоне,
-   перематывать и показывать в классе без интернета после загрузки.
-   ============================================================ */
-const VIDEO_FILES = [
-  { file: 'lesson-1.mp4', title: 'Серия 1 · Прилёт: первое «нихао»', dur: '1:02', loc: 'Аэропорт' },
-  { file: 'lesson-2.mp4', title: 'Серия 2 · Такси: город и цена', dur: '1:00', loc: 'Дорога в город' },
-  { file: 'lesson-3.mp4', title: 'Серия 3 · Отель: заселение', dur: '1:01', loc: 'Стойка регистрации' },
-  { file: 'lesson-4.mp4', title: 'Серия 4 · Кафе: заказ и разговор', dur: '1:00', loc: 'Кафе' },
-  { file: 'lesson-5.mp4', title: '4 тона китайского', dur: '0:45', loc: 'Фонетика' },
-  { file: 'lesson-6.mp4', title: 'Первые приветствия и вежливость', dur: '0:40', loc: 'Разговорник' },
-  { file: 'lesson-7.mp4', title: 'Счёт от 1 до 10', dur: '0:40', loc: 'Числа' },
-  { file: 'lesson-8.mp4', title: 'Порядок слов во фразе', dur: '0:34', loc: 'Грамматика' },
-  { file: 'lesson-9.mp4', title: 'Секреты иероглифов', dur: '0:32', loc: 'Письмо' }
-];
-
-function renderVideoFiles(wrap) {
-  const panel = el('div', 'panel');
-  panel.appendChild(el('h3', '', '▶️ Готовые видео с озвучкой'));
-  panel.appendChild(el('p', 'page-sub',
-    'Полные видеофайлы с русской озвучкой и субтитрами: иероглифы, пиньинь и перевод прямо на экране. ' +
-    'Можно смотреть с телефона и перематывать.'));
-
-  const screen = el('div', 'mp4-screen');
-  const video = el('video', 'mp4-video');
-  video.controls = true;
-  video.preload = 'metadata';
-  video.playsInline = true;
-  video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-  screen.appendChild(video);
-
-  const caption = el('div', 'mp4-caption');
-  const list = el('div', 'mp4-list');
-  let current = -1;
-
-  function play(idx) {
-    const item = VIDEO_FILES[idx];
-    if (!item) return;
-    current = idx;
-    video.src = '/video/' + item.file;
-    caption.innerHTML = `<b>${esc(item.title)}</b> <span class="mp4-loc">${esc(item.loc)} · ${esc(item.dur)}</span>`;
-    $$('.mp4-item', list).forEach((b, i) => b.classList.toggle('active', i === idx));
-    /* Автовоспроизведение может быть запрещено браузером — это нормально,
-       пользователь нажмёт ▶ на плеере. Ловим отказ, чтобы не было ошибки. */
-    const pr = video.play();
-    if (pr && pr.catch) pr.catch(() => { });
-  }
-
-  VIDEO_FILES.forEach((it, i) => {
-    const b = el('button', 'mp4-item', `
-      <span class="mp4-num">${i + 1}</span>
-      <span class="mp4-t">${esc(it.title)}</span>
-      <span class="mp4-d">${esc(it.dur)}</span>`);
-    b.onclick = () => play(i);
-    list.appendChild(b);
-  });
-
-  /* Если файла нет на сервере (например, видео ещё не собрали),
-     честно говорим об этом вместо «вечной загрузки». */
-  video.onerror = () => {
-    const item = VIDEO_FILES[current];
-    caption.innerHTML = `<b>${esc(item ? item.title : 'Видео')}</b> ` +
-      '<span class="mp4-err">файл не найден на сервере — запустите сборку видео (см. video/README.md)</span>';
-  };
-
-  panel.appendChild(screen);
-  panel.appendChild(caption);
-  panel.appendChild(list);
-  wrap.appendChild(panel);
-  play(0);
-}
-
 function renderVideos(root) {
   const wrap = el('div');
-  wrap.appendChild(el('h1', 'page-title', '🎬 Обучающие видео'));
-  wrap.appendChild(el('p', 'page-sub', 'Встроенные анимированные видео-уроки со звуком и субтитрами (работают даже без VPN и YouTube) + проверенные уроки на YouTube.'));
-
-  /* Сначала — настоящие MP4: их можно смотреть целиком, с озвучкой. */
-  renderVideoFiles(wrap);
+  wrap.appendChild(el('h1', 'page-title', '🎬 Видео-уроки'));
+  wrap.appendChild(el('p', 'page-sub', 'Анимированные уроки со звуком, субтитрами и пиньинем: смотрите по кадрам, включайте озвучку и разбирайте реплики. Работают без интернета и VPN после первой загрузки.'));
 
   let lessons = (typeof VIDEO_LESSONS !== 'undefined' && VIDEO_LESSONS) || [];
 
@@ -1771,25 +1693,6 @@ function renderVideos(root) {
     paintPlayer();
   }
 
-  /* Внешние проверенные YouTube-видео */
-  const ext = (typeof EXTERNAL_VIDEOS !== 'undefined' && EXTERNAL_VIDEOS) || [];
-  if (ext.length) {
-    const yp = el('div', 'panel');
-    yp.appendChild(el('h3', '', '📺 Бесплатные уроки на YouTube'));
-    yp.appendChild(el('p', 'page-sub', 'Открываются в новой вкладке YouTube.'));
-    const yg = el('div', 'yt-grid');
-    ext.forEach(v => {
-      const a = el('a', 'yt-card', `
-        <div class="yt-top"><span class="yt-badge">${esc(v.lang)}</span><span>${esc(v.channel)}</span></div>
-        <b>${esc(v.title)}</b>
-        <p>${esc(v.note)}</p>
-        <span class="yt-go">Смотреть на YouTube ↗</span>`);
-      a.href = v.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      yg.appendChild(a);
-    });
-    yp.appendChild(yg);
-    wrap.appendChild(yp);
-  }
   root.appendChild(wrap);
 }
 
@@ -2018,220 +1921,511 @@ function tutorWordHtml(w) {
     (ru ? `<span class="tw-r">${esc(ru)}</span>` : '') + '</span>';
 }
 
+/* ============================================================
+   ИИ-ПОМОЩНИК СЯО МИН — ЛОКАЛЬНЫЙ ДВИЖОК РАССУЖДЕНИЯ
+   ============================================================
+   Раньше на каждый вопрос вешалась одна длинная цепочка из десяти
+   регулярных выражений: любая фраза, не совпавшая с шаблоном дословно,
+   падала в «я не понял». Здесь запрос сначала разбирается на признаки
+   (о ком, о чём, какое действие), затем опечатки и падежи приводятся
+   к словарной форме, и только потом собирается ответ — с учётом
+   прогресса ученика и уже сказанного в диалоге.
+   ============================================================ */
+
+/* Приведение русского слова к грубой основе: убираем окончания,
+   чтобы «спасибо», «спасиба» и «спасибу» находили одно и то же. */
+function ruStem(word) {
+  let w = String(word || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9-]/g, '');
+  if (w.length <= 3) return w;
+  const endings = ['ами', 'ями', 'ого', 'его', 'ому', 'ему', 'ыми', 'ими', 'ется', 'ится',
+    'ать', 'ять', 'ить', 'еть', 'уть', 'ыть', 'ой', 'ей', 'ий', 'ый', 'ая', 'яя', 'ое', 'ее',
+    'ые', 'ие', 'ам', 'ям', 'ах', 'ях', 'ом', 'ем', 'ов', 'ев', 'ию', 'ия', 'ии', 'ью',
+    'ть', 'ет', 'ют', 'ут', 'ат', 'ят', 'ит', 'ла', 'ло', 'ли', 'ыл', 'ил',
+    'а', 'я', 'ы', 'и', 'у', 'ю', 'о', 'е', 'ь', 'й'];
+  for (const end of endings) {
+    if (w.length - end.length >= 3 && w.endsWith(end)) { w = w.slice(0, -end.length); break; }
+  }
+  return w;
+}
+
+/* Расстояние Левенштейна: нужно, чтобы «спосибо» и «спасибо» считались
+   одним словом, а не разными. Порог зависит от длины слова. */
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length || !b.length) return Math.max(a.length, b.length);
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function fuzzyHit(query, candidates) {
+  const q = ruStem(query);
+  if (q.length < 4) return null;
+  let best = null, bestD = 99;
+  candidates.forEach(c => {
+    const d = editDistance(q, ruStem(c));
+    const limit = q.length >= 7 ? 2 : 1;
+    if (d <= limit && d < bestD) { bestD = d; best = c; }
+  });
+  return best;
+}
+
+/* ---------- Быстрые доступы к данным курса ---------- */
+function tutorLessonIds() {
+  const ids = Object.keys(LESSONS);
+  if (typeof MODULES !== 'undefined' && Array.isArray(MODULES)) {
+    const ordered = [];
+    MODULES.forEach(m => (m.lessons || []).forEach(id => ids.includes(id) && ordered.push(id)));
+    ids.forEach(id => { if (!ordered.includes(id)) ordered.push(id); });
+    return ordered;
+  }
+  return ids.sort((a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, '')));
+}
+
+function tutorLexicon() {
+  const seen = new Map();
+  tutorAllVocab().forEach(w => {
+    const key = w.h;
+    if (!seen.has(key)) seen.set(key, []);
+    const rec = seen.get(key);
+    const val = { ru: (w.r || '').toLowerCase(), p: (w.p || '').toLowerCase(), lesson: w.lesson || '', word: w };
+    if (!rec.some(x => x.ru === val.ru && x.p === val.p)) rec.push(val);
+  });
+  const entries = [];
+  seen.forEach((list, h) => list.forEach(v => entries.push({ h, p: v.p, r: v.ru, lesson: v.lesson, word: v.word })));
+  return entries;
+}
+
+const TUTOR_LEX = (() => {
+  const cache = { dir: null, sum: '' };
+  return {
+    all() {
+      const list = tutorAllVocab();
+      const sum = list.length + '|' + doneCount() + '|' + Object.keys(state.lessons || {}).length;
+      if (cache.sum !== sum || !cache.dir) { cache.dir = tutorLexicon(); cache.sum = sum; }
+      return cache.dir;
+    },
+    reload() { cache.sum = ''; }
+  };
+})();
+
+/* Проверки «правил» — общий набор для вопросов и для подсказок по ошибкам */
+const TUTOR_RULES = [
+  {
+    id: 'ma', keys: ['吗', 'ma', 'общий вопрос', 'да нет', 'вопрос'],
+    title: '吗 — вопрос «да или нет»',
+    body: 'Ставится в <b>самый конец</b> утверждения, порядок слов не меняется.<br>' +
+      '<b>你喝茶。</b> — Ты пьёшь чай. → <b>你喝茶吗？</b> — Ты пьёшь чай?<br>' +
+      'Ответ короткий: <b>喝。</b> — пью, <b>不喝。</b> — не пью.',
+    ex: { h: '你喝茶吗？', p: 'nǐ hē chá ma?', r: 'Ты пьёшь чай?' }
+  },
+  {
+    id: 'le', keys: ['了', 'le', 'прошлое', 'завершено', 'уже'],
+    title: '了 — «уже сделано» или «ситуация изменилась»',
+    body: 'Два места — два смысла.<br>• После глагола — действие завершено: <b>我吃了早饭。</b><br>' +
+      '• В конце фразы — новое состояние: <b>我饿了。</b> — Я проголодался.<br>' +
+      'Отрицание — через <b>没</b>: <b>我没吃早饭。</b>',
+    ex: { h: '我吃了早饭', p: 'wǒ chī le zǎo fàn', r: 'Я позавтракал' }
+  },
+  {
+    id: 'bu_mei', keys: ['不', '没', 'bu', 'mei', 'отрицание', 'не'],
+    title: '不 и 没 — два разных «не»',
+    body: '<b>不 (bù)</b> — настоящее, будущее и привычка: <b>我不喝咖啡</b>.<br>' +
+      '<b>没 (méi)</b> — прошлое и «не иметь»: <b>我没去</b> — не ходил, <b>我没有时间</b> — нет времени.<br>' +
+      'Прилагательные отрицаем только через 不: <b>不好</b>, <b>不贵</b>.',
+    ex: { h: '我不喝咖啡', p: 'wǒ bù hē kā fēi', r: 'Я не пью кофе' }
+  },
+  {
+    id: 'de', keys: ['的', 'de', 'притяж', 'чей'],
+    title: '的 — «чей, какой»',
+    body: 'Ставится <b>перед существительным</b>: <b>我的书</b> — моя книга, <b>中国的茶</b> — китайский чай.<br>' +
+      'Не путать с <b>得</b>: она идёт <b>после глагола</b> — <b>跑得快</b> — бегает быстро.',
+    ex: { h: '我的书', p: 'wǒ de shū', r: 'Моя книга' }
+  },
+  {
+    id: 'ba', keys: ['把', 'ba', 'объект'],
+    title: '把 — объект перед глаголом',
+    body: 'Нужна, когда с предметом что-то сделали и есть результат.<br>' +
+      'Схема: <b>кто + 把 + что + глагол + результат</b><br><b>我把书放在桌上。</b> — Я положил книгу на стол.<br>' +
+      'Если результата нет, 把 не нужна: <b>我买书。</b>',
+    ex: { h: '我把书放在桌上', p: 'wǒ bǎ shū fàng zài zhuō shang', r: 'Я положил книгу на стол' }
+  },
+  {
+    id: 'tones', keys: ['тон', 'тоны', 'сандх', 'пиньинь', 'произнош', 'ma1'],
+    title: 'Тоны: как не путать',
+    body: 'Один слог — четыре смысла: <b>mā</b> мама, <b>má</b> конопля, <b>mǎ</b> лошадь, <b>mà</b> ругать.<br><br>' +
+      '1-й — ровно высоко. 2-й — снизу вверх, как переспрос. 3-й — вниз и чуть вверх. 4-й — резко вниз.<br>' +
+      'Два 3-х тона подряд: первый читается 2-м — <b>nǐ hǎo → ní hǎo</b>.',
+    ex: { h: 'nǐ hǎo', p: 'ní hǎo', r: 'привет (второй тон вместо третьего)' }
+  },
+  {
+    id: 'counters', keys: ['счетн', 'счётн', 'классификатор', '个', '本', '杯', '份', '碗'],
+    title: 'Счётные слова',
+    body: 'Между числом и предметом всегда стоит счётное слово:<br>' +
+      '• <b>个</b> — универсальное: 一个人<br>• <b>本</b> — книги: 一本书<br>• <b>杯</b> — чашки: 一杯茶<br>' +
+      '• <b>份</b> — порции: 一份牛肉面<br>• <b>碗</b> — пиалы: 一碗面',
+    ex: { h: '一杯茶', p: 'yī bēi chá', r: 'чашка чая' }
+  },
+  {
+    id: 'zai', keys: ['在', 'zai', 'где', 'место'],
+    title: '在 — где находится',
+    body: '<b>我在学校。</b> — Я в школе.<br>Вопрос: <b>你在哪里？</b> — Где ты?<br>' +
+      'Ещё 在 перед глаголом значит «сейчас делаю»: <b>我在吃饭。</b> — Я сейчас ем.',
+    ex: { h: '我在学校', p: 'wǒ zài xué xiào', r: 'Я в школе' }
+  },
+  {
+    id: 'haishi', keys: ['还是', '或者', 'или', 'haishi', 'huozhe'],
+    title: '还是 и 或者 — «или»',
+    body: 'В вопросе — <b>还是</b>: <b>你喝茶还是咖啡？</b><br>' +
+      'В утверждении — <b>或者</b>: <b>我喝茶或者咖啡都行。</b>',
+    ex: { h: '你喝茶还是咖啡？', p: 'nǐ hē chá hái shi kā fēi?', r: 'Ты пьёшь чай или кофе?' }
+  },
+  {
+    id: 'modals', keys: ['要', '想', '会', '能', '可以', 'хочу', 'модальн', 'умею', 'могу'],
+    title: '要, 想, 会, 能, 可以 — кто из них «хочу»',
+    body: '<b>要</b> — твёрдое намерение: <b>我要学中文。</b><br><b>想</b> — мягче, «хочется»: <b>我想喝茶。</b><br>' +
+      '<b>会</b> — умею (навык), <b>能</b> — могу сейчас, <b>可以</b> — разрешено.',
+    ex: { h: '我想喝茶', p: 'wǒ xiǎng hē chá', r: 'Я хочу чаю' }
+  },
+  {
+    id: 'bi', keys: ['比', 'bi', 'сравн', 'чем'],
+    title: 'Сравнение с 比',
+    body: 'Схема: <b>A + 比 + B + прилагательное</b>.<br><b>今天比昨天冷。</b> — Сегодня холоднее, чем вчера.<br>' +
+      'После 比 нельзя ставить 很. «Намного» — <b>得多</b>.',
+    ex: { h: '今天比昨天冷', p: 'jīn tiān bǐ zuó tiān lěng', r: 'Сегодня холоднее, чем вчера' }
+  },
+  {
+    id: 'le_gno', keys: ['过', 'guo', 'опыт'],
+    title: '过 — «уже бывало в жизни»',
+    body: 'Ставится после глагола и говорит про опыт: <b>我去过中国。</b> — Я бывал в Китае.<br>' +
+      'Сравните: <b>我去了中国</b> — съездил (результат), <b>我去过中国</b> — есть такой опыт.',
+    ex: { h: '我去过中国', p: 'wǒ qù guo Zhōng guó', r: 'Я бывал в Китае' }
+  },
+  {
+    id: 'zheng', keys: ['正在', '在', 'сейчас', 'процесс'],
+    title: '在 / 正在 — «сейчас в процессе»',
+    body: '<b>我在吃饭。</b> — Я сейчас ем. Можно усилить: <b>我正在吃饭。</b><br>' +
+      'Разница с 了: 了 — результат, 在 — действие идёт прямо сейчас.',
+    ex: { h: '我正在吃饭', p: 'wǒ zhèng zài chī fàn', r: 'Я как раз ем' }
+  },
+  {
+    id: 'de_bu', keys: ['不+', 'потенциал', '得', 'не могу'],
+    title: '得 и 不 — «могу / не могу»',
+    body: 'Между глаголом и результатом:<br><b>看得懂</b> — могу понять (читая), <b>看不懂</b> — не могу понять.<br>' +
+      '<b>吃得完</b> — могу доесть, <b>吃不完</b> — не осилю.',
+    ex: { h: '我看不懂', p: 'wǒ kàn bu dǒng', r: 'Я не понимаю (при чтении)' }
+  }
+];
+
+/* Сопоставление вопроса с правилом: ключи проверяются как подстроки
+   нормализованной строки, поэтому падежи и порядок слов не важны. */
+function tutorMatchRule(low) {
+  const norm = low.replace(/ё/g, 'е');
+  const hits = [];
+  TUTOR_RULES.forEach(rule => {
+    let score = 0;
+    rule.keys.forEach(k => {
+      const key = k.replace(/ё/g, 'е');
+      if (!key) return;
+      if (/[\u3400-\u9fff]/.test(key)) { if (norm.includes(key)) score += 3; return; }
+      if (norm.includes(key)) score += key.length >= 4 ? 3 : 1;
+    });
+    if (score) hits.push({ rule, score });
+  });
+  hits.sort((a, b) => b.score - a.score);
+  return hits.length && hits[0].score >= 2 ? hits[0].rule : null;
+}
+
+/* ---------- Поиск слова: иероглифы, пиньинь, русский, опечатки ---------- */
+function tutorFindWords(text, limit = 6) {
+  const q = String(text || '').trim();
+  if (!q) return [];
+  const lex = TUTOR_LEX.all();
+  const hanzi = q.match(/[\u3400-\u9fff]+/g) || [];
+  const out = [];
+  const push = w => { if (w && !out.some(x => x.h === w.h && x.r === w.r)) out.push(w); };
+
+  // 1. Полное совпадение иероглифов
+  hanzi.forEach(chunk => lex.filter(w => w.h === chunk).forEach(push));
+  // 2. Вхождение иероглифов
+  hanzi.forEach(chunk => lex.filter(w => w.h.includes(chunk) || chunk.includes(w.h)).forEach(push));
+  // 3. Пиньинь: сравниваем и с тонами, и без них
+  const bare = s => String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // снимаем тоны: ǎ → a
+    .replace(/ü/g, 'v').replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const plain = bare(q);
+  if (plain && /^[a-z ]+$/.test(plain)) {
+    const squash = s => s.replace(/\s+/g, '');
+    const want = squash(plain);
+    if (want.length >= 2) {
+      lex.filter(w => w.p && squash(bare(w.p)) === want).forEach(push);
+      if (!out.length) lex.filter(w => w.p && squash(bare(w.p)).includes(want)).forEach(push);
+    }
+  }
+  // 4. Русский: точное, затем по основе слова
+  const ruWords = q.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/).filter(w => w.length > 1);
+  ruWords.forEach(word => {
+    const stem = ruStem(word);
+    if (stem.length < 3) return;
+    lex.filter(w => {
+      const ru = w.r.replace(/ё/g, 'е');
+      const parts = ru.split(/[;,/()]+/).map(s => s.trim()).filter(Boolean);
+      return parts.some(p => ruStem(p) === stem || ruStem(p).replace(/[^a-zа-я]/g, '') === stem);
+    }).forEach(push);
+    if (out.length) return;
+    lex.filter(w => ruStem(w.r).includes(stem) && stem.length >= 4).forEach(push);
+  });
+  // 5. Опечатки: ищем ближайшее слово словаря целиком
+  if (!out.length && ruWords.length) {
+    const phrase = ruWords.join(' ');
+    const dict = [...new Set(lex.map(w => w.r.split(/[;,/()]/)[0].trim()))].filter(Boolean);
+    const fixed = fuzzyHit(phrase, dict);
+    if (fixed) {
+      lex.filter(w => w.r.startsWith(fixed)).forEach(push);
+    }
+  }
+  return out.slice(0, limit);
+}
+
+/* Карточка слова: иероглиф + пиньинь + перевод (ученику так читаемо) */
+function tutorCardHtml(w) {
+  const isWord = w && w.h;
+  if (!isWord) return '';
+  return `<div class="tw-card"><b class="zh" style="font-size:22px">${ruby(w.h)}</b>` +
+    `<div class="tw-ru">${esc(w.r)}</div>` +
+    (w.lesson ? `<div class="tw-src">${esc(w.lesson)}</div>` : '') + '</div>';
+}
+
+/* ---------- Разбор китайской фразы: слова + грамматика ---------- */
+function tutorParsePhrase(hanziOnly) {
+  const parts = tutorSegment(hanziOnly);
+  const exact = tutorLookup(hanziOnly);
+  const pinyin = pinyinOf(hanziOnly);
+  let html = '';
+  if (exact) {
+    html += tutorCardHtml(exact);
+    html += `<div class="tw-py">${esc(exact.p || pinyin)}</div>`;
+  }
+  html += `<b>По словам</b> <span style="color:var(--txt3)">(${esc(pinyin)})</span>:` +
+    parts.map(tutorWordHtml).join('');
+  if (parts.some(p => !p.r)) {
+    html += `<div class="tw-note">Серые слова — их пока нет в словаре курса, чтение подсказано по иероглифам.</div>`;
+  }
+  return { html, speak: hanziOnly, pinyin };
+}
+
+/* ---------- Мини-тест с привязкой к слабым местам ---------- */
+function tutorQuizReply() {
+  const pool = tutorAllVocab().filter(w => w.h && w.p && w.r);
+  if (!pool.length) return { html: 'Словарь пуст — начните с первого урока.' };
+  const weak = cardPool().filter(c => (state.cards[c.h] || {}).wrong > 0);
+  const source = weak.length ? weak : pool;
+  const target = source[Math.floor(Math.random() * source.length)];
+  const decoys = shuffle(pool.filter(w => w.r !== target.r)).slice(0, 3);
+  const opts = shuffle([target, ...decoys]);
+  return {
+    html: (weak.length ? 'Вопрос по слову, где вы ошибались.<br>' : '') +
+      `Как переводится <b class="zh" style="font-size:20px">${ruby(target.h)}</b>` +
+      `<span class="tw-py">(${esc(target.p)})</span>?`,
+    speak: target.h,
+    quiz: { target, opts }
+  };
+}
+
+/* ---------- Совет по прогрессу с конкретикой ---------- */
+function tutorAdviceReply() {
+  const ids = tutorLessonIds();
+  const done = doneCount(), total = ids.length;
+  const due = dueCards().length;
+  const nxt = LESSONS[nextLesson()];
+  const hard = cardPool().filter(c => (state.cards[c.h] || {}).wrong > 0).slice(0, 5);
+  const acc = accuracy();
+  let txt = `Пройдено <b>${done} из ${total}</b> уроков, точность <b>${acc}%</b>, серия <b>${state.streak}</b> дн.<br>`;
+  if (acc && acc < 60) txt += '🎯 Точность ниже 60% — сейчас важнее не новые уроки, а повторение. ';
+  else if (acc >= 85 && done < total) txt += '🚀 Отличная точность — можно смело идти дальше. ';
+  txt += '<br>';
+  if (due) txt += `🗂️ <b>${due}</b> карточек ждут повторения — <a href="#/cards">Карточки</a>.<br>`;
+  if (hard.length) {
+    txt += '🎯 Слабее всего: ' + hard.map(c => `<b>${esc(c.h)}</b> (${esc(c.p)} — ${esc(c.r)})`).join(', ') + '.<br>';
+  }
+  if (nxt) txt += `📚 Следующий урок: <b>«${esc(nxt.title)}»</b> — <a href="#/lesson/${nextLesson()}">открыть →</a>`;
+  const openHw = typeof hwOpenCount === 'function' ? hwOpenCount() : 0;
+  if (openHw) txt += `<br>🏠 Домашек к сдаче: <b>${openHw}</b> — <a href="#/homework">открыть</a>`;
+  return { html: txt };
+}
+
 function tutorReplyLocal(raw) {
   const q = String(raw || '').trim();
-  const low = q.toLowerCase();
+  const low = q.toLowerCase().replace(/ё/g, 'е');
+  const hasHanzi = /[\u3400-\u9fff]/.test(q);
+  const words = low.split(/[^a-zа-я0-9]+/).filter(Boolean);
 
-  /* ---------- 0) Что умеет помощник ---------- */
-  if (/что ты (умеешь|можешь)|твои возможности|помощь|команды|что умеет/.test(low)) {
+  /* Диалог — это режим, но он не должен «залипать»: если посреди
+     тренировки задали обычный вопрос, выходим из диалога и отвечаем
+     по существу. Раньше после «давай поговорим» помощник на любой
+     вопрос продолжал реплики диалога. */
+  if (tutorContext.mode === 'dialogue' &&
+      (/\?/.test(q) || /объясн|переведи|что значит|как сказать|что такое|разниц|правил|почему|что мне|проверь/.test(low))) {
+    tutorContext.mode = 'chat';
+    tutorContext.step = 0;
+  }
+
+  /* ---------- 1) Что умеет помощник ---------- */
+  if (/(что|чем) (ты )?(умееш|можеш|умеет)|твои возможност|команд|помощь|как (тобой|тебя) пользов/.test(low)) {
     return {
-      html: 'Я помогаю по-русски — иероглифы не нужны. Просто спросите:<br><br>' +
+      html: 'Спрашивайте по-русски своими словами — иероглифы набирать не нужно.<br><br>' +
         '• <b>Как сказать «спасибо»?</b> — дам иероглиф, пиньинь и перевод<br>' +
-        '• <b>разбери 我想喝茶</b> — разложу фразу по словам с чтением<br>' +
-        '• <b>объясни 了</b> — расскажу правило простыми словами и дам примеры<br>' +
-        '• <b>тоны</b> — напомню про 4 тона и как они меняются<br>' +
-        '• <b>проверь меня</b> — задам вопрос по пройденному<br>' +
-        '• <b>что мне повторить</b> — посмотрю ваши ошибки и прогресс'
+        '• <b>Что значит 出租车?</b> — разберу фразу или слово по частям<br>' +
+        '• <b>Объясни 了 / 吗 / 把</b> — правило простыми словами и пример<br>' +
+        '• <b>Как спросить дорогу?</b> — подберу готовые фразы по теме<br>' +
+        '• <b>Проверь меня</b> — мини-тест по вашим слабым словам<br>' +
+        '• <b>Что мне повторить?</b> — посмотрю прогресс и ошибки<br>' +
+        '• <b>Давай поговорим</b> — тренировочный диалог'
     };
   }
 
-  /* ---------- 1) Совет по личному прогрессу ---------- */
-  if (/прогресс|повторить|совет|что учить|план|ошибк/.test(low)) {
-    const done = doneCount(), total = allLessonIds().length;
-    const due = dueCards().length;
-    const nxt = LESSONS[nextLesson()];
-    const hard = cardPool().filter(c => state.cards[c.h]?.wrong > 0).slice(0, 4);
-    let txt = `Ваш прогресс: пройдено <b>${done} из ${total}</b> уроков, точность <b>${accuracy()}%</b>, серия <b>${state.streak}</b> дн.<br><br>`;
-    if (due) txt += `🗂️ У вас <b>${due}</b> карточек ждут повторения — загляните в <a href="#/cards">Карточки</a>.<br>`;
-    if (hard.length) txt += `🎯 Сложные слова: ${hard.map(c => `<b>${esc(c.h)}</b> (${esc(c.p)} — ${esc(c.r)})`).join(', ')}.<br>`;
-    txt += `📚 Следующий урок: <b>«${esc(nxt.title)}»</b> — <a href="#/lesson/${nextLesson()}">открыть урок →</a>`;
-    return { html: txt };
+  /* ---------- 2) Прогресс и совет ---------- */
+  if (/прогресс|повторить|совет|что учить|план на|ошибк|получает|как у меня|идет ли|идёт ли|трудно дается|трудно даётся/.test(low)) {
+    return tutorAdviceReply();
   }
 
-  /* ---------- 2) Мини-тест ---------- */
-  if (/тест|проверь|викторин|экзамен|задани/.test(low)) {
-    const pool = tutorAllVocab().filter(w => w.h && w.p && w.r);
-    const target = pool[Math.floor(Math.random() * pool.length)];
-    const decoys = shuffle(pool.filter(w => w.r !== target.r)).slice(0, 3);
-    const opts = shuffle([target, ...decoys]);
-    return {
-      html: `Проверьте себя: как переводится <b class="zh" style="font-size:20px">${ruby(target.h)}</b>` +
-        `<span style="color:var(--gold)"> (${esc(target.p)})</span>?`,
-      speak: target.h,
-      quiz: { target, opts }
-    };
+  /* ---------- 3) Мини-тест ---------- */
+  if (/(^|\s)(тест|проверь|проверься|викторин|экзамен|задани|испыта)/.test(low) ||
+      /проверь меня|задай вопрос|потренируй меня/.test(low)) {
+    return tutorQuizReply();
   }
 
-  /* ---------- 3) «Как сказать X» — перевод с русского ---------- */
-  const sayMatch = q.match(/(?:как\s+(?:будет|сказать|перевести|спросить|пишется)|переведи(?:те)?|перевод)\s*[:\-—]?\s*(.+)/i);
+  /* ---------- 4) «Как сказать X» / «переведи X» ---------- */
+  const sayMatch = q.match(/(?:как\s+(?:будет|сказать|перевести|спросить|пишется|говорят|правильно)|переведи(?:те)?|перевод|что\s+значит|означает)\s*[:\-—]?\s*(.+)/i);
   if (sayMatch) {
     const phrase = sayMatch[1].replace(/[«»"'.?!]+$/g, '').trim();
-    const need = phrase.toLowerCase();
-    const vocab = tutorAllVocab();
-    /* 1. точное совпадение по русскому переводу */
-    let hits = vocab.filter(w => w.r.toLowerCase() === need);
-    /* 2. перевод начинается с этого слова */
-    if (!hits.length) hits = vocab.filter(w => w.r.toLowerCase().split(/[;,/]/)[0].trim() === need);
-    /* 3. вхождение */
-    if (!hits.length) hits = vocab.filter(w => w.r.toLowerCase().includes(need) && need.length > 2);
-    if (hits.length) {
-      const best = hits.slice(0, 4);
-      return {
-        html: `«${esc(phrase)}» по-китайски:<br><br>` +
-          best.map(w => `<div class="tw-card"><b class="zh" style="font-size:22px">${ruby(w.h)}</b>` +
-            `<div class="tw-ru">${esc(w.r)}</div></div>`).join('') +
-          (best[0].lesson ? `<div class="tw-src">Из раздела: ${esc(best[0].lesson)}</div>` : ''),
-        speak: best[0].h
-      };
+
+    // 4a. Внутри — иероглифы: разбираем как фразу
+    const han = phrase.match(/[\u3400-\u9fff]+/g);
+    if (han) {
+      const joined = han.join('');
+      const parsed = tutorParsePhrase(joined);
+      return { html: parsed.html, speak: parsed.speak };
     }
-    /* 4. не нашли готового — честно говорим и предлагаем похожее */
-    const words = need.split(/\s+/).filter(Boolean);
-    const near = words.map(wd => vocab.find(x => x.r.toLowerCase().includes(wd.slice(0, Math.max(4, wd.length - 2))))).filter(Boolean);
+
+    // 4b. Ищем перевод в словаре (с учётом опечаток и падежей)
+    const hits = tutorFindWords(phrase, 4);
+    if (hits.length) {
+      const best = hits[0];
+      let html = `<div class="tw-py" style="margin:0 0 6px">«${esc(phrase)}» по-китайски:</div>`;
+      html += hits.map(tutorCardHtml).join('');
+      // Полезная связка: показываем, как сказать целую фразу просьбы
+      if (/^(спасибо|извините|привет|здравствуйте|пока|до свидания)/.test(best.r) && hits.length < 3) {
+        html += `<div class="tw-note">Хотите вежливее? Добавьте <b>请 (qǐng)</b> в начале или <b>一下 (yí xià)</b> — смягчает просьбу.</div>`;
+      }
+      return { html, speak: best.h };
+    }
+
+    // 4c. Тема, а не одно слово: «как спросить дорогу», «как заказать еду»
+    const topic = tutorTopicReply(phrase);
+    if (topic) return topic;
+
+    // 4d. Честно говорим, что нет, и предлагаем близкое
+    const near = tutorFindWords(phrase.split(/\s+/).slice(-2).join(' '), 3);
     return {
-      html: `Готового перевода «${esc(phrase)}» в словаре курса нет` +
-        (near.length ? `, но вот близкие по смыслу слова:<br><br>${near.slice(0, 4).map(tutorWordHtml).join('')}` : '.') +
-        `<br><br>Загляните в <a href="#/dict">Словарь</a> — там можно искать по русскому слову.`
+      html: `Точного перевода «${esc(phrase)}» в словаре курса нет.` +
+        (near.length ? `<br>Близкие слова:<br>${near.map(tutorCardHtml).join('')}` : '') +
+        `<div class="tw-note">Подскажите тему иначе — например «еда», «дорога», «покупки» — и я подберу фразы. Или найдите слово в <a href="#/dict">Словаре</a>.</div>`
     };
   }
 
-  /* ---------- 4) Разбор фразы / предложения по словам ---------- */
-  const hasHanzi = /[\u3400-\u9fff]/.test(q);
-  const askParse = /разбер|разложи|по\s+словам|что\s+значит|переведи|как\s+читать|чтение/i.test(low);
-  if (hasHanzi && (askParse || q.replace(/[^\u3400-\u9fff]/g, '').length >= 2)) {
+  /* ---------- 5) Тема: дорога, еда, покупки, отель... ---------- */
+  /* Про тему спрашивают прямо («фразы про еду», «как спросить дорогу»)
+     или называют её одним-двумя словами. Иначе — не перехватываем:
+     вопрос «сколько времени нужно учить» — про обучение, а не про темы. */
+  const plainWords = words.length;
+  const asksTopic = /фраз[ыа]?\s+(про|о|для|на тему)|по теме|диалог\s+(про|о)|(как|что)\s+(спросить|сказать|заказать)\s+(дорог|цен|еду|счет|счёт|путь|направлен|врач|билет)|(какие|дай|покажи)\s+(слова|фразы)/.test(low);
+  const namesTopic = plainWords <= 4 && /^(дорог|еда|покупк|отел|такси|транспорт|погод|семь|работ|учеб|здоров|врач|деньг|врем|дата|месяц)/.test(low.trim());
+  if (asksTopic || namesTopic || (/как\s+(спросить|сказать|объяснить|заказать)/.test(low) && plainWords <= 7)) {
+    const topic = tutorTopicReply(low);
+    if (topic) return topic;
+  }
+
+  /* ---------- 6) Разбор китайской фразы ----------
+     Но если спрашивают «в чём разница 不 и 没» — это вопрос о правиле,
+     а не просьба перевести фразу: сначала правило. */
+  const hanziCount = (q.match(/[\u3400-\u9fff]/g) || []).length;
+  const wantsRule = /разниц|объясн|правил|грамматик|когда (использ|ставят|нужн)|почему|зачем/.test(low);
+  const earlyRule = wantsRule && hanziCount <= 2 ? tutorMatchRule(low) : null;
+  if (earlyRule) {
+    const ex = earlyRule.ex || {};
+    return {
+      html: `<b>📖 ${esc(earlyRule.title)}</b><br><br>${earlyRule.body}` +
+        (ex.h ? `<div class="tw-card"><b class="zh" style="font-size:20px">${ruby(ex.h)}</b>` +
+          `<div class="tw-py">${esc(ex.p || '')}</div><div class="tw-ru">${esc(ex.r || '')}</div></div>` : ''),
+      speak: ex.h || ''
+    };
+  }
+
+  if (hasHanzi && q.replace(/[^\u3400-\u9fff]/g, '').length >= 2) {
     const hanziOnly = q.match(/[\u3400-\u9fff]+/g).join('');
-    const parts = tutorSegment(hanziOnly);
-    const exact = tutorLookup(hanziOnly);
-    const pinyin = pinyinOf(hanziOnly);
-    const words = parts.map(p => `${esc(p.h)} (${esc(p.p || pinyinOf(p.h))})`).join(' · ');
-    let html = '';
-    if (exact) {
-      html += `<div class="tw-card"><b class="zh" style="font-size:22px">${ruby(exact.h)}</b>` +
-        `<div class="tw-ru">${esc(exact.r)}</div></div>`;
-      if (exact.lesson) html += `<div class="tw-src">Из раздела: ${esc(exact.lesson)}</div>`;
-      html += '<br>';
-    }
-    html += `<b>Разбор по словам</b> <span style="color:var(--txt3)">(${esc(pinyin)})</span>:<br>` +
-      parts.map(tutorWordHtml).join('');
-    const known = parts.filter(p => p.r).length;
-    if (!exact && parts.length > 1 && known === 0) {
-      html += `<br><div class="tw-note">Точного перевода в курсе нет. Добавьте слово в <a href="#/cards">карточки</a> — и оно попадёт в повторение.</div>`;
-    }
-    return { html, speak: hanziOnly };
+    const parsed = tutorParsePhrase(hanziOnly);
+    const rule = TUTOR_RULES.find(r => r.id === 'le' && /了/.test(hanziOnly)) ||
+      TUTOR_RULES.find(r => r.id === 'ma' && /吗/.test(hanziOnly)) ||
+      TUTOR_RULES.find(r => r.id === 'ba' && /把/.test(hanziOnly));
+    let html = parsed.html;
+    if (rule) html += `<div class="tw-note">📖 Здесь работает <b>${esc(rule.title)}</b>. Спросите «объясни ${rule.id === 'le' ? '了' : rule.id === 'ma' ? '吗' : '把'}», если нужно подробнее.</div>`;
+    return { html, speak: parsed.speak };
   }
 
-  /* ---------- 5) Объяснение грамматики ---------- */
-  const grammarKB = [
-    { re: /吗|\bma\b|вопрос.*да.?нет|общий вопрос/, title: '吗 — вопрос «да или нет»',
-      body: 'Ставится в <b>самый конец</b> утверждения, порядок слов не меняется.<br>' +
-        '<b>你喝茶。</b> — Ты пьёшь чай. → <b>你喝茶吗？</b> — Ты пьёшь чай?<br>' +
-        'Ответ: <b>喝。</b> (пью) или <b>不喝。</b> (не пью).', speak: '你喝茶吗' },
-    { re: /了|\ble\b|прошед|заверш/, title: '了 — «уже сделано» или «ситуация изменилась»',
-      body: 'Два места — два смысла.<br>' +
-        '• После глагола — действие завершено: <b>我吃了早饭。</b> — Я позавтракал.<br>' +
-        '• В конце — новое состояние: <b>我饿了。</b> — Я проголодался.<br>' +
-        'Отрицание с 了 — через <b>没</b>: <b>我没吃早饭。</b>', speak: '我吃了早饭' },
-    { re: /不.*没|没.*不|отрицан/, title: '不 и 没 — два разных «не»',
-      body: '<b>不 (bù)</b> — настоящее и будущее, привычка: <b>我不喝咖啡</b> — я не пью кофе.<br>' +
-        '<b>没 (méi)</b> — прошлое и «не иметь»: <b>我没去</b> — я не ходил, <b>我没有时间</b> — у меня нет времени.<br>' +
-        'Прилагательные отрицаем только через 不: <b>不好</b>, <b>不贵</b>.', speak: '我不喝咖啡' },
-    { re: /的|\bde\b.*(притяж|частиц)/, title: '的 — «чей, какой»',
-      body: 'Ставится <b>перед существительным</b>: <b>我的书</b> — моя книга, <b>中国的茶</b> — китайский чай.<br>' +
-        'Не путать с <b>得</b> — она идёт <b>после глагола</b>: <b>跑得快</b> — бегает быстро.', speak: '我的书' },
-    { re: /把|ba.*конструк/, title: '把 — объект перед глаголом',
-      body: 'Нужна, когда с предметом что-то сделали и есть результат.<br>' +
-        'Схема: <b>кто + 把 + что + глагол + результат</b><br>' +
-        '<b>我把书放在桌上。</b> — Я положил книгу на стол.<br>' +
-        'Если результата нет — 把 не нужна: <b>我买书。</b>', speak: '我把书放在桌上' },
-    { re: /тон|пиньинь|сандх|произнош|4 тона|четыре тона/, title: 'Тоны: как не путать',
-      body: 'Один слог — четыре смысла: <b>mā</b> (мама), <b>má</b> (конопля), <b>mǎ</b> (лошадь), <b>mà</b> (ругать).<br><br>' +
-        '1-й — ровно высоко (ма-а-а).<br>2-й — снизу вверх, как переспрос.<br>' +
-        '3-й — вниз и чуть вверх.<br>4-й — резко вниз.<br><br>' +
-        'Два 3-х тона подряд: первый читается 2-м — <b>nǐ hǎo → ní hǎo</b>.', speak: '妈麻马骂' },
-    { re: /счетн|счётн|классификатор|个|本|杯|份|碗/, title: 'Счётные слова',
-      body: 'Между числом и предметом всегда стоит счётное слово:<br>' +
-        '• <b>个</b> — универсальное: 一个人 (один человек)<br>' +
-        '• <b>本</b> — книги: 一本书<br>• <b>杯</b> — чашки: 一杯茶<br>' +
-        '• <b>份</b> — порции: 一份牛肉面<br>• <b>碗</b> — пиалы: 一碗面', speak: '一杯茶' },
-    { re: /在|место.*врем|где/, title: '在 — где находится',
-      body: '<b>我在学校。</b> — Я в школе.<br>Вопрос: <b>你在哪里？</b> — Где ты?<br>' +
-        'Ещё 在 перед глаголом значит «сейчас делаю»: <b>我在吃饭。</b> — Я сейчас ем.', speak: '我在学校' },
-    { re: /还是|或者|или/, title: '还是 и 或者 — «или»',
-      body: 'В вопросе — <b>还是</b>: <b>你喝茶还是咖啡？</b><br>' +
-        'В утверждении — <b>或者</b>: <b>我喝茶或者咖啡都行。</b>', speak: '你喝茶还是咖啡' },
-    { re: /要.*想|хочу|модальн/, title: '要 и 想 — «хочу»',
-      body: '<b>我要</b> — твёрдое намерение: <b>我要学中文。</b> (я буду учить)<br>' +
-        '<b>我想</b> — мягче, «мне хочется»: <b>我想喝茶。</b><br>' +
-        '<b>会</b> — умею (навык), <b>能</b> — могу (есть возможность), <b>可以</b> — разрешено.', speak: '我想喝茶' },
-    { re: /比|сравн/, title: 'Сравнение с 比',
-      body: 'Схема: <b>A + 比 + B + прилагательное</b>.<br><b>今天比昨天冷。</b> — Сегодня холоднее, чем вчера.<br>' +
-        'После 比 нельзя ставить 很. «Намного» — <b>得多</b>: <b>今天比昨天冷得多。</b>', speak: '今天比昨天冷' }
-  ];
-  for (const g of grammarKB) {
-    if (g.re.test(low)) {
-      return { html: `<b>📖 ${g.title}</b><br><br>${g.body}`, speak: g.speak };
-    }
+  /* ---------- 7) Грамматика: правило по ключевым словам ---------- */
+  const rule = tutorMatchRule(low);
+  const asksRule = /объясн|правил|грамматик|как (использ|употребл|работает|построить|строит)|разниц|почему|зачем|когда/.test(low);
+  if (rule && (asksRule || words.length <= 6 || !hasHanzi)) {
+    const ex = rule.ex || {};
+    return {
+      html: `<b>📖 ${esc(rule.title)}</b><br><br>${rule.body}` +
+        (ex.h ? `<div class="tw-card"><b class="zh" style="font-size:20px">${ruby(ex.h)}</b>` +
+          `<div class="tw-py">${esc(ex.p || '')}</div><div class="tw-ru">${esc(ex.r || '')}</div></div>` : ''),
+      speak: ex.h || ''
+    };
   }
 
-  /* ---------- 6) Разбор отдельного иероглифа ---------- */
+  /* ---------- 8) Один иероглиф ---------- */
   const singleHan = q.match(/^[\u3400-\u9fff]$/);
   if (singleHan) {
     const ch = singleHan[0];
     const py = (typeof PY_CHAR !== 'undefined' && PY_CHAR[ch]) || '';
-    const known = GRAMMAR_TIPS[ch];
+    const known = typeof GRAMMAR_TIPS !== 'undefined' ? GRAMMAR_TIPS[ch] : '';
     const look = tutorLookup(ch);
     let html = `<b class="zh" style="font-size:30px">${ruby(ch)}</b>`;
-    if (py) html += ` <span style="color:var(--gold)">[${esc(py)}]</span>`;
+    if (py) html += ` <span class="tw-py">[${esc(py)}]</span>`;
     if (look) html += `<br>Перевод: <b>${esc(look.r)}</b>`;
     if (known) html += `<br>В грамматике: ${esc(known)}`;
-    if (!look && !known) html += '<br><span style="color:var(--txt3)">Такого слова пока нет в курсе — спросите про него иначе или добавьте в карточки.</span>';
+    if (!look && !known) html += '<div class="tw-note">Этот иероглиф пока не встречался в курсе. Спросите фразой — например «разбери 中国人».</div>';
     return { html, speak: ch };
   }
 
-  /* ---------- 7) Поиск по словарю ---------- */
-  const vocab = tutorAllVocab();
-  const plain = q.replace(/[？?！!。.,，\s]/g, '');
-  const exact = vocab.find(w => w.h === plain || w.r.toLowerCase() === low || w.p.toLowerCase() === low);
-  if (exact) {
-    return {
-      html: `<b class="zh" style="font-size:24px">${ruby(exact.h)}</b><br>` +
-        `Перевод: <b>${esc(exact.r)}</b>` +
-        (exact.lesson ? `<br><span style="color:var(--txt3);font-size:12.5px">Раздел курса: ${esc(exact.lesson)}</span>` : ''),
-      speak: exact.h
-    };
-  }
-
-  const hits = vocab.filter(w => {
-    const ru = w.r.toLowerCase();
-    const py = w.p.toLowerCase().replace(/[^a-z]/g, '');
-    const needle = low.replace(/[^a-zа-яё]/g, '');
-    return needle.length > 1 && (ru.includes(low) || (py && py.includes(needle)));
-  }).slice(0, 6);
-  if (hits.length) {
-    return {
-      html: `Вот что есть по запросу «${esc(q)}»:<br>` + hits.map(tutorWordHtml).join(''),
-      speak: hits[0].h
-    };
-  }
-
-  /* ---------- 8) Диалог ---------- */
-  if (/давай поговорим|диалог|потренир|попрактик/.test(low)) {
+  /* ---------- 9) Диалог ---------- */
+  if (/давай поговорим|диалог|потренир|попрактик|поговорим/.test(low)) {
     tutorContext.mode = 'dialogue';
     tutorContext.step = 1;
     return {
       html: 'Отлично, потренируем диалог. Я начинаю:<br><br>' +
-        `<b class="zh" style="font-size:19px">${ruby('你好！你叫什么名字？')}</b><br>` +
-        '<span style="color:var(--gold)">Nǐ hǎo! Nǐ jiào shénme míngzi?</span><br>— Привет! Как тебя зовут?<br><br>' +
-        '<i>Ответьте по-китайски, например: 我叫阿里 — «меня зовут Али».</i>',
+        '<b class="zh" style="font-size:19px">' + ruby('你好！你叫什么名字？') + '</b><br>' +
+        '<span class="tw-py">Nǐ hǎo! Nǐ jiào shénme míngzi?</span><br>— Привет! Как тебя зовут?<br><br>' +
+        '<i>Ответьте по-китайски, например: 我叫阿里 — «меня зовут Али». Или по-русски — я переведу.</i>',
       speak: '你好！你叫什么名字？'
     };
   }
-  if (tutorContext.mode === 'dialogue' && hasHanzi) {
+  if (tutorContext.mode === 'dialogue') {
     if (tutorContext.step === 1) {
       tutorContext.step = 2;
       return {
         html: 'Хорошо! Продолжаем:<br><br>' +
-          `<b class="zh" style="font-size:19px">${ruby('很高兴认识你！你喝茶还是咖啡？')}</b><br>` +
-          '<span style="color:var(--gold)">Hěn gāoxìng rènshi nǐ! Nǐ hē chá háishi kāfēi?</span><br>' +
+          '<b class="zh" style="font-size:19px">' + ruby('很高兴认识你！你喝茶还是咖啡？') + '</b><br>' +
+          '<span class="tw-py">Hěn gāoxìng rènshi nǐ! Nǐ hē chá háishi kāfēi?</span><br>' +
           '— Рад познакомиться! Ты пьёшь чай или кофе?',
         speak: '很高兴认识你！你喝茶还是咖啡？'
       };
@@ -2239,20 +2433,120 @@ function tutorReplyLocal(raw) {
     tutorContext.mode = 'chat';
     return {
       html: 'Отлично, диалог получился! 👏<br><br>' +
-        `<b class="zh" style="font-size:19px">${ruby('你中文说得很好！继续加油！')}</b><br>` +
-        '<span style="color:var(--gold)">Nǐ Zhōngwén shuō de hěn hǎo! Jìxù jiāyóu!</span><br>' +
+        '<b class="zh" style="font-size:19px">' + ruby('你中文说得很好！继续加油！') + '</b><br>' +
+        '<span class="tw-py">Nǐ Zhōngwén shuō de hěn hǎo! Jìxù jiāyóu!</span><br>' +
         '— Ты хорошо говоришь по-китайски! Так держать!',
       speak: '你中文说得很好！继续加油！'
     };
   }
 
-  /* ---------- 9) Подсказка, а не стена иероглифов ---------- */
+  /* ---------- 9) Поиск по словарю (терпим к опечаткам и падежам) ---------- */
+  const found = tutorFindWords(q, 6);
+  if (found.length) {
+    const exact = found.find(w => ruStem(w.r) === ruStem(q) || w.h === q.trim());
+    if (exact && found.length === 1) {
+      return {
+        html: `<b class="zh" style="font-size:24px">${ruby(exact.h)}</b><span class="tw-py">${esc(exact.p)}</span><br>` +
+          `Перевод: <b>${esc(exact.r)}</b>` +
+          (exact.lesson ? `<div class="tw-src">Раздел курса: ${esc(exact.lesson)}</div>` : ''),
+        speak: exact.h
+      };
+    }
+    return {
+      html: `Вот что есть по запросу «${esc(q)}»:<br>` + found.map(tutorWordHtml).join(''),
+      speak: found[0].h
+    };
+  }
+
+  /* ---------- 11) Всё равно не поняли: уточняем, а не отшиваем ---------- */
+  // Пробуем вытащить хоть одно знакомое слово из вопроса
+  const fragments = q.split(/[^a-zA-Zа-яА-ЯёЁ0-9\u3400-\u9fff]+/).filter(w => w.length > 2);
+  const guess = fragments.map(f => tutorFindWords(f, 1)[0]).filter(Boolean).slice(0, 3);
   return {
-    html: 'Я не уверен, что понял вопрос. Спросите иначе, например:<br>' +
-      '• <b>как сказать спасибо</b><br>' +
-      '• <b>объясни 了</b><br>' +
-      '• <b>разбери 我想喝茶</b><br>' +
-      '• <b>что мне повторить</b>'
+    html: 'Не уверен, что понял — уточните, пожалуйста. Я лучше всего отвечаю на такие вопросы:<br>' +
+      '• <b>как сказать «спасибо»</b><br>• <b>что значит 车站</b><br>• <b>объясни разницу 不 и 没</b><br>' +
+      '• <b>как спросить дорогу</b><br>• <b>что мне повторить</b>' +
+      (guess.length ? `<div class="tw-note">Возможно, вы про это: ${guess.map(w => `<b>${esc(w.h)}</b> (${esc(w.p)} — ${esc(w.r)})`).join(', ')}</div>` : '')
+  };
+}
+
+/* ---------- Ответы по темам: готовые фразы из курса ----------
+   Тема ищется не только по названию урока, но и по самим словам:
+   иначе в «дорогу» попадали 把 и 拿 из соседнего урока. */
+const TUTOR_TOPICS = [
+  { id: 'greet', title: 'Приветствия и знакомство', ids: ['l1'],
+    words: /приветств|здравств|знаком|(^|\s)имя|зовут|до свидан|спасибо|благодар|извинит|простит|вежлив/,
+    topic: /приветств|знакомств|представит|вежлив/ },
+  { id: 'money', title: 'Покупки и деньги', ids: ['l2'],
+    words: /цен[аыуеой]|деньг|денег|дорого|дороже|дешев|стоит|скидк|покуп|магазин|юан/,
+    topic: /покупк|магазин|деньг|торг|рынок/ },
+  { id: 'family', title: 'Семья', ids: ['l3'],
+    words: /семь[яиюей]|семей|мам[аыуеой]|пап[аыуеой]|брат|сестр|сын|доч|родител|бабушк|дедушк|жен[аыуеой]|муж[ауе]?\b/,
+    topic: /семь|родствен|брат|сестр|мама|папа/ },
+  { id: 'food', title: 'Еда и ресторан', ids: ['l4'],
+    words: /ед[ауыеой]|заказ|ресторан|кафе|меню|вкусн|остр|ча[йяюе]|кофе|вод[аыуеой]|рис|лапш|мясо|блюд|счет|счёт|оплат|официант/,
+    topic: /еда|заказ|ресторан|кафе|меню|поесть|блюд|обед/ },
+  { id: 'place', title: 'Место и время (在)', ids: ['l5'],
+    words: /где|находит|мест[оаеу]|дом[ауе]\b|школ|врем[яиюе]|час[аов]?\b|минут|утр[оае]|вечер|ноч[ьи]|сейчас/,
+    topic: /мест|где находит|который час/ },
+  { id: 'past', title: 'Прошедшее и частица 了', ids: ['l6'],
+    words: /уже|сделал|вчера|прошл|законч|готов/,
+    topic: /прошл|уже сдела|заверш/ },
+  { id: 'weather', title: 'Погода и сезоны', ids: ['l11'],
+    words: /погод|дожд|снег|холод|жарк|тепл|ветер|солнц|весн|лето|осен|зим|месяц|январ|феврал|апрел|июн|июл|август|сентябр|октябр|ноябр|декабр/,
+    topic: /погод|времена года|сезон/ },
+  { id: 'transport', title: 'Транспорт и дорога', ids: ['l12'],
+    words: /такси|метро|автобус|поезд|самолет|самолёт|аэропорт|вокзал|билет|дорог[аиуеи]|улиц|налево|направ|прямо|рядом|идти|ехать|далеко|близко|карт[аыуе]|как пройти/,
+    topic: /такси|метро|транспорт|аэропорт|вокзал|билет|дорог|улиц|направ|как пройти/ },
+  { id: 'health', title: 'Здоровье и врач', ids: ['l13'],
+    words: /бол[ьи]|болит|болезн|врач|доктор|аптек|лекарств|температур|простуд|голов[аыуе]|живот|горл[оа]/,
+    topic: /здоров|врач|болезн|бол/ },
+  { id: 'work', title: 'Работа и офис', ids: ['l14'],
+    words: /работ|професс|офис|коллег|начальник|встреч|письм|должност|компани|зарплат/,
+    topic: /работ|професс|офис|должност/ },
+  { id: 'study', title: 'Учёба и планы', ids: ['l15'],
+    words: /учит|уч[её]б|школ|универ|экзамен|hsk|план|будущ|собира|мечт/,
+    topic: /учеб|экзамен|hsk|планы|будущ/ }
+];
+
+function tutorTopicReply(raw) {
+  const low = String(raw || '').toLowerCase().replace(/ё/g, 'е');
+  const scored = TUTOR_TOPICS.map(tp => ({ tp, score: (low.match(tp.words) ? 2 : 0) + (tp.topic.test(low) ? 3 : 0) }))
+    .filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+  if (!scored.length) return null;
+  const hit = scored[0].tp;
+
+  const items = [];
+  hit.ids.forEach(id => {
+    const L = LESSONS[id];
+    if (!L) return;
+    (L.vocab || []).forEach(w => {
+      const ru = (w.r || '').toLowerCase();
+      /* берём слова урока, которые действительно про эту тему */
+      if (hit.words.test(ru)) items.push({ h: w.h, p: w.p, r: w.r, lesson: L.title, score: 2 });
+    });
+  });
+  if (typeof PHRASES !== 'undefined') {
+    PHRASES.forEach(cat => {
+      (cat.items || []).forEach(w => {
+        if (hit.words.test((w.r || '').toLowerCase())) items.push({ h: w.h, p: w.p, r: w.r, lesson: cat.c, score: 3 });
+      });
+    });
+  }
+  if (!items.length) return null;
+  /* Ключевые слова темы короче описательных фраз — они и полезнее
+     в первую очередь: «дорога» раньше, чем «сколько стоит билет». */
+  items.sort((a, b) => (b.score - a.score) || (a.r.length - b.r.length));
+  const uniq = [];
+  items.forEach(w => { if (!uniq.some(x => x.h === w.h)) uniq.push(w); });
+  const first = uniq[0];
+  const lessonLinks = hit.ids.map(id => LESSONS[id]
+    ? `<a href="#/lesson/${id}">${esc(LESSONS[id].title)}</a>` : '').filter(Boolean).join(' · ');
+  return {
+    html: `<b>${esc(hit.title)}</b> — из курса:<br>` +
+      uniq.slice(0, 6).map(tutorCardHtml).join('') +
+      `<div class="tw-note">Разобрано в уроке: ${lessonLinks}. Ещё фразы — в разделе <a href="#/phrases">Фразы</a>.</div>`,
+    speak: first.h
   };
 }
 
@@ -2263,12 +2557,14 @@ function renderTutor(root) {
 
   const chips = el('div', 't-chips');
   [
-    ['🔎 Разбери фразу', 'разбери фразу 我想喝茶'],
+    ['🔎 Разбери фразу', 'разбери 我想喝茶'],
     ['🔍 Как сказать «спасибо»?', 'как сказать спасибо'],
-    ['📖 Что такое частица 了?', 'объясни частицу 了'],
-    ['🎵 Как меняются тоны?', 'объясни тоны и сандхи'],
-    ['💬 Потренируем диалог', 'давай поговорим в диалоге'],
-    ['🎯 Что мне повторить?', 'что мне повторить сейчас'],
+    ['📖 Частица 了', 'объясни частицу 了'],
+    ['⚖️ Разница 不 и 没', 'в чём разница между 不 и 没'],
+    ['🎵 Тоны', 'объясни тоны'],
+    ['🛣 Как спросить дорогу', 'как спросить дорогу'],
+    ['💬 Диалог', 'давай поговорим'],
+    ['🎯 Что повторить', 'что мне повторить сейчас'],
     ['🎲 Проверь меня', 'проверь меня тестом']
   ].forEach(([label, query]) => {
     const b = el('button', 'btn btn-sm btn-ghost', label);
@@ -2338,6 +2634,13 @@ function renderTutor(root) {
     paintFeed();
     send.disabled = true;
 
+    /* Пока ждём ответ, показываем, что помощник работает:
+       иначе на медленном соединении чат выглядит «мёртвым». */
+    const thinking = el('div', 't-msg t-bot');
+    thinking.appendChild(el('div', 't-bubble t-thinking', 'Сяо Мин думает<span class="t-dots"><i></i><i></i><i></i></span>'));
+    feed.appendChild(thinking);
+    feed.scrollTop = feed.scrollHeight;
+
     let replyObj = null;
     if (window.Auth && Auth.online) {
       try {
@@ -2358,7 +2661,11 @@ function renderTutor(root) {
       } catch (e) { }
     }
     if (!replyObj) replyObj = tutorReplyLocal(q);
-    tutorHistory.push({ role: 'assistant', content: q, ...replyObj });
+    /* В историю для серверного ИИ кладём чистый текст ответа,
+       а не HTML и не вопрос ученика (раньше модель видела кашу). */
+    const plainReply = String(replyObj.html || replyObj.content || '')
+      .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    tutorHistory.push({ role: 'assistant', content: plainReply, ...replyObj });
     send.disabled = false;
     paintFeed();
   }
