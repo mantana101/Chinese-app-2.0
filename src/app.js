@@ -917,7 +917,7 @@ function cardListPanel() {
       <span class="cl-p">${esc(c.p)}</span>
       <span class="cl-r">${esc(c.r || '—')}</span>
       <span class="cl-box" title="Коробка Лейтнера">${'▮'.repeat(box + 1)}<i>${'▯'.repeat(5 - box)}</i></span>
-      <button class="cl-del" data-del="${esc(c.h)}" title="Удалить">✕</button>`);
+      <button class="cl-del" data-del="${esc(c.h)}" title="Удалить" aria-label="Удалить ${esc(c.h)} из карточек">✕</button>`);
     list.appendChild(row);
   });
   p.appendChild(list);

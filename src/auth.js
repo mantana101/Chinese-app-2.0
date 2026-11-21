@@ -659,7 +659,7 @@ const Auth = (() => {
 
       modal.innerHTML = `
         <div class="modal-head"><h2>${esc(it.student)} · ${esc(title)}</h2>
-        <button class="modal-x">✕</button></div>
+        <button class="modal-x" aria-label="Закрыть">✕</button></div>
         <p class="page-sub">Отправлено ${timeAgo(it.updated_at)}${it.graded_at ? ' · проверено ' + timeAgo(it.graded_at) : ''}</p>
         <div class="hw-answers">${rows || '<div class="empty">Заданий не найдено</div>'}</div>
         <h3>Оценка работы</h3>
@@ -903,7 +903,7 @@ const Auth = (() => {
       const s = d.summary;
       modal.innerHTML = `
         <div class="modal-head"><h2>${esc(d.user.display_name)} <span class="lvl-chip">${ROLE_RU[d.user.role]}</span></h2>
-        <button class="modal-x">✕</button></div>
+        <button class="modal-x" aria-label="Закрыть">✕</button></div>
         <div class="stat-grid">
           <div><b>${s.lessons_done}/${s.lessons_total}</b><span>уроков</span></div>
           <div><b>${s.avg_score}%</b><span>средний балл</span></div>
