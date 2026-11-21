@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#171327">
-<meta name="app-build" content="712b3de62c29">
+<meta name="app-build" content="e797c3406334">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1532,6 +1532,55 @@ button { font-family: inherit; cursor: pointer; }
   border: 1px solid rgba(116,169,239,.35);
 }
 :root[data-theme="light"] .t-links a { color: #2f5f9e; }
+
+/* ---------- Кто сейчас на сайте ---------- */
+.live-list { display: flex; flex-direction: column; gap: 2px; }
+.live-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 4px; border-bottom: 1px solid var(--line);
+}
+.live-row:last-child { border-bottom: none; }
+.live-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--green, #4ec97e); box-shadow: 0 0 0 4px rgba(78,201,126,.18);
+}
+.live-dot.off { background: var(--txt3); box-shadow: none; }
+.live-name { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.live-name b { font-size: 14px; }
+.live-name i { font-size: 11.5px; color: var(--txt3); font-style: normal; }
+.live-when { font-size: 12px; color: var(--txt3); white-space: nowrap; }
+.live-when.bad { color: var(--red, #e5674f); }
+
+/* Столбики заходов по дням */
+.days-chart {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 140px; padding-top: 8px;
+}
+.day-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.day-bar {
+  width: 100%; max-width: 34px; border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--gold), rgba(116,169,239,.75));
+  transition: height .3s ease;
+}
+.day-bar.off { background: var(--line); }
+.day-num { font-size: 11px; color: var(--txt2); margin-top: 4px; min-height: 14px; }
+.day-lbl { font-size: 10px; color: var(--txt3); white-space: nowrap; }
+@media (max-width: 640px) {
+  .day-lbl { font-size: 9px; }
+  .days-chart { gap: 3px; height: 120px; }
+  /* На телефоне список учеников читается лучше карточками, чем
+     горизонтальной прокруткой таблицы. */
+  .st-row { min-width: 0; grid-template-columns: 1fr auto; row-gap: 4px; }
+  .st-head { display: none; }
+  .st-row > span:nth-child(2)::before { content: 'уроки: '; color: var(--txt3); }
+  .st-row > span:nth-child(3)::before { content: 'балл: '; color: var(--txt3); }
+  .st-row > span:nth-child(4)::before { content: 'точность: '; color: var(--txt3); }
+  .st-row > span:nth-child(5)::before { content: 'карточки: '; color: var(--txt3); }
+  .st-row > span:nth-child(6)::before { content: 'дней: '; color: var(--txt3); }
+  .st-row > span:nth-child(7)::before { content: 'был: '; color: var(--txt3); }
+  .st-row > span:nth-child(8)::before { content: 'оценка: '; color: var(--txt3); }
+  .live-row { padding: 8px 2px; }
+}
 
 </style>
 </head>
@@ -3901,7 +3950,8 @@ const Auth = (() => {
       {
         const tabs = el2('div', 'tabs');
         const errN = sys?.counts?.errors || 0;
-        [['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
+        const onN = data.online_count || 0;
+        [['live', `🟢 Кто онлайн${onN ? ` (${onN})` : ''}`], ['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
           const b = el2('button', 'tab' + (tab === id ? ' active' : ''), label);
           b.onclick = () => { tab = id; paint(); };
           tabs.appendChild(b);
@@ -3909,6 +3959,20 @@ const Auth = (() => {
         wrap.appendChild(tabs);
       }
 
+      if (tab === 'live') {
+        paintLive();
+        /* Пока вкладка открыта, обновляем список сам: «сейчас на сайте»
+           устаревает за минуты, а нажимать «обновить» никто не будет. */
+        if (!window.__liveTimer) {
+          window.__liveTimer = setInterval(async () => {
+            if (tab !== 'live' || !document.body.contains(wrap)) {
+              clearInterval(window.__liveTimer); window.__liveTimer = null; return;
+            }
+            try { await loadData(); paint(); } catch (e) { }
+          }, 30000);
+        }
+        return;
+      }
       if (tab === 'hw') {
         paintHomework();
         return;
@@ -4124,6 +4188,95 @@ const Auth = (() => {
       if (b < 1024) return b + ' Б';
       if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' КБ';
       return (b / (1024 * 1024)).toFixed(2) + ' МБ';
+    }
+
+    /* --- Кто сейчас на сайте ---
+       Учителю важно видеть не только оценки, но и кто реально заходит:
+       «активен 2 минуты назад» или «не заходил неделю». Данные берём из
+       отметок сессий на сервере (не чаще раза в минуту на человека). */
+    function paintLive() {
+      const on = data.online || [];
+      const win = Math.round((data.online_window_sec || 300) / 60);
+
+      const head = el2('div', 'panel');
+      head.appendChild(el2('h3', '', '🟢 Кто сейчас на сайте'));
+      head.appendChild(el2('p', 'page-sub',
+        `Считается активным, если заходил за последние ${win} мин. Всего в классе: ${data.count}.`));
+
+      const grid = el2('div', 'stat-grid');
+      const activeToday = (data.students || []).filter(s => s.active_today).length;
+      const gone = (data.students || []).filter(s => s.last_seen && (data.server_time - s.last_seen) > 86400 * 7).length;
+      grid.innerHTML = `
+        <div><b class="ok">${on.length}</b><span>сейчас на сайте</span></div>
+        <div><b>${activeToday}</b><span>занимались сегодня</span></div>
+        <div><b>${data.count}</b><span>учеников в классе</span></div>
+        <div><b class="${gone ? 'bad' : 'ok'}">${gone}</b><span>не заходят 7+ дней</span></div>`;
+      head.appendChild(grid);
+
+      /* список тех, кто онлайн */
+      const livePanel = el2('div', 'panel');
+      livePanel.appendChild(el2('h3', '', 'Сейчас в приложении'));
+      if (!on.length) {
+        livePanel.appendChild(el2('div', 'empty', 'Сейчас никого нет. Загляните позже — список обновляется сам.'));
+      } else {
+        const ul = el2('div', 'live-list');
+        on.forEach(p => {
+          const row = el2('div', 'live-row');
+          row.innerHTML = `<span class="live-dot"></span>
+            <span class="live-name"><b>${esc(p.display_name)}</b>
+              <i>${p.role === 'owner' ? 'владелец' : p.role === 'teacher' ? 'учитель' : 'ученик'}</i></span>
+            <span class="live-when">${timeAgo(p.seen)}</span>`;
+          ul.appendChild(row);
+        });
+        livePanel.appendChild(ul);
+      }
+      const rf = el2('button', 'btn btn-sm btn-ghost', '↻ Обновить');
+      rf.onclick = () => reload();
+      livePanel.appendChild(rf);
+      wrap.appendChild(livePanel);
+
+      /* занятия по дням: столбики за две недели */
+      const days = data.days || [];
+      if (days.length) {
+        const chart = el2('div', 'panel');
+        chart.appendChild(el2('h3', '', '📈 Заходы за две недели'));
+        chart.appendChild(el2('p', 'page-sub', 'Сколько учеников заходило в приложение каждый день.'));
+        const max = Math.max(1, ...days.map(d => d.users));
+        const bars = el2('div', 'days-chart');
+        days.forEach(d => {
+          const col = el2('div', 'day-col');
+          const h = Math.round((d.users / max) * 100);
+          col.innerHTML = `<div class="day-bar${d.users ? '' : ' off'}" style="height:${Math.max(6, h)}%"
+              title="${d.users} чел."></div>
+            <span class="day-num">${d.users || ''}</span>
+            <span class="day-lbl">${new Date(d.day * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>`;
+          bars.appendChild(col);
+        });
+        chart.appendChild(bars);
+        wrap.appendChild(chart);
+      }
+
+      /* кто давно не заходил — сюда учитель смотрит в первую очередь */
+      const absent = (data.students || [])
+        .filter(s => !s.online)
+        .sort((a, b) => (a.last_seen || 0) - (b.last_seen || 0))
+        .slice(0, 8);
+      const miss = el2('div', 'panel');
+      miss.appendChild(el2('h3', '', '⏰ Давно не заходили'));
+      if (!absent.length) {
+        miss.appendChild(el2('div', 'empty', 'Все ученики на месте.'));
+      } else {
+        const table = el2('div', 'live-list');
+        absent.forEach(s => {
+          const row = el2('div', 'live-row');
+          const late = s.last_seen && (data.server_time - s.last_seen) > 86400 * 3;
+          row.innerHTML = `<span class="live-dot off"></span>
+            <span class="live-name"><b>${esc(s.display_name)}</b><i>уроков: ${s.lessons_done}/${s.lessons_total}</i></span>
+            <span class="live-when ${late ? 'bad' : ''}">${s.last_seen ? timeAgo(s.last_seen) : 'ещё не заходил'}</span>`;
+          miss.appendChild(row);
+        });
+      }
+      wrap.appendChild(miss);
     }
 
     function paintSystem() {
@@ -4784,7 +4937,19 @@ let quizState = null;
 function renderLesson(root, args) {
   const id = args[0];
   const l = LESSONS[id];
-  if (!l) { root.appendChild(el('div', 'panel', 'Урок не найден')); return; }
+  if (!l) {
+    /* Тупик вместо подсказки: раньше был голый текст «Урок не найден»,
+       и человеку некуда было нажать. Теперь — путь дальше. */
+    const pan = el('div', 'panel');
+    pan.innerHTML = '<h3>Такого урока нет</h3>' +
+      '<p class="page-sub">Возможно, ссылка устарела. Вот что можно открыть:</p>' +
+      '<div class="btn-row">' +
+      '<a class="btn btn-primary" href="#/plan">📚 План курса</a>' +
+      '<a class="btn btn-ghost" href="#/home">🏠 На главную</a>' +
+      '<a class="btn btn-ghost" href="#/dict">📖 Словарь</a></div>';
+    root.appendChild(pan);
+    return;
+  }
   const mod = MODULES.find(m => m.lessons.includes(id));
   touchDay();
 
@@ -5855,6 +6020,17 @@ function renderStats(root) {
     <div><b>${state.streak}</b><span>дней подряд</span></div>
     <div><b>${Object.keys(state.cards).length}</b><span>карточек</span></div>
     <div><b>${dueCards().length}</b><span>к повторению</span></div>`));
+  /* Новичок видит шесть нулей и не понимает, что делать. Даём понятный
+     следующий шаг вместо пустого отчёта. */
+  if (!done && !state.totalRight && !state.totalWrong && !state.days.length) {
+    const start = el('div', 'panel');
+    start.innerHTML = '<h3>Пока пусто — и это нормально 🙂</h3>' +
+      '<p class="page-sub">Статистика появится после первого урока. Начать проще всего так:</p>' +
+      '<div class="btn-row">' +
+      '<a class="btn btn-primary" href="#/diag">🎯 Уровень за 10 минут</a>' +
+      '<a class="btn btn-ghost" href="#/lesson/l1">📖 Первый урок</a></div>';
+    wrap.appendChild(start);
+  }
   panel.appendChild(el('h3', '', 'Последние 7 дней'));
   panel.appendChild(el('div', 'days', grades.map(g => `<div class="day ${g.on ? 'on' : ''}"><i>${g.on ? '●' : '○'}</i><span>${g.d.slice(8)}</span></div>`).join('')));
   wrap.appendChild(panel);

@@ -44,6 +44,9 @@ HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
 
 SESSION_DAYS = 30
+
+# Сколько секунд после последнего запроса человек считается «на сайте».
+ONLINE_WINDOW = int(os.environ.get("ONLINE_WINDOW", "300"))
 PBKDF2_ROUNDS = 200_000
 MIN_PASSWORD_LEN = 8
 
@@ -155,7 +158,9 @@ def init_db():
             token      TEXT PRIMARY KEY,
             user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             created_at INTEGER NOT NULL,
-            expires_at INTEGER NOT NULL
+            expires_at INTEGER NOT NULL,
+            -- последний запрос с этой сессией: по нему видно, кто сейчас на сайте
+            last_seen  INTEGER
         );
         CREATE TABLE IF NOT EXISTS progress (
             user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -235,6 +240,14 @@ def migrate(conn):
         # v2 — домашние задания (таблица homework). Создаётся в init_db,
         # здесь только фиксируем версию схемы.
         conn.execute("PRAGMA user_version = 2")
+        conn.commit()
+        version = 2
+    if version < 3:
+        # v3 — «кто сейчас на сайте». Старые базы не знают колонку last_seen.
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+        if "last_seen" not in cols:
+            conn.execute("ALTER TABLE sessions ADD COLUMN last_seen INTEGER")
+        conn.execute("PRAGMA user_version = 3")
         conn.commit()
 
 
@@ -484,10 +497,17 @@ def get_session(handler):
         return None
     conn = db()
     row = conn.execute(
-        "SELECT s.token, s.expires_at, u.* FROM sessions s JOIN users u ON u.id = s.user_id "
+        "SELECT s.token, s.expires_at, s.last_seen, u.* FROM sessions s JOIN users u ON u.id = s.user_id "
         "WHERE s.token = ? AND u.active = 1",
         (token,),
     ).fetchone()
+    if row:
+        # Отмечаем «был здесь только что» не чаще раза в минуту: иначе
+        # каждый запрос писал бы в базу и тормозил бы страницу.
+        ts = now()
+        if not row["last_seen"] or ts - row["last_seen"] >= 60:
+            conn.execute("UPDATE sessions SET last_seen = ? WHERE token = ?", (ts, token))
+            conn.commit()
     conn.close()
     if not row:
         return None
@@ -1157,6 +1177,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "FROM homework GROUP BY user_id) h ON h.user_id = u.id "
                 "WHERE u.role = 'student' ORDER BY u.display_name COLLATE NOCASE"
             ).fetchall()
+            # последняя активность каждого пользователя (для «онлайн» и «был N минут назад»)
+            seen = {}
+            for r in conn.execute(
+                "SELECT user_id, MAX(last_seen) AS seen FROM sessions "
+                "WHERE last_seen IS NOT NULL GROUP BY user_id"
+            ).fetchall():
+                seen[r["user_id"]] = r["seen"]
+            online_cut = now() - ONLINE_WINDOW
+
             students = []
             for r in rows:
                 payload = json.loads(r["payload"]) if r["payload"] else {}
@@ -1171,14 +1200,51 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         "created_at": r["created_at"],
                         "last_login": r["last_login"],
                         "last_active": r["prog_at"] or r["last_login"] or r["created_at"],
+                        "last_seen": seen.get(r["id"]),
+                        "online": bool(seen.get(r["id"]) and seen[r["id"]] >= online_cut),
                         "hw_done": r["hw_done"] or 0,
                         "hw_waiting": r["hw_waiting"] or 0,
                     }
                 )
                 students.append(s)
-            conn.close()
+            # Соединение закрываем в конце: ниже идут ещё запросы (онлайн,
+            # посещения по дням) — иначе они падали на закрытой базе.
+            # --- кто сейчас на сайте: сессия с активностью за последние минуты
+            online_rows = conn.execute(
+                "SELECT u.id, u.display_name, u.role, MAX(s.last_seen) AS seen "
+                "FROM sessions s JOIN users u ON u.id = s.user_id "
+                "WHERE u.active = 1 AND s.last_seen IS NOT NULL AND s.last_seen >= ? "
+                "GROUP BY u.id ORDER BY seen DESC",
+                (online_cut,),
+            ).fetchall()
+            online = [{"id": r["id"], "display_name": r["display_name"],
+                       "role": r["role"], "seen": r["seen"]} for r in online_rows]
+
+            # --- посещения по дням за две недели: видно, кто пропал
+            days = []
+            for i in range(13, -1, -1):
+                day_start = int((now() - i * 86400) // 86400 * 86400)  # полночь UTC
+                days.append({"day": day_start, "visits": 0, "users": 0})
+            week_ago = days[0]["day"]
+            visit_rows = conn.execute(
+                "SELECT user_id, last_seen FROM sessions WHERE last_seen >= ?", (week_ago,)
+            ).fetchall()
+            per_day = {}
+            for r in visit_rows:
+                d = int(r["last_seen"] // 86400 * 86400)
+                per_day.setdefault(d, set()).add(r["user_id"])
+            for d in days:
+                who = per_day.get(d["day"], set())
+                d["users"] = len(who)
+                d["visits"] = len(who)
+
             overview = {
                 "students": students,
+                "online": online,
+                "online_count": len(online),
+                "online_window_sec": ONLINE_WINDOW,
+                "days": days,
+                "server_time": now(),
                 "count": len(students),
                 "avg_score": round(sum(s["avg_score"] for s in students) / len(students)) if students else 0,
                 "avg_accuracy": round(sum(s["accuracy"] for s in students) / len(students)) if students else 0,
@@ -1187,6 +1253,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "hw_waiting": sum(s["hw_waiting"] for s in students),
                 "hw_total": sum(s["hw_done"] for s in students),
             }
+            conn.close()
             return send_json(self, 200, overview)
 
         # --- домашние задания ---
@@ -1972,8 +2039,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         token = secrets.token_urlsafe(32)
         conn = db()
         conn.execute(
-            "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
-            (token, user_id, now(), now() + SESSION_DAYS * 86400),
+            "INSERT INTO sessions (token, user_id, created_at, expires_at, last_seen) VALUES (?,?,?,?,?)",
+            (token, user_id, now(), now() + SESSION_DAYS * 86400, now()),
         )
         conn.commit()
         conn.close()

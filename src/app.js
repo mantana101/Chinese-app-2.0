@@ -432,7 +432,19 @@ let quizState = null;
 function renderLesson(root, args) {
   const id = args[0];
   const l = LESSONS[id];
-  if (!l) { root.appendChild(el('div', 'panel', 'Урок не найден')); return; }
+  if (!l) {
+    /* Тупик вместо подсказки: раньше был голый текст «Урок не найден»,
+       и человеку некуда было нажать. Теперь — путь дальше. */
+    const pan = el('div', 'panel');
+    pan.innerHTML = '<h3>Такого урока нет</h3>' +
+      '<p class="page-sub">Возможно, ссылка устарела. Вот что можно открыть:</p>' +
+      '<div class="btn-row">' +
+      '<a class="btn btn-primary" href="#/plan">📚 План курса</a>' +
+      '<a class="btn btn-ghost" href="#/home">🏠 На главную</a>' +
+      '<a class="btn btn-ghost" href="#/dict">📖 Словарь</a></div>';
+    root.appendChild(pan);
+    return;
+  }
   const mod = MODULES.find(m => m.lessons.includes(id));
   touchDay();
 
@@ -1503,6 +1515,17 @@ function renderStats(root) {
     <div><b>${state.streak}</b><span>дней подряд</span></div>
     <div><b>${Object.keys(state.cards).length}</b><span>карточек</span></div>
     <div><b>${dueCards().length}</b><span>к повторению</span></div>`));
+  /* Новичок видит шесть нулей и не понимает, что делать. Даём понятный
+     следующий шаг вместо пустого отчёта. */
+  if (!done && !state.totalRight && !state.totalWrong && !state.days.length) {
+    const start = el('div', 'panel');
+    start.innerHTML = '<h3>Пока пусто — и это нормально 🙂</h3>' +
+      '<p class="page-sub">Статистика появится после первого урока. Начать проще всего так:</p>' +
+      '<div class="btn-row">' +
+      '<a class="btn btn-primary" href="#/diag">🎯 Уровень за 10 минут</a>' +
+      '<a class="btn btn-ghost" href="#/lesson/l1">📖 Первый урок</a></div>';
+    wrap.appendChild(start);
+  }
   panel.appendChild(el('h3', '', 'Последние 7 дней'));
   panel.appendChild(el('div', 'days', grades.map(g => `<div class="day ${g.on ? 'on' : ''}"><i>${g.on ? '●' : '○'}</i><span>${g.d.slice(8)}</span></div>`).join('')));
   wrap.appendChild(panel);
