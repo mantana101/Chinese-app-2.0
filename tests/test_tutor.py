@@ -178,6 +178,61 @@ class TutorUnderstanding(unittest.TestCase):
         self.assertNotIn("транспорт", t)
 
 
+class ChatSurvivesRerender(unittest.TestCase):
+    """Разговор не должен исчезать при перерисовке страницы.
+
+    Раньше вход в аккаунт (Auth.boot завершается уже после первого экрана)
+    перерисовывал страницу и стирал чат: ученик видел свой вопрос без
+    ответа и решал, что помощник не отвечает.
+    """
+
+    RUNNER_CHAT = r"""
+const { JSDOM } = require(process.cwd() + '/node_modules/jsdom/lib/api.js');
+const fs = require('fs');
+const saved = JSON.parse(process.argv[1]);
+const dom = new JSDOM(fs.readFileSync(process.cwd() + '/index.html', 'utf8'), {
+  runScripts: 'dangerously', url: 'http://localhost/', pretendToBeVisual: true,
+  beforeParse(w) {
+    w.matchMedia = () => ({ matches: false, addEventListener(){}, removeEventListener(){} });
+    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    w.speechSynthesis = { speak(){}, cancel(){}, getVoices: () => [] };
+    w.scrollTo = () => {}; w.fetch = () => Promise.reject(new Error('offline'));
+    w.localStorage.setItem('tutorChat', JSON.stringify(saved));
+  }
+});
+const w = dom.window;
+setTimeout(() => {
+  w.__guest = true; w.location.hash = '#/tutor'; w.route();
+  const msgs = Array.from(w.document.querySelectorAll('.t-msg')).map(m => ({
+    role: m.className.indexOf('t-user') >= 0 ? 'user' : 'bot',
+    text: (m.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+  }));
+  process.stdout.write(JSON.stringify(msgs));
+  process.exit(0);
+}, 700);
+"""
+
+    def test_previous_chat_is_restored(self):
+        node = _node()
+        api = os.path.join(ROOT, "node_modules", "jsdom", "lib", "api.js")
+        if not os.path.exists(api):
+            raise unittest.SkipTest("нет jsdom — npm install --no-save jsdom")
+        saved = [
+            {"role": "user", "content": "аптека", "html": ""},
+            {"role": "assistant", "content": "аптека", "html": "<b>药店</b> — аптека"},
+            {"role": "user", "content": "билет", "html": ""},
+        ]
+        res = subprocess.run(
+            [node, "-e", self.RUNNER_CHAT, json.dumps(saved, ensure_ascii=False)],
+            cwd=ROOT, capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr[-400:])
+        msgs = json.loads(res.stdout)
+        self.assertEqual(len(msgs), 3, f"разговор потерялся: {msgs}")
+        self.assertEqual(msgs[0]["role"], "user")
+        self.assertIn("билет", msgs[2]["text"])
+
+
 class TutorInteraction(unittest.TestCase):
     """Диалог, тест и подстройка под прогресс."""
 
@@ -311,6 +366,107 @@ class TutorThinking(unittest.TestCase):
         t = text_of(self.answers["давай поговорим → хватит"])
         self.assertNotIn("как тебя зовут", t)
         self.assertIn("практика", t)
+
+
+class TutorThinksBeforeAnswering(unittest.TestCase):
+    """Помощник не вываливает словарь, а думает: что именно спросили.
+
+    Раньше любой длинный вопрос попадал в словарный поиск, и на «сколько
+    времени нужно учить китайский» приходило «几 — сколько, 多少 — сколько,
+    要不要 — нужно»: слова вместо ответа. Эти тесты держат новый порядок:
+    ситуация → правило → живой ответ → слово, и только потом словарь.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.answers = ask(
+            "как спросить дорогу",
+            "как заказать такси",
+            "что сказать в аптеке",
+            "как позвонить в ресторан и заказать столик",
+            "сколько времени нужно учить китайский",
+            "что делать если забыл слово",
+            "я устал учить",
+            "с чего начать",
+            "как дела",
+            "кто ты",
+            "совсем не понимаю",
+            "объясни по-человечески 了",
+            "не понимаю почему тут 的",
+            "аптека",
+            "что значит 身份证",
+        )
+
+    def test_no_js_errors(self):
+        for q, a in self.answers.items():
+            self.assertNotIn("error", a, f"«{q}» → {a.get('error')}")
+
+    def test_phrase_question_gets_phrases_not_one_word(self):
+        """«как спросить дорогу» — это просьба о фразах, а не перевод 路."""
+        t = text_of(self.answers["как спросить дорогу"])
+        self.assertIn("как пройти", t)
+        self.assertNotIn("по-китайски:", t)
+
+    def test_situation_is_recognised_from_live_wording(self):
+        t = text_of(self.answers["как заказать такси"])
+        self.assertIn("дорога и транспорт", t)
+        self.assertIn("dì tiě", self.answers["как заказать такси"]["html"])
+
+    def test_restaurant_request_gets_bill_phrase(self):
+        a = self.answers["как позвонить в ресторан и заказать столик"]
+        t = text_of(a)
+        self.assertIn("забронировать", t)
+        self.assertIn("счёт", t)
+
+    def test_health_question_gets_doctor_phrases(self):
+        # руби-разметка режет иероглифы на слоги — проверяем по пиньиню и переводу
+        a = self.answers["что сказать в аптеке"]
+        self.assertIn("yī shēng", a["html"])
+        self.assertIn("вызовите врача", text_of(a))
+
+    def test_long_question_is_not_dumped_into_dictionary(self):
+        """Главная регрессия: длинный вопрос не должен превращаться в словарь."""
+        for q in ("сколько времени нужно учить китайский",
+                  "что делать если забыл слово",
+                  "я устал учить",
+                  "с чего начать"):
+            t = text_of(self.answers[q])
+            self.assertNotIn("вот что есть по запросу", t, q)
+
+    def test_learning_time_gets_honest_numbers(self):
+        t = text_of(self.answers["сколько времени нужно учить китайский"])
+        self.assertIn("hsk", t)
+        self.assertIn("месяц", t)
+
+    def test_emotional_message_is_answered_with_care(self):
+        a = self.answers["я устал учить"]
+        self.assertIn("我有点累", a["html"])
+        self.assertIn("карточки", text_of(a))
+
+    def test_small_talk_is_answered(self):
+        t = text_of(self.answers["как дела"])
+        self.assertIn("你好吗", self.answers["как дела"]["html"].replace(" ", ""))
+        self.assertNotIn(NO_IDEA, t)
+
+    def test_confusion_gets_a_question_back(self):
+        t = text_of(self.answers["совсем не понимаю"])
+        self.assertIn("что именно непонятно", t)
+
+    def test_explain_request_with_hanzi_gets_the_rule(self):
+        """«объясни по-человечески 了» — правило, а не «что именно объяснить?»."""
+        t = text_of(self.answers["объясни по-человечески 了"])
+        self.assertIn("уже", t)
+        self.assertNotIn("что именно объяснить", t)
+
+    def test_why_question_points_to_rule(self):
+        t = text_of(self.answers["не понимаю почему тут 的"])
+        self.assertIn("мой" if False else "какой", t)
+        self.assertIn("перед существительным", t)
+
+    def test_single_word_still_works(self):
+        self.assertIn("yào diàn", self.answers["аптека"]["html"])
+        self.assertIn("аптека", text_of(self.answers["аптека"]))
+        self.assertIn("удостоверение личности", text_of(self.answers["что значит 身份证"]))
 
 
 if __name__ == "__main__":

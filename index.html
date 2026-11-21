@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#171327">
-<meta name="app-build" content="46b0f7afca3f">
+<meta name="app-build" content="712b3de62c29">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6121,6 +6121,13 @@ function ruby(hanzi, cls = '') {
    ВНУТРЕННИЙ ИИ-АГЕНТ (Сяо Мин · 小明)
    ============================================================ */
 let tutorHistory = [];
+let tutorHistoryRestored = (() => {
+  try {
+    const raw = localStorage.getItem('tutorChat');
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(m => m && m.role) : [];
+  } catch (e) { return []; }
+})();
 let tutorContext = { mode: 'chat', step: 0, quiz: null };
 
 function tutorAllVocab() {
@@ -6748,6 +6755,23 @@ function tutorAnswerCore(raw) {
     return tutorQuizReply();
   }
 
+  /* ---------- 3a) Живой разговор: эмоции, планы, «как дела» ----------
+     Эти вопросы не про словарь, поэтому раньше они падали в «не понял»
+     или получали случайное слово. Отвечаем по существу. */
+  const talk = tutorTalkReply(low, q);
+  if (talk) return talk;
+
+  /* ---------- 3b) «Как спросить / заказать / что сказать» ----------
+     Это просьба о готовых фразах, а не о переводе слова: раньше
+     «как спросить дорогу» отвечало «路 — дорога», и ученик не получал
+     ни одной фразы, которой можно спросить. */
+  if (/как\s+(мне\s+)?(спросить|узнать|заказать|попросить|позвонить|объяснить|сказать в|договориться)|что\s+(сказать|говорить|спросить)|какие\s+фразы|фразы\s+(для|про|на)/.test(low)) {
+    const sit = tutorSituation(low);
+    if (sit) return tutorSituationReply(sit, q);
+    const topic = tutorTopicReply(low);
+    if (topic) return topic;
+  }
+
   /* ---------- 4) «Как сказать X» / «переведи X» ---------- */
   const sayMatch = q.match(/(?:как\s+(?:будет|сказать|перевести|спросить|пишется|говорят|правильно)|переведи(?:те)?|перевод|что\s+значит|означает)\s*[:\-—]?\s*(.+)/i);
   if (sayMatch) {
@@ -6759,6 +6783,13 @@ function tutorAnswerCore(raw) {
       const joined = han.join('');
       const parsed = tutorParsePhrase(joined);
       return { html: parsed.html, speak: parsed.speak };
+    }
+
+    /* 4a2. Развёрнутая просьба — это не одно слово, а ситуация:
+       «как позвонить в ресторан и заказать столик» просит фразы, а не 饭店. */
+    if (phrase.split(/\s+/).filter(w => w.length > 1).length >= 3) {
+      const sit = tutorSituation(phrase);
+      if (sit) return tutorSituationReply(sit, phrase);
     }
 
     // 4b. Ищем перевод в словаре (с учётом опечаток и падежей)
@@ -6798,6 +6829,8 @@ function tutorAnswerCore(raw) {
   const asksTopic = /фраз[ыа]?\s+(про|о|для|на тему)|по теме|диалог\s+(про|о)|(как|что)\s+(спросить|сказать|заказать)\s+(дорог|цен|еду|счет|счёт|путь|направлен|врач|билет)|(какие|дай|покажи)\s+(слова|фразы)/.test(low);
   const namesTopic = plainWords <= 4 && /^(дорог|еда|покупк|отел|такси|транспорт|погод|семь|работ|учеб|здоров|врач|деньг|врем|дата|месяц)/.test(low.trim());
   if (asksTopic || namesTopic || (/как\s+(спросить|сказать|объяснить|заказать)/.test(low) && plainWords <= 7)) {
+    const sit = tutorSituation(low);
+    if (sit) return tutorSituationReply(sit, q);
     const topic = tutorTopicReply(low);
     if (topic) return topic;
   }
@@ -6807,7 +6840,10 @@ function tutorAnswerCore(raw) {
      а не просьба перевести фразу: сначала правило. */
   const hanziCount = (q.match(/[\u3400-\u9fff]/g) || []).length;
   const wantsRule = /разниц|объясн|правил|грамматик|когда (использ|ставят|нужн)|почему|зачем/.test(low);
-  const earlyRule = wantsRule && hanziCount <= 2 ? tutorMatchRule(low) : null;
+  /* Порог был «не больше двух иероглифов», но «объясни по-человечески 了»
+     содержит их ровно один — и всё равно попадал в словарь вместо правила.
+     Если правило найдено и вопрос про правило — отвечаем правилом. */
+  const earlyRule = wantsRule ? tutorMatchRule(low) : null;
   if (earlyRule) {
     const ex = earlyRule.ex || {};
     return {
@@ -6865,9 +6901,42 @@ function tutorAnswerCore(raw) {
     if (turn) return turn;
   }
 
-  /* ---------- 9) Поиск по словарю (терпим к опечаткам и падежам) ---------- */
-  const found = tutorFindWords(q, 6);
-  if (found.length) {
+  /* ---------- 9) Ситуация: бытовой запрос целиком ----------
+     «что сказать в аптеке», «как заказать такси», «мне нужен врач» —
+     это просьба о фразах, а не о переводе одного слова. */
+  const isShort = words.filter(w => w.length > 2).length <= 3;
+  if (!hasHanzi) {
+    const sit = tutorSituation(low);
+    if (sit && (!isShort || /фраз|сказать|спросить|как|что|нужн|хочу|можно/.test(low))) {
+      return tutorSituationReply(sit, q);
+    }
+  }
+
+  /* ---------- 10b) «Не понимаю» без темы — просим уточнить по-человечески ----------
+     Стоит до словаря: иначе «совсем не понимаю» находило 不 и 没 и
+     отвечало списком отрицаний вместо «давайте разберёмся». */
+  if (/не\s+(понима|понял|поняла|разобрал)|ничего не понят|сложно понять|запутал/.test(low)) {
+    return {
+      html: 'Хорошо, давайте медленнее. Что именно непонятно?<br>' +
+        '• слово — напишите его, разберу по частям;<br>' +
+        '• правило — назовите частицу или конструкцию (了, 的, 把, 吗);<br>' +
+        '• фраза — пришлите её целиком, переведу по словам.<br>' +
+        '<div class="tw-note">Можно совсем просто: «объясни 了», «что значит 车站», «как сказать спасибо».</div>'
+    };
+  }
+
+  /* ---------- 9b) Поиск по словарю ----------
+     Ищем слово, только если вопрос короткий («билет», «аптека») или
+     в нём есть иероглифы. Длинный вопрос — это не одно слово: раньше
+     «сколько времени нужно учить китайский» получал в ответ 几, 多少,
+     要不要 — четыре слова подряд вместо ответа. */
+  const found = (isShort || hasHanzi) ? tutorFindWords(q, 6) : [];
+  /* На длинный вопрос словарное совпадение почти всегда случайное:
+     «сколько времени нужно учить китайский» ловило 几 и 要不要. Такое
+     совпадение лучше не показывать вовсе, чем выдавать за ответ. */
+  const noisy = !isShort && found.length > 0 && !found.some(
+    w => ruStem(w.r) === ruStem(q) || w.h === q.trim());
+  if (found.length && !noisy) {
     const exact = found.find(w => ruStem(w.r) === ruStem(q) || w.h === q.trim());
     if (exact && found.length === 1) {
       return {
@@ -6897,6 +6966,193 @@ function tutorAnswerCore(raw) {
           tutorDictLinks(q.split(/[^\u3400-\u9fff]+/)[0] || q).slice(0, 2)
             .map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a>`).join(' · ') +
           `</div>` : '')
+  };
+}
+
+/* ---------- Разговор по существу: то, о чём ученик спрашивает словами ----------
+   Всё ниже — не перевод и не правило, а ответ на живой вопрос: «сколько
+   учить», «я устал», «с чего начать». Раньше такие вопросы попадали
+   в словарь («учить» → 学) или в «не понял». Здесь у каждого свой
+   ответ, и он опирается на реальные цифры курса, а не на выдумки. */
+function tutorTalkReply(low, q) {
+  const done = doneCount(), total = allLessonIds().length;
+
+  /* «как дела / как ты» — обычная человеческая реплика */
+  if (/^(как дела|как ты|как жизнь|что нового|как настроение)[\s?!.]*$/.test(low)) {
+    return {
+      html: 'У меня всё отлично — я же не устаю 🙂<br>А как ваши дела? По-китайски это <b>你好吗？</b> ' +
+        '<span class="tw-py">nǐ hǎo ma?</span> — буквально «ты хорошо?».<br>' +
+        '<div class="tw-note">Ответ: <b>我很好</b> (wǒ hěn hǎo) — «у меня всё хорошо», или <b>还不错</b> (hái bú cuò) — «неплохо».</div>'
+    };
+  }
+
+  /* «как сказать, что мне грустно / я устал» — эмоции */
+  if (/груст|плохо|устал|тяжело|трудно|не получается|нет сил|бросить|сдаться/.test(low)) {
+    const isTired = /устал|нет сил|тяжело|трудно/.test(low);
+    return {
+      html: (isTired
+        ? 'Усталость — нормальная часть учёбы, особенно с китайским: тут нужно время, а не талант.<br>'
+        : 'Понимаю. С языком бывает тяжело, и это не про ваши способности.<br>') +
+        'Скажите об этом по-китайски:<br>' +
+        '<div class="tw-card"><b class="zh" style="font-size:19px">我有点累。</b>' +
+        '<div class="tw-py">wǒ yǒu diǎn lèi</div><div class="tw-ru">Я немного устал(а)</div></div>' +
+        '<div class="tw-card"><b class="zh" style="font-size:19px">我今天心情不好。</b>' +
+        '<div class="tw-py">wǒ jīn tiān xīn qíng bù hǎo</div><div class="tw-ru">У меня сегодня плохое настроение</div></div>' +
+        `<div class="tw-note">Если сил мало — не начинайте новый урок. Откройте <a href="#/cards">Карточки</a>: 5 минут повторения держат слова живыми. Пройдено ${done} из ${total}, это уже путь.</div>`
+    };
+  }
+
+  /* «сколько учить / когда заговорю» */
+  if (/сколько (времени|лет|месяцев)|как быстро|когда (я )?(заговор|выуч|начну говорить)|реально ли выуч/.test(low)) {
+    return {
+      html: '<b>Честно, без обещаний «за месяц».</b><br>' +
+        '• HSK 1–2 (около 300 слов) — обычно 3–6 месяцев по 20 минут в день;<br>' +
+        '• HSK 3–4 (около 1200 слов) — ещё год-полтора;<br>' +
+        '• свободная бытовая речь — 2–3 года регулярных занятий.<br>' +
+        `<div class="tw-note">В вашем курсе ${total} уроков; пройдено ${done}. Главное — не длина занятия, а частота: 15 минут каждый день сильнее, чем 2 часа раз в неделю.</div>`
+    };
+  }
+
+  /* «с чего начать / как учить / с чего продолжить» */
+  if (/с чего начать|как учить|как заниматься|с чего продолжить|план обучен|как запоминать|как учить слова/.test(low)) {
+    const nxt = LESSONS[nextLesson()];
+    return {
+      html: '<b>Простой порядок, который работает:</b><br>' +
+        '1. Урок — 10–15 минут, вслух, с пиньинем.<br>' +
+        '2. Сразу после — 5 минут <a href="#/cards">карточек</a>: они держат слова в памяти.<br>' +
+        '3. Раз в неделю — <a href="#/tones">Тоны</a> и <a href="#/practice">Практика</a>.<br>' +
+        (nxt ? `<div class="tw-note">Следующий шаг прямо сейчас: «${esc(nxt.title)}» — <a href="#/lesson/${nextLesson()}">открыть урок →</a></div>` : '')
+    };
+  }
+
+  /* «забыл слово / не помню» — приём, а не перевод */
+  if (/забыл|не помню|вылетело|не могу вспомнить/.test(low)) {
+    return {
+      html: 'Это нормально: забывать — часть запоминания.<br>' +
+        'Три приёма, которые работают:<br>' +
+        '• <b>Вспомните урок</b>, где слово встречалось, — контекст вытягивает слово.<br>' +
+        '• <b>Опишите</b> его по-китайски: «то, на чём ездят» → 车 (chē).<br>' +
+        '• <b>Загляните в карточки</b> — слово, которое вы забыли, уже ждёт в повторении.<br>' +
+        '<div class="tw-note">Напишите мне по-русски, что помните о слове, — я подберу кандидатов.</div>'
+    };
+  }
+
+  /* «расскажи про себя / кто ты» — коротко и по делу */
+  if (/кто ты|расскажи (о себе|про себя)|ты робот|ты человек|что ты такое/.test(low)) {
+    return {
+      html: 'Я Сяо Мин (小明) — встроенный помощник этого курса.<br>' +
+        'Я не человек: отвечаю по правилам курса, словарю HSK и найденным источникам, а где не уверен — говорю об этом прямо.<br>' +
+        '<div class="tw-note">Можете спросить: «как сказать спасибо», «объясни 了», «как заказать столик».</div>'
+    };
+  }
+
+  return null;
+}
+
+/* ---------- Ситуации: живой запрос → готовые фразы ----------
+   Ученик редко спрашивает «какие фразы по теме еда». Он спрашивает
+   «как позвонить в ресторан и заказать столик». Раньше такой вопрос
+   попадал в словарь и получал 饭店 + 餐厅 — то есть перевод одного
+   слова вместо готовой фразы. Здесь у каждой бытовой ситуации свой
+   набор: проверенные фразы, пиньинь, перевод и короткая подсказка. */
+const TUTOR_SITUATIONS = [
+  {
+    id: 'restaurant', title: 'В ресторане',
+    keys: /ресторан|кафе|столик|официант|меню|заказать ед|поесть|обед|ужин|счёт|счет|оплатить|заплатить|поесть/,
+    lines: [
+      { h: '请问，有空位吗？', p: 'qǐng wèn, yǒu kòng wèi ma?', r: 'Извините, есть свободные места?' },
+      { h: '我要订一张桌子。', p: 'wǒ yào dìng yì zhāng zhuō zi', r: 'Я хочу забронировать столик' },
+      { h: '请给我菜单。', p: 'qǐng gěi wǒ cài dān', r: 'Дайте, пожалуйста, меню' },
+      { h: '我要这个。', p: 'wǒ yào zhè ge', r: 'Я возьму вот это' },
+      { h: '买单，谢谢。', p: 'mǎi dān, xiè xie', r: 'Счёт, пожалуйста' }
+    ],
+    tip: 'Для брони по телефону хватит трёх фраз: 我要订一张桌子 (хочу забронировать столик), 今天晚上 (на сегодня вечером) и 两个人 (два человека).'
+  },
+  {
+    id: 'shop', title: 'Покупки и деньги',
+    keys: /магазин|куп|сколько сто|цен|дорого|дешев|скидк|юан|оплат|картой|деньг|сдач/,
+    lines: [
+      { h: '多少钱？', p: 'duō shao qián?', r: 'Сколько стоит?' },
+      { h: '太贵了。', p: 'tài guì le', r: 'Слишком дорого' },
+      { h: '可以便宜一点吗？', p: 'kě yǐ pián yi yì diǎn ma?', r: 'Можно немного дешевле?' },
+      { h: '我刷卡。', p: 'wǒ shuā kǎ', r: 'Я оплачу картой' },
+      { h: '我要这个。', p: 'wǒ yào zhè ge', r: 'Я возьму это' }
+    ],
+    tip: 'Про скидку спрашивают мягко: 可以便宜一点吗？ — дословно «можно чуть дешевле?».'
+  },
+  {
+    id: 'road', title: 'Дорога и транспорт',
+    keys: /дорог|пройти|проехать|где находит|метро|такси|автобус|вокзал|аэропорт|билет|далеко|близко|налево|направо|заблуд/,
+    lines: [
+      { h: '请问，怎么走？', p: 'qǐng wèn, zěn me zǒu?', r: 'Извините, как пройти?' },
+      { h: '最近的地铁站在哪里？', p: 'zuì jìn de dì tiě zhàn zài nǎ lǐ?', r: 'Где ближайшая станция метро?' },
+      { h: '我迷路了。', p: 'wǒ mí lù le', r: 'Я заблудился' },
+      { h: '请给我一张票。', p: 'qǐng gěi wǒ yì zhāng piào', r: 'Дайте, пожалуйста, один билет' },
+      { h: '远不远？', p: 'yuǎn bu yuǎn?', r: 'Далеко?' }
+    ],
+    tip: 'Таксисту достаточно сказать «去 + место»: 去机场 (в аэропорт).'
+  },
+  {
+    id: 'hotel', title: 'Гостиница',
+    keys: /отел|гостиниц|номер|брон|засел|выпис|ключ/,
+    lines: [
+      { h: '我订了房间。', p: 'wǒ dìng le fáng jiān', r: 'Я забронировал номер' },
+      { h: '还有房间吗？', p: 'hái yǒu fáng jiān ma?', r: 'Есть ещё номера?' },
+      { h: '多少钱一晚？', p: 'duō shao qián yì wǎn?', r: 'Сколько стоит за ночь?' },
+      { h: '几点退房？', p: 'jǐ diǎn tuì fáng?', r: 'Во сколько выезд?' },
+      { h: '有 Wi-Fi 吗？', p: 'yǒu Wi-Fi ma?', r: 'Есть Wi-Fi?' }
+    ],
+    tip: 'Номер бронируют через 订 (dìng): 我订了房间 — «я забронировал номер».'
+  },
+  {
+    id: 'health', title: 'Здоровье и аптека',
+    keys: /бол|болит|врач|доктор|аптек|лекарств|температур|простуд|плохо себя|вызвать врач/,
+    lines: [
+      { h: '我不舒服。', p: 'wǒ bù shū fu', r: 'Я плохо себя чувствую' },
+      { h: '我头疼。', p: 'wǒ tóu téng', r: 'У меня болит голова' },
+      { h: '请叫医生。', p: 'qǐng jiào yī shēng', r: 'Вызовите врача, пожалуйста' },
+      { h: '我要买药。', p: 'wǒ yào mǎi yào', r: 'Мне нужно купить лекарство' },
+      { h: '医院在哪里？', p: 'yī yuàn zài nǎ lǐ?', r: 'Где больница?' }
+    ],
+    tip: 'Боль называют через 疼 (téng): 我头疼 — болит голова, 我肚子疼 — болит живот.'
+  },
+  {
+    id: 'help', title: 'Помощь и вежливость',
+    keys: /помог|извин|простит|не понима|говорите медлен|повторите|спасибо|вежлив/,
+    lines: [
+      { h: '对不起。', p: 'duì bu qǐ', r: 'Извините' },
+      { h: '请再说一遍。', p: 'qǐng zài shuō yí biàn', r: 'Повторите, пожалуйста' },
+      { h: '请说慢一点。', p: 'qǐng shuō màn yì diǎn', r: 'Говорите помедленнее, пожалуйста' },
+      { h: '我没听懂。', p: 'wǒ méi tīng dǒng', r: 'Я не понял' },
+      { h: '麻烦你帮我。', p: 'má fan nǐ bāng wǒ', r: 'Помогите мне, пожалуйста' }
+    ],
+    tip: 'Если не поняли — не молчите: 请再说一遍 и 请说慢一点 спасают разговор.'
+  }
+];
+
+function tutorSituation(raw) {
+  const low = String(raw || '').toLowerCase().replace(/ё/g, 'е');
+  let best = null, bestScore = 0;
+  TUTOR_SITUATIONS.forEach(sit => {
+    const m = low.match(sit.keys);
+    if (!m) return;
+    /* Чем больше совпало ключевых слов — тем вернее ситуация:
+       «позвонить в ресторан и заказать столик» — это ресторан. */
+    const score = (low.match(new RegExp(sit.keys.source, 'g')) || []).length * 2 + m[0].length / 4;
+    if (score > bestScore) { bestScore = score; best = sit; }
+  });
+  return best;
+}
+
+function tutorSituationReply(sit, raw) {
+  const cards = sit.lines.map(l =>
+    `<div class="tw-card"><b class="zh" style="font-size:19px">${ruby(l.h)}</b>` +
+    `<div class="tw-py">${esc(l.p)}</div><div class="tw-ru">${esc(l.r)}</div></div>`).join('');
+  return {
+    html: `<b>💬 ${esc(sit.title)}</b><br>` +
+      `<div class="tw-py" style="margin:2px 0 6px">Готовые фразы под ваш вопрос:</div>` + cards +
+      `<div class="tw-note">${esc(sit.tip)}</div>`,
+    speak: sit.lines[0].h
   };
 }
 
@@ -7129,7 +7385,7 @@ function tutorCheckAnswer(raw) {
 
 /* ---------- Как ученик формулирует просьбы ---------- */
 const TUTOR_INTENT = [
-  { id: 'simpler', re: /^(а\s+)?(попроще|проще)|простыми словами|не понимаю (это|почему|разниц|правил)|объясни (понятн|проще)|как реб[её]нку|ещ[её] проще|слишком сложно/ },
+  { id: 'simpler', re: /^(а\s+)?(попроще|проще)|простыми словами|объясни (понятн|проще|по-человечески)|как реб[её]нку|ещ[её] проще|слишком сложно/ },
   { id: 'example', re: /^(а\s+)?(еще\s+|ещё\s+)?пример|примеры|покажи пример|как сказать эту фразу|в предложении/ },
   { id: 'more', re: /^(а\s+)?(еще|ещё|дальше|подробнее|расскажи больше)|расскажи подробнее|а что еще|а что ещё/ },
   { id: 'repeat', re: /^(повтори|еще раз|ещё раз|не успел|проговори)|^повтори(\s+(это|ещё|еще))?$/ },
@@ -7144,8 +7400,18 @@ const TUTOR_INTENT = [
 
 function tutorIntent(low) {
   const q = low.trim().replace(/[.!…]+$/, '');
-  for (const it of TUTOR_INTENT) if (it.re.test(q)) return it.id;
-  return null;
+  const out = (() => {
+    for (const it of TUTOR_INTENT) if (it.re.test(q)) return it.id;
+    return null;
+  })();
+  /* «не понимаю, почему тут 的» — это вопрос о правиле, а не голая
+     просьба «объясни попроще»: иначе помощник отвечал «что именно
+     объяснить?», хотя ученик уже сказал, что именно. */
+  if (out === 'simpler' && /не\s+понима|не\s+понял|запутался|сложно/.test(q) &&
+      q.split(/\s+/).length > 2) {
+    return null;
+  }
+  return out;
 }
 
 /* ---------- План ответа: то, что раньше не строилось вовсе ---------- */
@@ -7253,7 +7519,18 @@ function tutorFollowup(plan) {
 
   /* «попроще» */
   if (intent === 'simpler') {
-    const rule = M.lastKind === 'word' ? null : M.rule;
+    /* «объясни по-человечески 了» приходит сюда как «попроще», хотя
+       правило назвали прямо в вопросе. Раньше в такой ситуации
+       отвечало случайное слово из памяти (学 от прошлого вопроса),
+       поэтому: сначала правило из самого вопроса, потом память. */
+    const asked = String(plan.q || '').toLowerCase().replace(/ё/g, 'е');
+    /* Правило ищем по самому вопросу без иероглифов: «объясни
+       по-человечески 了» — про 了, хотя ключевые слова 学 там нет. */
+    const askedRule = tutorMatchRule(asked.replace(/[\u3400-\u9fff]/g, ' ')) ||
+      (/([\u3400-\u9fff])/.test(asked) ? tutorMatchRule(asked) : null);
+    /* Если правило названо прямо в вопросе — оно главнее и памяти
+       о прошлом слове (иначе «M.lastKind === 'word'» его отменял). */
+    const rule = askedRule || (M.lastKind === 'word' ? null : M.rule);
     if (rule && rule.simple) {
       return {
         html: `<b>${esc(rule.title)}</b> — совсем просто:<br>${rule.simple}` +
@@ -7263,7 +7540,11 @@ function tutorFollowup(plan) {
         speak: rule.ex ? rule.ex.h : ''
       };
     }
-    const w = M.words[0];
+    /* Слово из памяти подходит, только если его спросили именно сейчас:
+       иначе на «объясни по-человечески 了» приходило 学 из прошлого
+       разговора — формально ответ, по сути не по теме. */
+    const askedWord = tutorFindWords(asked, 1).find(x => M.words.some(m => m.h === x.h));
+    const w = askedWord || (M.lastKind === 'word' ? M.words[0] : null);
     if (w) {
       return {
         html: `<b>${esc(w.h)}</b> (${esc(w.p)}) — это <b>${esc(w.r)}</b>.<br>` +
@@ -7677,6 +7958,13 @@ function renderTutor(root) {
   const feed = el('div', 'tutor-feed');
   box.appendChild(feed);
 
+  /* История чата живёт вне страницы. Раньше вход в аккаунт (Auth.boot
+     завершается позже первого экрана) перерисовывал страницу и стирал
+     весь разговор: ученик видел свой вопрос без ответа. */
+  if (!tutorHistory.length && tutorHistoryRestored.length) {
+    tutorHistory.push(...tutorHistoryRestored);
+    tutorHistoryRestored = [];
+  }
   if (!tutorHistory.length) {
     tutorHistory.push({
       role: 'assistant',
@@ -7741,6 +8029,15 @@ function renderTutor(root) {
     feed.appendChild(thinking);
     feed.scrollTop = feed.scrollHeight;
 
+    /* Сначала спрашиваем встроенный движок: он понимает вопрос целиком
+       («сколько учить», «как заказать столик»). Если он уверен — его ответ
+       и показываем, а сервер нужен только за ссылками на источники.
+       Раньше сервер шёл первым, и найденное слово 中文 перебивало готовый
+       ответ на вопрос — ученик видел «中文 — китайский язык» вместо ответа. */
+    const localReply = tutorReplyLocal(q);
+    const localSure = !/не уверен, что понял|^\s*$/i.test(
+      String(localReply.html || '').replace(/<[^>]+>/g, ' ').trim());
+
     let replyObj = null;
     if (window.Auth && Auth.online) {
       try {
@@ -7764,13 +8061,19 @@ function renderTutor(root) {
             speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0]
           };
         } else if (d && d.mode === 'sources') {
-          /* Ключа ИИ нет, но словари ответили — показываем их, а не
-             «извините, я не знаю». */
-          replyObj = tutorSourcesReply(d, q);
+          if (localSure) {
+            /* Движок ответил по существу — не заслоняем его словарём,
+               но добавляем ссылки: ученик видит, где проверить. */
+            replyObj = { ...localReply, html: localReply.html + tutorSourceLinks(d.sources) };
+          } else {
+            /* Ответить по существу нечем, а словари слово знают —
+               показываем их, а не «извините, я не знаю». */
+            replyObj = tutorSourcesReply(d, q);
+          }
         }
       } catch (e) { }
     }
-    if (!replyObj) replyObj = tutorReplyLocal(q);
+    if (!replyObj) replyObj = localReply;
     /* В историю для серверного ИИ кладём чистый текст ответа,
        а не HTML и не вопрос ученика (раньше модель видела кашу). */
     const plainReply = String(replyObj.html || replyObj.content || '')
@@ -7778,6 +8081,12 @@ function renderTutor(root) {
     tutorHistory.push({ role: 'assistant', content: plainReply, ...replyObj });
     send.disabled = false;
     paintFeed();
+    /* Разговор сохраняем: перезагрузка страницы (новая сборка, вход)
+       не должна стирать то, что ученик только что спросил. */
+    try {
+      localStorage.setItem('tutorChat', JSON.stringify(
+        tutorHistory.slice(-40).map(m => ({ role: m.role, content: m.content || '', html: m.html || '', speak: m.speak || '' }))));
+    } catch (e) { }
   }
 
   form.onsubmit = (e) => {
