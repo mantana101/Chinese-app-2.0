@@ -1496,14 +1496,19 @@ button { font-family: inherit; cursor: pointer; }
 /* заголовок страницы — с тёплым подчёркиванием, чтобы глаз цеплялся */
 .page-title { position: relative; padding-bottom: 8px; }
 /* Мазок кистью под заголовком: киноварь, которая тает к концу. */
+/* Карандашная черта: два слоя, чуть разной толщины и наклона — так
+   подчёркивают от руки, второпях. Фильтр добавляет дрожание края. */
 .page-title::after {
   content: '';
-  position: absolute; left: 0; bottom: 0; width: 68px; height: 3px;
-  border-radius: 2px 4px 4px 2px;
-  background: linear-gradient(90deg, var(--red) 0%, var(--red2) 42%, rgba(207,91,66,0) 100%);
-  mask-image: linear-gradient(90deg, #000 76%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, #000 76%, transparent 100%);
+  position: absolute; left: -2px; bottom: -2px; width: 74px; height: 5px;
+  background:
+    linear-gradient(91deg, rgba(178,58,46,.85) 0%, rgba(207,91,66,.7) 46%, rgba(207,91,66,0) 96%);
+  clip-path: polygon(0 46%, 8% 22%, 22% 58%, 40% 30%, 58% 62%, 76% 34%, 92% 54%, 100% 40%, 100% 100%, 0 100%);
+  filter: url(#rough-line);
+  opacity: .9;
+  transform: rotate(-.6deg);
 }
+.page-title { position: relative; }
 
 /* ---------- Плитки: по цвету на каждый раздел ---------- */
 .tile {
@@ -1549,6 +1554,11 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- Панели: тонкая цветная кромка сверху ---------- */
 .panel { position: relative; }
+/* «Наклеено руками»: панели стоят не идеально, но совсем чуть-чуть.
+   Больше поворота — и текст начнёт «плыть», поэтому доли градуса. */
+.panel:nth-of-type(odd) { --tilt: -.18deg; }
+.panel:nth-of-type(even) { --tilt: .16deg; }
+.panel { transform: rotate(var(--tilt, 0deg)); }
 .panel > h3::before {
   content: ''; flex: 0 0 3px; width: 3px; height: 16px; border-radius: 1px 2px 2px 1px;
   background: linear-gradient(180deg, var(--red) 10%, var(--gold) 90%);
@@ -1693,4 +1703,61 @@ button { font-family: inherit; cursor: pointer; }
   .st-row > span:nth-child(7)::before { content: 'был: '; color: var(--txt3); }
   .st-row > span:nth-child(8)::before { content: 'оценка: '; color: var(--txt3); }
   .live-row { padding: 8px 2px; }
+}
+
+/* ---------- Каракули ----------
+   Нарисованные «от руки» пометки: звёздочка, стрелка, птичка, волна,
+   иероглиф с карандашной подчёркиванием. Все линии проходят через
+   SVG-фильтр с шумом, поэтому не бывают математически ровными.
+   Вставляются как .scrawl.scrawl-<вид> (см. app.js → scrawl()). */
+.scrawl { position: relative; display: inline-block; vertical-align: middle; }
+.scrawl svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.scrawl svg path, .scrawl svg circle, .scrawl svg text { fill: none; stroke: currentColor; stroke-linecap: round; }
+.scrawl svg text { fill: currentColor; stroke: none; }
+.scrawl svg circle[r="2.6"] { fill: currentColor; stroke: none; }
+.scrawl.spark, .scrawl.check, .scrawl.bang, .scrawl.curl { width: 64px; height: 64px; color: var(--gold2); }
+.scrawl.arrow { width: 76px; height: 58px; color: var(--red2); }
+.scrawl.wave { width: 72px; height: 40px; color: var(--jade); }
+.scrawl.cn { width: 96px; height: 96px; color: rgba(35,31,44,.13); }
+.scrawl.cn.accent { color: rgba(178,58,46,.16); }
+
+/* ---------- Мелочи «от руки» ---------- */
+/* Подсказка со стрелкой в пустой статистике: каракуля указывает на кнопку. */
+.start-row { align-items: center; position: relative; }
+.start-hint {
+  display: inline-flex; flex-direction: column; align-items: center;
+  color: var(--red2); margin-right: 2px; transform: translateY(-6px);
+}
+.start-hint i { font-style: normal; font-size: 12px; color: var(--txt3); letter-spacing: .3px; }
+.qd-emoji { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+/* Каракули не должны ловить клики и попадать в табуляцию. */
+.scrawl { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .scrawl { transform: none !important; }
+}
+
+/* ---------- Рукописные пометки ---------- */
+/* Надпись «от руки» рядом с заголовком: наклон, другой шрифт, светлее.
+   Специально не курсив браузера — он выглядит одинаково на всех сайтах. */
+.hero-hand {
+  display: inline-block; margin: -4px 0 14px;
+  font-family: "Bradley Hand", "Segoe Script", "Comic Sans MS", "Noto Serif SC", cursive;
+  font-size: 13px; color: var(--txt3); opacity: .8;
+  transform: rotate(-2.4deg); letter-spacing: .2px;
+}
+/* Подзаголовок страницы: тонкая карандашная линия под текстом,
+   неровная по краям — как подчёркивают в конспекте. */
+.page-sub { position: relative; }
+.page-sub::after {
+  content: ''; position: absolute; left: 0; bottom: -7px; width: min(58%, 320px); height: 3px;
+  background: linear-gradient(90deg, rgba(154,112,22,.34), rgba(154,112,22,.10) 70%, transparent);
+  clip-path: polygon(0 40%, 12% 62%, 30% 38%, 52% 60%, 72% 40%, 100% 56%, 100% 100%, 0 100%);
+  filter: url(#rough-line);
+}
+.site-foot b { position: relative; }
+/* Подпись автора — как росчерк: короткая дуга под именем. */
+.site-foot b::after {
+  content: ''; position: absolute; left: -6%; right: -6%; bottom: -5px; height: 5px;
+  border-bottom: 1.5px solid rgba(178,58,46,.55); border-radius: 50%;
+  transform: rotate(-1.5deg); filter: url(#rough-line);
 }

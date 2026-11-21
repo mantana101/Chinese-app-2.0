@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6efe3">
-<meta name="app-build" content="4b9d6f24d236">
+<meta name="app-build" content="1d437c658102">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1757,14 +1757,19 @@ button { font-family: inherit; cursor: pointer; }
 /* заголовок страницы — с тёплым подчёркиванием, чтобы глаз цеплялся */
 .page-title { position: relative; padding-bottom: 8px; }
 /* Мазок кистью под заголовком: киноварь, которая тает к концу. */
+/* Карандашная черта: два слоя, чуть разной толщины и наклона — так
+   подчёркивают от руки, второпях. Фильтр добавляет дрожание края. */
 .page-title::after {
   content: '';
-  position: absolute; left: 0; bottom: 0; width: 68px; height: 3px;
-  border-radius: 2px 4px 4px 2px;
-  background: linear-gradient(90deg, var(--red) 0%, var(--red2) 42%, rgba(207,91,66,0) 100%);
-  mask-image: linear-gradient(90deg, #000 76%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, #000 76%, transparent 100%);
+  position: absolute; left: -2px; bottom: -2px; width: 74px; height: 5px;
+  background:
+    linear-gradient(91deg, rgba(178,58,46,.85) 0%, rgba(207,91,66,.7) 46%, rgba(207,91,66,0) 96%);
+  clip-path: polygon(0 46%, 8% 22%, 22% 58%, 40% 30%, 58% 62%, 76% 34%, 92% 54%, 100% 40%, 100% 100%, 0 100%);
+  filter: url(#rough-line);
+  opacity: .9;
+  transform: rotate(-.6deg);
 }
+.page-title { position: relative; }
 
 /* ---------- Плитки: по цвету на каждый раздел ---------- */
 .tile {
@@ -1810,6 +1815,11 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- Панели: тонкая цветная кромка сверху ---------- */
 .panel { position: relative; }
+/* «Наклеено руками»: панели стоят не идеально, но совсем чуть-чуть.
+   Больше поворота — и текст начнёт «плыть», поэтому доли градуса. */
+.panel:nth-of-type(odd) { --tilt: -.18deg; }
+.panel:nth-of-type(even) { --tilt: .16deg; }
+.panel { transform: rotate(var(--tilt, 0deg)); }
 .panel > h3::before {
   content: ''; flex: 0 0 3px; width: 3px; height: 16px; border-radius: 1px 2px 2px 1px;
   background: linear-gradient(180deg, var(--red) 10%, var(--gold) 90%);
@@ -1956,9 +1966,85 @@ button { font-family: inherit; cursor: pointer; }
   .live-row { padding: 8px 2px; }
 }
 
+/* ---------- Каракули ----------
+   Нарисованные «от руки» пометки: звёздочка, стрелка, птичка, волна,
+   иероглиф с карандашной подчёркиванием. Все линии проходят через
+   SVG-фильтр с шумом, поэтому не бывают математически ровными.
+   Вставляются как .scrawl.scrawl-<вид> (см. app.js → scrawl()). */
+.scrawl { position: relative; display: inline-block; vertical-align: middle; }
+.scrawl svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.scrawl svg path, .scrawl svg circle, .scrawl svg text { fill: none; stroke: currentColor; stroke-linecap: round; }
+.scrawl svg text { fill: currentColor; stroke: none; }
+.scrawl svg circle[r="2.6"] { fill: currentColor; stroke: none; }
+.scrawl.spark, .scrawl.check, .scrawl.bang, .scrawl.curl { width: 64px; height: 64px; color: var(--gold2); }
+.scrawl.arrow { width: 76px; height: 58px; color: var(--red2); }
+.scrawl.wave { width: 72px; height: 40px; color: var(--jade); }
+.scrawl.cn { width: 96px; height: 96px; color: rgba(35,31,44,.13); }
+.scrawl.cn.accent { color: rgba(178,58,46,.16); }
+
+/* ---------- Мелочи «от руки» ---------- */
+/* Подсказка со стрелкой в пустой статистике: каракуля указывает на кнопку. */
+.start-row { align-items: center; position: relative; }
+.start-hint {
+  display: inline-flex; flex-direction: column; align-items: center;
+  color: var(--red2); margin-right: 2px; transform: translateY(-6px);
+}
+.start-hint i { font-style: normal; font-size: 12px; color: var(--txt3); letter-spacing: .3px; }
+.qd-emoji { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+/* Каракули не должны ловить клики и попадать в табуляцию. */
+.scrawl { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .scrawl { transform: none !important; }
+}
+
+/* ---------- Рукописные пометки ---------- */
+/* Надпись «от руки» рядом с заголовком: наклон, другой шрифт, светлее.
+   Специально не курсив браузера — он выглядит одинаково на всех сайтах. */
+.hero-hand {
+  display: inline-block; margin: -4px 0 14px;
+  font-family: "Bradley Hand", "Segoe Script", "Comic Sans MS", "Noto Serif SC", cursive;
+  font-size: 13px; color: var(--txt3); opacity: .8;
+  transform: rotate(-2.4deg); letter-spacing: .2px;
+}
+/* Подзаголовок страницы: тонкая карандашная линия под текстом,
+   неровная по краям — как подчёркивают в конспекте. */
+.page-sub { position: relative; }
+.page-sub::after {
+  content: ''; position: absolute; left: 0; bottom: -7px; width: min(58%, 320px); height: 3px;
+  background: linear-gradient(90deg, rgba(154,112,22,.34), rgba(154,112,22,.10) 70%, transparent);
+  clip-path: polygon(0 40%, 12% 62%, 30% 38%, 52% 60%, 72% 40%, 100% 56%, 100% 100%, 0 100%);
+  filter: url(#rough-line);
+}
+.site-foot b { position: relative; }
+/* Подпись автора — как росчерк: короткая дуга под именем. */
+.site-foot b::after {
+  content: ''; position: absolute; left: -6%; right: -6%; bottom: -5px; height: 5px;
+  border-bottom: 1.5px solid rgba(178,58,46,.55); border-radius: 50%;
+  transform: rotate(-1.5deg); filter: url(#rough-line);
+}
+
 </style>
 </head>
 <body>
+<!-- «Ручные» фильтры. Неровности в SVG рисуются смещением шума: линия
+     перестаёт быть математически ровной и выглядит нарисованной от руки.
+     scale можно менять из CSS через --rough-* переменные. -->
+<svg class="rough-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="rough-line" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough-ink" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.05" numOctaves="4" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="paper-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>
 <div class="app">
   <nav id="nav">
     <div class="brand">
@@ -5263,7 +5349,8 @@ function renderHome(root) {
     <div class="hero-seal" title="汉语学习">汉<br>语</div>
     <div class="hero-inner">
       <div class="hero-tag">汉语学习 · 学以致用</div>
-      <h1>Привет, 同学!</h1>
+      <span class="hero-hand" aria-hidden="true">учить и применять</span>
+      <h1>Привет, 同学! ${scrawl('spark', { style: 'width:44px;height:44px;vertical-align:-6px' })}</h1>
       <p class="hero-sub">Продолжим с урока <b>${esc(mod.title.split('—')[1] || mod.title)}</b>: <b>«${esc(l.title)}»</b></p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#/lesson/${id}">Продолжить урок →</a>
@@ -5632,7 +5719,7 @@ function finishQuiz(host) {
   }, 0);
 
   host.innerHTML = `<div class="quiz-done">
-      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
+      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}${score >= 0.8 ? scrawl('spark', { style: 'width:38px;height:38px' }) : ''}</div>
       <h3>Результат: ${quizState.correct} из ${l.quiz.length} (${Math.round(score * 100)}%)</h3>
       <p>${score >= 0.8 ? 'Отличная работа! Этот урок засчитан.'
         : score >= 0.5 ? 'Хорошо, но есть что подтянуть. Посмотрите ошибки выше и повторите урок.'
@@ -5713,7 +5800,7 @@ function renderDiagResult(host, score) {
   save();
   const weak = quizState.answers.filter(a => !a.ok).slice(0, 8).map(a => a.q);
   host.innerHTML = `<div class="panel quiz-done">
-      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
+      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}${score >= 0.8 ? scrawl('spark', { style: 'width:38px;height:38px' }) : ''}</div>
       <div class="level-badge">${esc(lvl.name)}</div>
       <h3>${esc(lvl.title)}</h3>
       <p>Правильно ${right} из ${total} (${Math.round(score * 100)}%)</p>
@@ -5826,7 +5913,7 @@ function cardListPanel() {
   const pool = cardPool();
   const p = el('div', 'panel');
   p.appendChild(el('h3', '', `Мои карточки (${pool.length})`));
-  if (!pool.length) { p.appendChild(el('div', 'empty', 'Пока пусто. Нажмите «＋» рядом со словом в уроке или добавьте весь словарь.')); return p; }
+  if (!pool.length) { p.appendChild(el('div', 'empty', 'Пока пусто. Нажмите «＋» рядом со словом в уроке или добавьте весь словарь.' + scrawl('curl', { style: 'width:34px;height:34px;margin-left:6px' }))); return p; }
   const list = el('div', 'card-list');
   pool.forEach(c => {
     const st = state.cards[c.h] || { box: 0 };
@@ -6440,7 +6527,9 @@ function renderStats(root) {
     const start = el('div', 'panel');
     start.innerHTML = '<h3>Пока пусто — и это нормально 🙂</h3>' +
       '<p class="page-sub">Статистика появится после первого урока. Начать проще всего так:</p>' +
-      '<div class="btn-row">' +
+      '<div class="btn-row start-row">' +
+      '<span class="start-hint">' + scrawl('arrow', { label: 'начните отсюда', style: 'width:64px;height:48px' }) +
+      '<i>отсюда</i></span>' +
       '<a class="btn btn-primary" href="#/diag">🎯 Уровень за 10 минут</a>' +
       '<a class="btn btn-ghost" href="#/lesson/l1">📖 Первый урок</a></div>';
     wrap.appendChild(start);
@@ -6672,6 +6761,62 @@ function pinyinOf(word) {
     else out.push(ch);
   }
   return out.join(' ').replace(/\s+([，。？！、；：,.?!;:])/g, '$1').trim();
+}
+
+/* ---------- Каракули ----------
+   Живые пометки «от руки»: звёздочка восторга, стрелка, птичка, волна.
+   Они проходят через SVG-фильтр с шумом (см. #rough-ink в шаблоне),
+   поэтому линии не бывают ровными — как в тетради на полях.
+   Вид: spark | arrow | check | bang | wave | curl | cn (иероглиф).
+   Подпись идёт в aria-label: для скринридера это картинка с текстом,
+   а не бессмысленный мусор в разметке. */
+const SCRAWL_PATHS = {
+  spark: `<g filter="url(#rough-ink)"><path d="M8,18 C11,11 13,8 18,6" stroke-width="2"/>`
+    + `<g transform="translate(36,30) scale(1.5)"><path d="M0,-11 C1.5,-4 4,-1.5 11,0 C4,1.5 1.5,4 0,11 C-1.5,4 -4,1.5 -11,0 C-4,-1.5 -1.5,-4 0,-11 Z" fill="currentColor" stroke="none"/></g>`
+    + `<g transform="translate(14,38) scale(.8)"><path d="M0,-11 C1.5,-4 4,-1.5 11,0 C4,1.5 1.5,4 0,11 C-1.5,4 -4,1.5 -11,0 C-4,-1.5 -1.5,-4 0,-11 Z" fill="currentColor" stroke="none"/></g>`
+    + `<path d="M24,12 l4,-5" stroke-width="1.6"/></g>`,
+  arrow: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M6,44 C18,40 30,28 44,16 C50,11 54,9 60,7" stroke-width="2.2"/>`
+    + `<path d="M48,6 C53,6.5 58,6.5 61,7 C60,11 58.5,15 56,19" stroke-width="2"/></g>`,
+  check: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M10,32 C15,38 20,46 24,50 C30,36 40,18 54,8" stroke-width="3.4"/>`
+    + `<path d="M44,10 C50,7 54,6 58,5" stroke-width="2"/></g>`,
+  bang: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M28,8 C30,18 31,28 30,36" stroke-width="4"/>`
+    + `<circle cx="29" cy="45" r="2.6" fill="currentColor" stroke="none"/></g>`,
+  wave: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M4,32 C14,20 22,44 34,30 C44,19 52,38 62,26" stroke-width="2.6"/></g>`,
+  curl: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M48,8 C34,10 20,18 14,30 C9,41 14,49 22,44 C28,40 26,30 20,31" stroke-width="2.2"/></g>`,
+};
+
+/* Китайские надписи «кистью»: иероглиф + карандашная черта под ним. */
+const SCRAWL_CN = {
+  '学': (size) => `${cnText('学', size)}<path d="M14,84 C30,80 52,82 74,78" stroke-width="2.6"/>`,
+  '好': (size) => cnText('好', size),
+  '加油': (size) => cnText('加油', size - 16),
+  '很棒': (size) => cnText('很棒', size - 16),
+  '字': (size) => `${cnText('字', size)}<circle cx="50" cy="50" r="34" stroke-width="1.8" stroke-dasharray="6 7"/>`,
+};
+function cnText(ch, size) {
+  return `<text x="50" y="50" font-size="${size}" text-anchor="middle" dominant-baseline="central" ` +
+    `font-family="'Noto Serif SC','Songti SC','STSong',serif">${ch}</text>`;
+}
+
+let scrawlSeq = 0;
+function scrawl(kind, opts) {
+  const o = opts || {};
+  const cn = kind === 'cn' ? (o.text || '学') : null;
+  const draw = cn ? (SCRAWL_CN[cn] || SCRAWL_CN['学'])(74) : SCRAWL_PATHS[kind];
+  if (!draw) return '';
+  const label = o.label || (cn ? `надпись ${cn}` : 'пометка от руки');
+  /* seed у фильтра свой для каждой пометки: иначе все звёздочки
+     дрожат одинаково и сразу выдают, что это одна и та же картинка. */
+  scrawlSeq += 1;
+  const rot = o.tilt === undefined ? (scrawlSeq % 2 ? -4 : 3.5) : o.tilt;
+  return `<span class="scrawl ${cn ? 'cn' : kind || 'spark'}${o.accent ? ' accent' : ''}" role="img" aria-label="${esc(label)}"` +
+    ` style="transform:rotate(${rot}deg)${o.style ? ';' + o.style : ''}">` +
+    `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">${draw}</svg></span>`;
 }
 
 /* Иероглифы + пиньинь сверху. addClass — дополнительный класс обёртки. */

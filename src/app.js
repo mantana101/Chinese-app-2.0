@@ -394,7 +394,8 @@ function renderHome(root) {
     <div class="hero-seal" title="汉语学习">汉<br>语</div>
     <div class="hero-inner">
       <div class="hero-tag">汉语学习 · 学以致用</div>
-      <h1>Привет, 同学!</h1>
+      <span class="hero-hand" aria-hidden="true">учить и применять</span>
+      <h1>Привет, 同学! ${scrawl('spark', { style: 'width:44px;height:44px;vertical-align:-6px' })}</h1>
       <p class="hero-sub">Продолжим с урока <b>${esc(mod.title.split('—')[1] || mod.title)}</b>: <b>«${esc(l.title)}»</b></p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#/lesson/${id}">Продолжить урок →</a>
@@ -763,7 +764,7 @@ function finishQuiz(host) {
   }, 0);
 
   host.innerHTML = `<div class="quiz-done">
-      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
+      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}${score >= 0.8 ? scrawl('spark', { style: 'width:38px;height:38px' }) : ''}</div>
       <h3>Результат: ${quizState.correct} из ${l.quiz.length} (${Math.round(score * 100)}%)</h3>
       <p>${score >= 0.8 ? 'Отличная работа! Этот урок засчитан.'
         : score >= 0.5 ? 'Хорошо, но есть что подтянуть. Посмотрите ошибки выше и повторите урок.'
@@ -844,7 +845,7 @@ function renderDiagResult(host, score) {
   save();
   const weak = quizState.answers.filter(a => !a.ok).slice(0, 8).map(a => a.q);
   host.innerHTML = `<div class="panel quiz-done">
-      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}</div>
+      <div class="qd-emoji">${score >= 0.8 ? '🎉' : score >= 0.5 ? '👍' : '💪'}${score >= 0.8 ? scrawl('spark', { style: 'width:38px;height:38px' }) : ''}</div>
       <div class="level-badge">${esc(lvl.name)}</div>
       <h3>${esc(lvl.title)}</h3>
       <p>Правильно ${right} из ${total} (${Math.round(score * 100)}%)</p>
@@ -957,7 +958,7 @@ function cardListPanel() {
   const pool = cardPool();
   const p = el('div', 'panel');
   p.appendChild(el('h3', '', `Мои карточки (${pool.length})`));
-  if (!pool.length) { p.appendChild(el('div', 'empty', 'Пока пусто. Нажмите «＋» рядом со словом в уроке или добавьте весь словарь.')); return p; }
+  if (!pool.length) { p.appendChild(el('div', 'empty', 'Пока пусто. Нажмите «＋» рядом со словом в уроке или добавьте весь словарь.' + scrawl('curl', { style: 'width:34px;height:34px;margin-left:6px' }))); return p; }
   const list = el('div', 'card-list');
   pool.forEach(c => {
     const st = state.cards[c.h] || { box: 0 };
@@ -1571,7 +1572,9 @@ function renderStats(root) {
     const start = el('div', 'panel');
     start.innerHTML = '<h3>Пока пусто — и это нормально 🙂</h3>' +
       '<p class="page-sub">Статистика появится после первого урока. Начать проще всего так:</p>' +
-      '<div class="btn-row">' +
+      '<div class="btn-row start-row">' +
+      '<span class="start-hint">' + scrawl('arrow', { label: 'начните отсюда', style: 'width:64px;height:48px' }) +
+      '<i>отсюда</i></span>' +
       '<a class="btn btn-primary" href="#/diag">🎯 Уровень за 10 минут</a>' +
       '<a class="btn btn-ghost" href="#/lesson/l1">📖 Первый урок</a></div>';
     wrap.appendChild(start);
@@ -1803,6 +1806,62 @@ function pinyinOf(word) {
     else out.push(ch);
   }
   return out.join(' ').replace(/\s+([，。？！、；：,.?!;:])/g, '$1').trim();
+}
+
+/* ---------- Каракули ----------
+   Живые пометки «от руки»: звёздочка восторга, стрелка, птичка, волна.
+   Они проходят через SVG-фильтр с шумом (см. #rough-ink в шаблоне),
+   поэтому линии не бывают ровными — как в тетради на полях.
+   Вид: spark | arrow | check | bang | wave | curl | cn (иероглиф).
+   Подпись идёт в aria-label: для скринридера это картинка с текстом,
+   а не бессмысленный мусор в разметке. */
+const SCRAWL_PATHS = {
+  spark: `<g filter="url(#rough-ink)"><path d="M8,18 C11,11 13,8 18,6" stroke-width="2"/>`
+    + `<g transform="translate(36,30) scale(1.5)"><path d="M0,-11 C1.5,-4 4,-1.5 11,0 C4,1.5 1.5,4 0,11 C-1.5,4 -4,1.5 -11,0 C-4,-1.5 -1.5,-4 0,-11 Z" fill="currentColor" stroke="none"/></g>`
+    + `<g transform="translate(14,38) scale(.8)"><path d="M0,-11 C1.5,-4 4,-1.5 11,0 C4,1.5 1.5,4 0,11 C-1.5,4 -4,1.5 -11,0 C-4,-1.5 -1.5,-4 0,-11 Z" fill="currentColor" stroke="none"/></g>`
+    + `<path d="M24,12 l4,-5" stroke-width="1.6"/></g>`,
+  arrow: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M6,44 C18,40 30,28 44,16 C50,11 54,9 60,7" stroke-width="2.2"/>`
+    + `<path d="M48,6 C53,6.5 58,6.5 61,7 C60,11 58.5,15 56,19" stroke-width="2"/></g>`,
+  check: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M10,32 C15,38 20,46 24,50 C30,36 40,18 54,8" stroke-width="3.4"/>`
+    + `<path d="M44,10 C50,7 54,6 58,5" stroke-width="2"/></g>`,
+  bang: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M28,8 C30,18 31,28 30,36" stroke-width="4"/>`
+    + `<circle cx="29" cy="45" r="2.6" fill="currentColor" stroke="none"/></g>`,
+  wave: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M4,32 C14,20 22,44 34,30 C44,19 52,38 62,26" stroke-width="2.6"/></g>`,
+  curl: `<g filter="url(#rough-ink)" fill="none" stroke-linecap="round">`
+    + `<path d="M48,8 C34,10 20,18 14,30 C9,41 14,49 22,44 C28,40 26,30 20,31" stroke-width="2.2"/></g>`,
+};
+
+/* Китайские надписи «кистью»: иероглиф + карандашная черта под ним. */
+const SCRAWL_CN = {
+  '学': (size) => `${cnText('学', size)}<path d="M14,84 C30,80 52,82 74,78" stroke-width="2.6"/>`,
+  '好': (size) => cnText('好', size),
+  '加油': (size) => cnText('加油', size - 16),
+  '很棒': (size) => cnText('很棒', size - 16),
+  '字': (size) => `${cnText('字', size)}<circle cx="50" cy="50" r="34" stroke-width="1.8" stroke-dasharray="6 7"/>`,
+};
+function cnText(ch, size) {
+  return `<text x="50" y="50" font-size="${size}" text-anchor="middle" dominant-baseline="central" ` +
+    `font-family="'Noto Serif SC','Songti SC','STSong',serif">${ch}</text>`;
+}
+
+let scrawlSeq = 0;
+function scrawl(kind, opts) {
+  const o = opts || {};
+  const cn = kind === 'cn' ? (o.text || '学') : null;
+  const draw = cn ? (SCRAWL_CN[cn] || SCRAWL_CN['学'])(74) : SCRAWL_PATHS[kind];
+  if (!draw) return '';
+  const label = o.label || (cn ? `надпись ${cn}` : 'пометка от руки');
+  /* seed у фильтра свой для каждой пометки: иначе все звёздочки
+     дрожат одинаково и сразу выдают, что это одна и та же картинка. */
+  scrawlSeq += 1;
+  const rot = o.tilt === undefined ? (scrawlSeq % 2 ? -4 : 3.5) : o.tilt;
+  return `<span class="scrawl ${cn ? 'cn' : kind || 'spark'}${o.accent ? ' accent' : ''}" role="img" aria-label="${esc(label)}"` +
+    ` style="transform:rotate(${rot}deg)${o.style ? ';' + o.style : ''}">` +
+    `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">${draw}</svg></span>`;
 }
 
 /* Иероглифы + пиньинь сверху. addClass — дополнительный класс обёртки. */
