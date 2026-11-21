@@ -34,12 +34,19 @@ const w = dom.window;
 setTimeout(() => {
   const questions = JSON.parse(process.argv[1]);
   const out = {};
-  for (const q of questions) {
+  for (const step of questions) {
+    // строка — одиночный вопрос; массив — разговор из реплик подряд
     try {
-      const r = w.tutorReplyLocal(q);
-      out[q] = { html: String(r && r.html || ''), quiz: !!(r && r.quiz), speak: String(r && r.speak || '') };
+      if (Array.isArray(step)) {
+        let last = null;
+        for (const q of step) last = w.tutorReplyLocal(q);
+        out[step.join(' → ')] = { html: String(last && last.html || ''), quiz: !!(last && last.quiz), speak: String(last && last.speak || '') };
+      } else {
+        const r = w.tutorReplyLocal(step);
+        out[step] = { html: String(r && r.html || ''), quiz: !!(r && r.quiz), speak: String(r && r.speak || '') };
+      }
     } catch (e) {
-      out[q] = { error: String(e && e.message || e) };
+      out[Array.isArray(step) ? step.join(' → ') : step] = { error: String(e && e.message || e) };
     }
   }
   process.stdout.write(JSON.stringify(out));
@@ -196,6 +203,114 @@ class TutorInteraction(unittest.TestCase):
         t = text_of(self.answers["что мне повторить"])
         self.assertIn("уроков", t)
         self.assertIn("точность", t)
+
+
+class TutorThinking(unittest.TestCase):
+    """Рассуждение: память разговора, уточнения и проверка ответа."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.answers = ask(
+            ["объясни частицу 了", "попроще"],
+            ["объясни частицу 了", "а пример?"],
+            ["объясни частицу 了", "а подробнее"],
+            ["объясни разницу 不 и 没", "почему так"],
+            ["проверь меня", "не знаю"],
+            ["проверь меня", "я ошибся"],
+            ["как сказать спасибо", "повтори"],
+            ["как сказать спасибо", "как это звучит"],
+            "проверь мой ответ 我喝茶了",
+            "проверь мой ответ 我喝X茶",
+            "проверь мой ответ где вокзал",
+            "проверь мой ответ",
+            ["давай поговорим", "меня зовут Али", "чай", "я из Душанбе"],
+            ["давай поговорим", "хватит"],
+        )
+
+    def test_no_errors(self):
+        for q, a in self.answers.items():
+            self.assertNotIn("error", a, f"«{q}» → {a.get('error')}")
+
+    def test_simpler_uses_plain_words(self):
+        """«попроще» пересказывает то же правило, а не начинает заново."""
+        t = text_of(self.answers["объясни частицу 了 → попроще"])
+        self.assertIn("совсем просто", t)
+        self.assertIn("уже", t)
+
+    def test_example_follows_the_rule_in_focus(self):
+        t = text_of(self.answers["объясни частицу 了 → а пример?"])
+        self.assertIn("пример", t)
+        self.assertIn("завтрак", t)   # пример правила 了: 我吃了早饭
+
+    def test_more_gives_deeper_detail(self):
+        t = text_of(self.answers["объясни частицу 了 → а подробнее"])
+        self.assertIn("подробнее", t)
+        self.assertNotIn("совсем просто", t)
+
+    def test_why_explains_reason(self):
+        t = text_of(self.answers["объясни разницу 不 и 没 → почему так"])
+        self.assertIn("почему так", t)
+
+    def test_after_quiz_idont_know_gives_the_answer(self):
+        """Раньше на «не знаю» приходил новый тест вместо ответа."""
+        a = self.answers["проверь меня → не знаю"]
+        self.assertFalse(a["quiz"], "после «не знаю» новый тест не нужен")
+        self.assertIn("правильный ответ", text_of(a))
+
+    def test_after_quiz_wrong_explains_difference(self):
+        t = text_of(self.answers["проверь меня → я ошибся"])
+        self.assertIn("правильно", t)
+        self.assertTrue("ваш вариант" in t or "сравните" in t or "ошибк" in t)
+
+    def test_repeat_returns_last_explained_word(self):
+        """«повтори» после перевода — то же слово, а не правило из прошлого."""
+        a = self.answers["как сказать спасибо → повтори"]
+        self.assertIn("谢谢", a["html"])
+
+    def test_audio_intent(self):
+        t = text_of(self.answers["как сказать спасибо → как это звучит"])
+        self.assertIn("звучит", t)
+
+    def test_check_known_sentence(self):
+        t = text_of(self.answers["проверь мой ответ 我喝茶了"])
+        self.assertIn("по словам", t)
+        self.assertIn("все слова есть", t)
+
+    def test_check_flags_wrong_keyboard(self):
+        """Латиница внутри китайской фразы — типичная ошибка раскладки."""
+        t = text_of(self.answers["проверь мой ответ 我喝X茶"])
+        self.assertIn("латинские буквы", t)
+
+    def test_check_flags_unknown_words(self):
+        """Слова не из курса отмечаются отдельно, а не тонут в общем разборе."""
+        answer = ask("проверь мой ответ 我喝鑫")
+        t = text_of(answer["проверь мой ответ 我喝鑫"])
+        self.assertIn("не встречались", t)
+
+    def test_check_russian_phrase(self):
+        t = text_of(self.answers["проверь мой ответ где вокзал"])
+        self.assertIn("车站", self.answers["проверь мой ответ где вокзал"]["html"])
+
+    def test_check_without_phrase_asks_for_it(self):
+        t = text_of(self.answers["проверь мой ответ"])
+        self.assertIn("пришлите фразу", t)
+
+    def test_dialogue_reacts_to_user(self):
+        """Диалог слушает: имя запоминается, выбор напитка влияет на ответ."""
+        a = self.answers["давай поговорим → меня зовут Али → чай → я из Душанбе"]
+        t = text_of(a)
+        self.assertIn("али", t)
+        self.assertIn("чай", t)
+        self.assertIn("душанбе", t)
+        # иероглифы идут с пиньинем, поэтому проверяем по тексту без разметки
+        self.assertIn("huān", t)
+        self.assertIn("yíng", t)
+        self.assertIn("добро пожаловать", t)
+
+    def test_dialogue_can_be_stopped(self):
+        t = text_of(self.answers["давай поговорим → хватит"])
+        self.assertNotIn("как тебя зовут", t)
+        self.assertIn("практика", t)
 
 
 if __name__ == "__main__":
