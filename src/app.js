@@ -160,7 +160,7 @@ const PREFS = {
     }
     // Цвет адресной строки на телефоне подстраивается под тему.
     const meta = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#fbf6ef');
+    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#f7efe4');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
   set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }

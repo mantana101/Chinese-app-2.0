@@ -7,15 +7,17 @@
    Теперь фон уходит в фиолетово-синий закат, тёплые акценты (янтарь,
    коралл) соседствуют с холодными (бирюза, лаванда), а плитки и номера
    уроков в каждом разделе получают свой цвет. */
-/* Белая тема — основная и единственная по умолчанию.
-   Мягкий тёплый фон и тёмный текст: страницу удобно читать днём,
-   на солнце и при слабом зрении, а иероглифы остаются контрастными. */
+/* Светлая тема — основная.
+   Не белый лист: фон тёплый песочно-персиковый, карточки — сливочные,
+   а не чисто белые. Чистый #fff на большой площади бьёт по глазам
+   (особенно вечером и на ярких экранах), поэтому белого в палитре нет
+   вовсе: самый светлый тон — сливки #fffdf7. */
 :root {
-  --bg: #fbf6ef;
-  --bg2: #f3ece1;
-  --panel: #fffdf9;
-  --panel2: #f7f1e7;
-  --line: #e4d9c8;
+  --bg: #f7efe4;
+  --bg2: #f1e6d8;
+  --panel: #fffdf7;
+  --panel2: #f9f1e6;
+  --line: #e8dccb;
   --txt: #2a2130;
   --txt2: #5f5267;
   --txt3: #796c82;
@@ -69,23 +71,37 @@
 
 /* Светлая тема — «бумага и закат»: тот же тёплый акцент, но светлый фон. */
 
-:root:not([data-theme="dark"]) #nav { background: rgba(255,253,248,.94); }
-:root:not([data-theme="dark"]) .mnav { background: rgba(255,253,248,.97); }
-:root:not([data-theme="dark"]) .hero { background: linear-gradient(135deg, #fffaf4, #f4ecf7); }
+:root:not([data-theme="dark"]) #nav { background: rgba(255,252,245,.92); }
+:root:not([data-theme="dark"]) .mnav { background: rgba(255,252,245,.96); }
+/* Главная плашка: персик + сливки + лаванда. Тёплый старт, но без
+   резкого белого и без «кислотности». */
+:root:not([data-theme="dark"]) .hero {
+  background:
+    radial-gradient(620px 300px at 92% 0%, rgba(255,196,150,.55), transparent 65%),
+    radial-gradient(520px 280px at 4% 100%, rgba(186,172,238,.42), transparent 62%),
+    linear-gradient(128deg, #fff7ec 0%, #fdeee2 52%, #f3ecfa 100%);
+}
+:root:not([data-theme="dark"]) .hero { box-shadow: 0 14px 38px rgba(150,110,80,.14); }
+:root:not([data-theme="dark"]) .hero-seal {
+  border-color: rgba(196,59,52,.35); color: #b8463c; background: rgba(242,141,180,.14);
+}
 :root:not([data-theme="dark"]) .vcard .vc-h, :root:not([data-theme="dark"]) .gram-ex b,
 :root:not([data-theme="dark"]) .gl-row b, :root:not([data-theme="dark"]) .rt-v { color: var(--red); }
 :root:not([data-theme="dark"]) .tile:hover, :root:not([data-theme="dark"]) .opt:hover:not(:disabled) { background: rgba(154,105,18,.08); }
 :root:not([data-theme="dark"]) .search, :root:not([data-theme="dark"]) .auth-form input,
-:root:not([data-theme="dark"]) .g-input, :root:not([data-theme="dark"]) .gap-input { background: #fff; color: var(--txt); }
+:root:not([data-theme="dark"]) .g-input, :root:not([data-theme="dark"]) .gap-input { background: var(--panel); color: var(--txt); }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
+  /* Цветные пятна по углам дают глубину и убирают ощущение «белый лист».
+     Тона пастельные: персик, мята, лаванда, золотистый. */
   background:
-    radial-gradient(1100px 560px at 84% -12%, rgba(242,120,96,.22), transparent 62%),
-    radial-gradient(900px 520px at 6% -4%, rgba(116,169,239,.16), transparent 58%),
-    radial-gradient(760px 460px at 52% 108%, rgba(169,139,240,.14), transparent 60%),
-    var(--bg);
+    radial-gradient(1100px 560px at 86% -14%, rgba(247,166,132,.30), transparent 62%),
+    radial-gradient(940px 540px at 4% -6%, rgba(126,196,214,.24), transparent 58%),
+    radial-gradient(820px 500px at 96% 34%, rgba(180,168,235,.22), transparent 62%),
+    radial-gradient(900px 560px at 38% 104%, rgba(160,214,183,.26), transparent 60%),
+    linear-gradient(180deg, #f9f1e6 0%, var(--bg) 46%, #f4ece2 100%);
   background-attachment: fixed;
   color: var(--txt);
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
@@ -109,7 +125,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ---------- Каркас ---------- */
 .app { display: flex; min-height: 100vh; }
 #nav {
-  width: 232px; flex: 0 0 232px; background: rgba(255,253,248,.9); backdrop-filter: blur(14px);
+  width: 232px; flex: 0 0 232px; background: rgba(255,252,245,.88); backdrop-filter: blur(14px);
   border-right: 1px solid rgba(var(--tint),.06);
   border-right: 1px solid var(--line); padding: 18px 12px;
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
@@ -385,7 +401,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .cc-in.wide { flex: 1.6; min-width: 170px; }
 .cc-in:focus { outline: none; border-color: var(--gold); }
-:root:not([data-theme="dark"]) .cc-in { background: #fff; color: var(--txt); }
+:root:not([data-theme="dark"]) .cc-in { background: var(--panel); color: var(--txt); }
 .card-list { display: flex; flex-direction: column; gap: 5px; max-height: 430px; overflow-y: auto; }
 .cl-row { display: grid; grid-template-columns: 110px 120px 1fr 110px 30px; gap: 10px; align-items: center; padding: 8px 11px; border-radius: 8px; background: rgba(var(--tint),.028); font-size: 13.5px; }
 .cl-h { font-family: "Noto Serif SC", serif; font-size: 17px; }
@@ -725,7 +741,7 @@ button { font-family: inherit; cursor: pointer; }
   flex: 1; padding: 11px 14px; border-radius: 11px; border: 1px solid var(--line);
   background: rgba(var(--tint),.05); color: var(--txt); font-size: 14.5px;
 }
-:root:not([data-theme="dark"]) .t-input { background: #fff; color: var(--txt); }
+:root:not([data-theme="dark"]) .t-input { background: var(--panel); color: var(--txt); }
 .t-input:focus { outline: none; border-color: var(--gold); }
 .tutor-fab {
   position: fixed; right: 20px; bottom: 22px; z-index: 35; width: 52px; height: 52px; border-radius: 50%;

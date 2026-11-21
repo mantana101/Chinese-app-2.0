@@ -31,8 +31,9 @@ class BasePalette(unittest.TestCase):
         src = css()
         root = src[src.index(":root {"):]
         root = root[: root.index("}")]
-        self.assertIn("--bg: #fbf6ef", root, "фон по умолчанию должен быть светлым")
+        self.assertIn("--bg: #f7efe4", root, "фон по умолчанию должен быть тёплым светлым")
         self.assertIn("--txt: #2a2130", root, "текст по умолчанию — тёмный")
+        self.assertIn("--panel: #fffdf7", root, "карточки не должны быть чисто белыми")
 
     def test_dark_palette_is_opt_in(self):
         src = css()
@@ -56,7 +57,7 @@ class BasePalette(unittest.TestCase):
                      for c in parts]
             return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
 
-        bg, txt = "#fbf6ef", "#2a2130"
+        bg, txt = "#f7efe4", "#2a2130"
         a, b = lum(bg), lum(txt)
         ratio = (max(a, b) + 0.05) / (min(a, b) + 0.05)
         self.assertGreater(ratio, 7.0, f"контраст {ratio:.1f}:1 слишком низкий")
@@ -64,7 +65,28 @@ class BasePalette(unittest.TestCase):
     def test_page_header_matches_light_theme(self):
         with open(INDEX, encoding="utf-8") as f:
             html = f.read()
-        self.assertIn('content="#fbf6ef"', html, "адресная строка телефона должна быть светлой")
+        self.assertIn('content="#f7efe4"', html, "адресная строка телефона должна быть светлой")
+
+
+class NoHarshWhite(unittest.TestCase):
+    """Чистый белый на большой площади бьёт по глазам — его в палитре нет."""
+
+    def test_panels_are_cream_not_white(self):
+        src = css()
+        root = src[src.index(":root {"):]
+        root = root[: root.index("}")]
+        for name in ("--bg", "--bg2", "--panel", "--panel2"):
+            line = [l for l in root.splitlines() if l.strip().startswith(name + ":")][0]
+            value = line.split(":")[1].strip().rstrip(";").lower()
+            self.assertNotIn(value, ("#fff", "#ffffff"), f"{name} не должен быть чисто белым")
+
+    def test_background_has_colour(self):
+        """Фон должен быть не «просто песочным», а с цветными пятнами."""
+        src = css()
+        body = src[src.index("\nbody {"):]
+        body = body[: body.index("}")]
+        self.assertGreaterEqual(body.count("radial-gradient"), 3,
+                                "фону нужны цветные пятна, иначе он выглядит плоским")
 
 
 class InBrowser(unittest.TestCase):
@@ -111,11 +133,11 @@ setTimeout(() => {
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(res.returncode, 0, res.stderr[-500:])
         out = __import__("json").loads(res.stdout)
-        self.assertEqual(out["defaultBg"], "#fbf6ef")
+        self.assertEqual(out["defaultBg"], "#f7efe4")
         self.assertIsNone(out["defaultAttr"], "по умолчанию атрибута темы быть не должно")
         self.assertEqual(out["darkBg"], "#171327")
         self.assertEqual(out["darkAttr"], "dark")
-        self.assertEqual(out["backBg"], "#fbf6ef")
+        self.assertEqual(out["backBg"], "#f7efe4")
         self.assertIsNone(out["backAttr"], "светлая тема не должна вешать пустой атрибут")
         self.assertEqual(out["saved"], "light")
 
