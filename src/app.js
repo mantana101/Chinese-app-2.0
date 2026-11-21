@@ -1769,6 +1769,13 @@ function ruby(hanzi, cls = '') {
    ВНУТРЕННИЙ ИИ-АГЕНТ (Сяо Мин · 小明)
    ============================================================ */
 let tutorHistory = [];
+let tutorHistoryRestored = (() => {
+  try {
+    const raw = localStorage.getItem('tutorChat');
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(m => m && m.role) : [];
+  } catch (e) { return []; }
+})();
 let tutorContext = { mode: 'chat', step: 0, quiz: null };
 
 function tutorAllVocab() {
@@ -3599,6 +3606,13 @@ function renderTutor(root) {
   const feed = el('div', 'tutor-feed');
   box.appendChild(feed);
 
+  /* История чата живёт вне страницы. Раньше вход в аккаунт (Auth.boot
+     завершается позже первого экрана) перерисовывал страницу и стирал
+     весь разговор: ученик видел свой вопрос без ответа. */
+  if (!tutorHistory.length && tutorHistoryRestored.length) {
+    tutorHistory.push(...tutorHistoryRestored);
+    tutorHistoryRestored = [];
+  }
   if (!tutorHistory.length) {
     tutorHistory.push({
       role: 'assistant',
@@ -3663,6 +3677,15 @@ function renderTutor(root) {
     feed.appendChild(thinking);
     feed.scrollTop = feed.scrollHeight;
 
+    /* Сначала спрашиваем встроенный движок: он понимает вопрос целиком
+       («сколько учить», «как заказать столик»). Если он уверен — его ответ
+       и показываем, а сервер нужен только за ссылками на источники.
+       Раньше сервер шёл первым, и найденное слово 中文 перебивало готовый
+       ответ на вопрос — ученик видел «中文 — китайский язык» вместо ответа. */
+    const localReply = tutorReplyLocal(q);
+    const localSure = !/не уверен, что понял|^\s*$/i.test(
+      String(localReply.html || '').replace(/<[^>]+>/g, ' ').trim());
+
     let replyObj = null;
     if (window.Auth && Auth.online) {
       try {
@@ -3686,13 +3709,19 @@ function renderTutor(root) {
             speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0]
           };
         } else if (d && d.mode === 'sources') {
-          /* Ключа ИИ нет, но словари ответили — показываем их, а не
-             «извините, я не знаю». */
-          replyObj = tutorSourcesReply(d, q);
+          if (localSure) {
+            /* Движок ответил по существу — не заслоняем его словарём,
+               но добавляем ссылки: ученик видит, где проверить. */
+            replyObj = { ...localReply, html: localReply.html + tutorSourceLinks(d.sources) };
+          } else {
+            /* Ответить по существу нечем, а словари слово знают —
+               показываем их, а не «извините, я не знаю». */
+            replyObj = tutorSourcesReply(d, q);
+          }
         }
       } catch (e) { }
     }
-    if (!replyObj) replyObj = tutorReplyLocal(q);
+    if (!replyObj) replyObj = localReply;
     /* В историю для серверного ИИ кладём чистый текст ответа,
        а не HTML и не вопрос ученика (раньше модель видела кашу). */
     const plainReply = String(replyObj.html || replyObj.content || '')
@@ -3700,6 +3729,12 @@ function renderTutor(root) {
     tutorHistory.push({ role: 'assistant', content: plainReply, ...replyObj });
     send.disabled = false;
     paintFeed();
+    /* Разговор сохраняем: перезагрузка страницы (новая сборка, вход)
+       не должна стирать то, что ученик только что спросил. */
+    try {
+      localStorage.setItem('tutorChat', JSON.stringify(
+        tutorHistory.slice(-40).map(m => ({ role: m.role, content: m.content || '', html: m.html || '', speak: m.speak || '' }))));
+    } catch (e) { }
   }
 
   form.onsubmit = (e) => {

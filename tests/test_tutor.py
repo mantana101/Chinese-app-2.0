@@ -178,6 +178,61 @@ class TutorUnderstanding(unittest.TestCase):
         self.assertNotIn("транспорт", t)
 
 
+class ChatSurvivesRerender(unittest.TestCase):
+    """Разговор не должен исчезать при перерисовке страницы.
+
+    Раньше вход в аккаунт (Auth.boot завершается уже после первого экрана)
+    перерисовывал страницу и стирал чат: ученик видел свой вопрос без
+    ответа и решал, что помощник не отвечает.
+    """
+
+    RUNNER_CHAT = r"""
+const { JSDOM } = require(process.cwd() + '/node_modules/jsdom/lib/api.js');
+const fs = require('fs');
+const saved = JSON.parse(process.argv[1]);
+const dom = new JSDOM(fs.readFileSync(process.cwd() + '/index.html', 'utf8'), {
+  runScripts: 'dangerously', url: 'http://localhost/', pretendToBeVisual: true,
+  beforeParse(w) {
+    w.matchMedia = () => ({ matches: false, addEventListener(){}, removeEventListener(){} });
+    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    w.speechSynthesis = { speak(){}, cancel(){}, getVoices: () => [] };
+    w.scrollTo = () => {}; w.fetch = () => Promise.reject(new Error('offline'));
+    w.localStorage.setItem('tutorChat', JSON.stringify(saved));
+  }
+});
+const w = dom.window;
+setTimeout(() => {
+  w.__guest = true; w.location.hash = '#/tutor'; w.route();
+  const msgs = Array.from(w.document.querySelectorAll('.t-msg')).map(m => ({
+    role: m.className.indexOf('t-user') >= 0 ? 'user' : 'bot',
+    text: (m.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+  }));
+  process.stdout.write(JSON.stringify(msgs));
+  process.exit(0);
+}, 700);
+"""
+
+    def test_previous_chat_is_restored(self):
+        node = _node()
+        api = os.path.join(ROOT, "node_modules", "jsdom", "lib", "api.js")
+        if not os.path.exists(api):
+            raise unittest.SkipTest("нет jsdom — npm install --no-save jsdom")
+        saved = [
+            {"role": "user", "content": "аптека", "html": ""},
+            {"role": "assistant", "content": "аптека", "html": "<b>药店</b> — аптека"},
+            {"role": "user", "content": "билет", "html": ""},
+        ]
+        res = subprocess.run(
+            [node, "-e", self.RUNNER_CHAT, json.dumps(saved, ensure_ascii=False)],
+            cwd=ROOT, capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr[-400:])
+        msgs = json.loads(res.stdout)
+        self.assertEqual(len(msgs), 3, f"разговор потерялся: {msgs}")
+        self.assertEqual(msgs[0]["role"], "user")
+        self.assertIn("билет", msgs[2]["text"])
+
+
 class TutorInteraction(unittest.TestCase):
     """Диалог, тест и подстройка под прогресс."""
 
