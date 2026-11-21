@@ -731,7 +731,10 @@ def sources_research(word: str, *, want_examples=True):
         used.append("CC-CEDICT")
         break
 
-    if SOURCES_ONLINE and _sources_budget():
+    # Онлайн-источники ищут только иероглифы: Викисловарь на запрос
+    # «привет» вернул бы русскую статью, и помощник отвечал бы не по теме.
+    is_hanzi = bool(re.search(r"[\u3400-\u9fff]", word))
+    if is_hanzi and SOURCES_ONLINE and _sources_budget():
         try:
             wik = wiktionary_lookup(word)
             if wik:

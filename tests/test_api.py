@@ -388,6 +388,10 @@ class TestTutor(ApiTestCase):
         self.assertEqual(status, 401, data)
 
     def test_tutor_works_without_api_key(self):
+        # Без сети: в CI интернет есть, и иначе ответ мог прийти «из источников».
+        old = server.SOURCES_ONLINE
+        server.SOURCES_ONLINE = False
+        self.addCleanup(setattr, server, "SOURCES_ONLINE", old)
         owner_token, _ = self.register_owner()
         status, data, _ = self.json(
             "POST", "/api/tutor/chat", {"message": "привет"}, owner_token

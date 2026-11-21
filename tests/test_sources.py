@@ -175,6 +175,15 @@ class OnlineLookups(unittest.TestCase):
             self.server.sources_research("缓存测试", want_examples=False)
         self.assertEqual(len(calls), 1, "повторный вопрос не должен снова ходить в сеть")
 
+    def test_russian_word_is_not_sent_to_wiktionary(self):
+        """Иначе на «привет» Викисловарь вернёт русскую статью — не по теме."""
+        called = []
+        with mock.patch.object(self.server, "_http_json", side_effect=lambda *a, **k: called.append(1)):
+            self.server._source_cache.clear()
+            self.server._source_hits["n"] = 0
+            self.server.sources_research("привет")
+        self.assertEqual(called, [])
+
     def test_offline_mode_makes_no_requests(self):
         off = fresh_server("0")
         # fresh_server перезагружает модуль — вернём сетевой режим остальным тестам
