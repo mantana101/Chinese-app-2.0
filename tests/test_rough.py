@@ -87,8 +87,10 @@ class Imperfection(unittest.TestCase):
         tilts = re.findall(r"--tilt:\s*(-?[\d.]+)deg", css)
         self.assertGreaterEqual(len(tilts), 2)
         for value in tilts:
-            self.assertLess(abs(float(value)), 0.6,
-                            "наклон больше 0,6° — текст начнёт «плыть»")
+            self.assertGreaterEqual(abs(float(value)), 0.3,
+                                    "наклон меньше 0,3° — его просто не видно")
+            self.assertLess(abs(float(value)), 1.2,
+                            "наклон больше 1,2° — текст начнёт «плыть»")
 
     def test_pencil_underline_on_titles(self):
         css = read("src", "styles.css")
@@ -115,6 +117,107 @@ class Imperfection(unittest.TestCase):
         html = read("index.html")
         self.assertIn("rough-ink", html)
         self.assertIn('class="scrawl', html)
+
+class VisibleAtFirstGlance(unittest.TestCase):
+    """Детали должны быть заметны, а не «существовать в коде».
+
+    Прошлый заход был слишком деликатным: наклон в 0,18° и штрихи
+    толщиной в пиксель не читались. Теперь у каждой детали есть
+    проверяемый признак заметности.
+    """
+
+    def test_hand_written_note_on_home(self):
+        app = read("src", "app.js")
+        self.assertIn("hand-note", app, "на главной нужна записка «от руки»")
+
+    def test_note_looks_like_tape_and_paper(self):
+        css = read("src", "styles.css")
+        start = css.index(".hand-note {")
+        block = css[start:css.index("}", start)]
+        self.assertIn("rotate(-1.6deg)", block, "записка должна быть под углом")
+        self.assertIn("cursive", block, "и рукописным шрифтом")
+        self.assertIn(".hand-note::before", css, "скотч сверху")
+
+    def test_card_corners_are_uneven(self):
+        """Разные радиусы у одного элемента — след «ножниц», а не шаблона."""
+        css = read("src", "styles.css")
+        start = css.index(".tile { border-radius:")
+        block = css[start:css.index("}", start)]
+        radii = re.findall(r"(\d+)px", block)
+        self.assertGreaterEqual(len(radii), 4)
+        self.assertGreater(len(set(radii)), 1, "все углы одинаковы — снова «ровно»")
+
+    def test_panel_has_folded_corner(self):
+        css = read("src", "styles.css")
+        self.assertIn(".panel::after", css, "загнутый угол — как у листа, который листали")
+
+    def test_pencil_dashes_in_service_blocks(self):
+        css = read("src", "styles.css")
+        start = css.index(".empty, .hw-note, .qd-unlock {")
+        block = css[start:css.index("}", start)]
+        self.assertIn("dashed", block, "служебные блоки отделены пунктиром «карандашом»")
+
+
+class InBrowser(unittest.TestCase):
+    """Проверяем не исходники, а то, что реально попадает в DOM."""
+
+    SCRIPT = r"""
+const fs = require('fs');
+const {JSDOM} = require(process.argv[2] + '/jsdom/lib/api.js');
+const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
+  runScripts: 'dangerously', url: 'http://127.0.0.1/', pretendToBeVisual: true,
+  beforeParse(w) {
+    w.matchMedia = () => ({matches: false, addEventListener(){}, removeEventListener(){}});
+    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    w.speechSynthesis = {speak(){}, cancel(){}, getVoices: () => []};
+    w.scrollTo = () => {};
+    w.fetch = () => Promise.reject(new Error('offline'));
+  }
+});
+const w = dom.window;
+setTimeout(() => {
+  w.__guest = true; w.location.hash = '#/home'; w.route();
+  const v = w.document.querySelector('#view');
+  const note = v.querySelector('.hand-note');
+  const star = v.querySelector('.hero .scrawl');
+  const hand = v.querySelector('.hero-hand');
+  const tile = v.querySelector('.tile');
+  const out = {
+    note: note ? note.textContent.trim().slice(0, 40) : '',
+    noteTransform: note ? w.getComputedStyle(note).transform : '',
+    starWidth: star ? w.getComputedStyle(star).width : '',
+    starPaths: star ? star.querySelectorAll('path').length : 0,
+    hand: hand ? hand.textContent.trim() : '',
+    tileRadius: tile ? w.getComputedStyle(tile).borderRadius : '',
+    filters: !!w.document.querySelector('#rough-ink'),
+  };
+  process.stdout.write(JSON.stringify(out));
+  process.exit(0);
+}, 900);
+"""
+
+    def test_home_actually_renders_details(self):
+        import json
+        import shutil
+        import subprocess
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("нет node")
+        jsdom = os.path.join(ROOT, "node_modules")
+        if not os.path.isdir(os.path.join(jsdom, "jsdom")):
+            self.skipTest("нет jsdom")
+        res = subprocess.run([node, "-e", self.SCRIPT, os.path.join(ROOT, "index.html"), jsdom],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(res.returncode, 0, res.stderr[-400:])
+        out = json.loads(res.stdout)
+        self.assertTrue(out["filters"], "фильтры не попали в страницу")
+        self.assertTrue(out["note"], "записки на скотче нет на главной")
+        self.assertIn("rotate", out["noteTransform"])
+        self.assertEqual(out["starWidth"], "44px", "звёздочка должна быть заметного размера")
+        self.assertGreaterEqual(out["starPaths"], 3, "звёздочка пустая")
+        self.assertTrue(out["hand"], "рукописной надписи нет")
+        self.assertGreater(len(set(re.findall(r"\d+", out["tileRadius"]))), 1,
+                           "у плитки снова одинаковые углы")
 
 
 if __name__ == "__main__":
