@@ -466,7 +466,8 @@ const Auth = (() => {
       {
         const tabs = el2('div', 'tabs');
         const errN = sys?.counts?.errors || 0;
-        [['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
+        const onN = data.online_count || 0;
+        [['live', `🟢 Кто онлайн${onN ? ` (${onN})` : ''}`], ['class', '📋 Ученики и коды'], ['hw', '🏠 Домашки'], ['system', `🛠 Состояние системы${errN ? ` (${errN})` : ''}`]].forEach(([id, label]) => {
           const b = el2('button', 'tab' + (tab === id ? ' active' : ''), label);
           b.onclick = () => { tab = id; paint(); };
           tabs.appendChild(b);
@@ -474,6 +475,20 @@ const Auth = (() => {
         wrap.appendChild(tabs);
       }
 
+      if (tab === 'live') {
+        paintLive();
+        /* Пока вкладка открыта, обновляем список сам: «сейчас на сайте»
+           устаревает за минуты, а нажимать «обновить» никто не будет. */
+        if (!window.__liveTimer) {
+          window.__liveTimer = setInterval(async () => {
+            if (tab !== 'live' || !document.body.contains(wrap)) {
+              clearInterval(window.__liveTimer); window.__liveTimer = null; return;
+            }
+            try { await loadData(); paint(); } catch (e) { }
+          }, 30000);
+        }
+        return;
+      }
       if (tab === 'hw') {
         paintHomework();
         return;
@@ -689,6 +704,95 @@ const Auth = (() => {
       if (b < 1024) return b + ' Б';
       if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' КБ';
       return (b / (1024 * 1024)).toFixed(2) + ' МБ';
+    }
+
+    /* --- Кто сейчас на сайте ---
+       Учителю важно видеть не только оценки, но и кто реально заходит:
+       «активен 2 минуты назад» или «не заходил неделю». Данные берём из
+       отметок сессий на сервере (не чаще раза в минуту на человека). */
+    function paintLive() {
+      const on = data.online || [];
+      const win = Math.round((data.online_window_sec || 300) / 60);
+
+      const head = el2('div', 'panel');
+      head.appendChild(el2('h3', '', '🟢 Кто сейчас на сайте'));
+      head.appendChild(el2('p', 'page-sub',
+        `Считается активным, если заходил за последние ${win} мин. Всего в классе: ${data.count}.`));
+
+      const grid = el2('div', 'stat-grid');
+      const activeToday = (data.students || []).filter(s => s.active_today).length;
+      const gone = (data.students || []).filter(s => s.last_seen && (data.server_time - s.last_seen) > 86400 * 7).length;
+      grid.innerHTML = `
+        <div><b class="ok">${on.length}</b><span>сейчас на сайте</span></div>
+        <div><b>${activeToday}</b><span>занимались сегодня</span></div>
+        <div><b>${data.count}</b><span>учеников в классе</span></div>
+        <div><b class="${gone ? 'bad' : 'ok'}">${gone}</b><span>не заходят 7+ дней</span></div>`;
+      head.appendChild(grid);
+
+      /* список тех, кто онлайн */
+      const livePanel = el2('div', 'panel');
+      livePanel.appendChild(el2('h3', '', 'Сейчас в приложении'));
+      if (!on.length) {
+        livePanel.appendChild(el2('div', 'empty', 'Сейчас никого нет. Загляните позже — список обновляется сам.'));
+      } else {
+        const ul = el2('div', 'live-list');
+        on.forEach(p => {
+          const row = el2('div', 'live-row');
+          row.innerHTML = `<span class="live-dot"></span>
+            <span class="live-name"><b>${esc(p.display_name)}</b>
+              <i>${p.role === 'owner' ? 'владелец' : p.role === 'teacher' ? 'учитель' : 'ученик'}</i></span>
+            <span class="live-when">${timeAgo(p.seen)}</span>`;
+          ul.appendChild(row);
+        });
+        livePanel.appendChild(ul);
+      }
+      const rf = el2('button', 'btn btn-sm btn-ghost', '↻ Обновить');
+      rf.onclick = () => reload();
+      livePanel.appendChild(rf);
+      wrap.appendChild(livePanel);
+
+      /* занятия по дням: столбики за две недели */
+      const days = data.days || [];
+      if (days.length) {
+        const chart = el2('div', 'panel');
+        chart.appendChild(el2('h3', '', '📈 Заходы за две недели'));
+        chart.appendChild(el2('p', 'page-sub', 'Сколько учеников заходило в приложение каждый день.'));
+        const max = Math.max(1, ...days.map(d => d.users));
+        const bars = el2('div', 'days-chart');
+        days.forEach(d => {
+          const col = el2('div', 'day-col');
+          const h = Math.round((d.users / max) * 100);
+          col.innerHTML = `<div class="day-bar${d.users ? '' : ' off'}" style="height:${Math.max(6, h)}%"
+              title="${d.users} чел."></div>
+            <span class="day-num">${d.users || ''}</span>
+            <span class="day-lbl">${new Date(d.day * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>`;
+          bars.appendChild(col);
+        });
+        chart.appendChild(bars);
+        wrap.appendChild(chart);
+      }
+
+      /* кто давно не заходил — сюда учитель смотрит в первую очередь */
+      const absent = (data.students || [])
+        .filter(s => !s.online)
+        .sort((a, b) => (a.last_seen || 0) - (b.last_seen || 0))
+        .slice(0, 8);
+      const miss = el2('div', 'panel');
+      miss.appendChild(el2('h3', '', '⏰ Давно не заходили'));
+      if (!absent.length) {
+        miss.appendChild(el2('div', 'empty', 'Все ученики на месте.'));
+      } else {
+        const table = el2('div', 'live-list');
+        absent.forEach(s => {
+          const row = el2('div', 'live-row');
+          const late = s.last_seen && (data.server_time - s.last_seen) > 86400 * 3;
+          row.innerHTML = `<span class="live-dot off"></span>
+            <span class="live-name"><b>${esc(s.display_name)}</b><i>уроков: ${s.lessons_done}/${s.lessons_total}</i></span>
+            <span class="live-when ${late ? 'bad' : ''}">${s.last_seen ? timeAgo(s.last_seen) : 'ещё не заходил'}</span>`;
+          miss.appendChild(row);
+        });
+      }
+      wrap.appendChild(miss);
     }
 
     function paintSystem() {
