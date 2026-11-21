@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="汉语学习">
 <meta name="color-scheme" content="dark light">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
 
 <title>汉语学习 — Учим китайский язык</title>
 <meta name="description" content="Программа для изучения китайского языка: уроки, карточки, тоны, пропись иероглифов, чтение, статистика и панель учителя.">
@@ -52,6 +55,17 @@
 </script>
 <script>
 {{HOMEWORK}}
+</script>
+<script>
+/* Устанавливаем приложение на телефон и открываем его без сети.
+   Всё нужное уже внутри страницы, поэтому офлайн работает честно. */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => {
+    if (window.__swDone) return;
+    window.__swDone = true;
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
