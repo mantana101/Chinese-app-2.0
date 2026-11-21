@@ -91,6 +91,26 @@ class Compression(PwaBase):
         self.assertIn("Accept-Encoding", hdrs.get("Vary", ""))
 
 
+class SecurityHeaders(PwaBase):
+    def test_frame_is_protected_from_foreign_sites(self):
+        """Чужой сайт не должен уметь вставить приложение в свой iframe."""
+        _, hdrs, _ = self.get("/", gzip_ok=False)
+        self.assertIn("'self'", hdrs.get("Content-Security-Policy", ""))
+        self.assertNotIn("frame-ancestors *", hdrs.get("Content-Security-Policy", ""))
+
+    def test_worker_sources_allowed(self):
+        """Без worker-src service worker может не зарегистрироваться."""
+        _, hdrs, _ = self.get("/", gzip_ok=False)
+        self.assertIn("worker-src 'self'", hdrs.get("Content-Security-Policy", ""))
+
+    def test_close_buttons_have_labels(self):
+        """Кнопка «✕» без подписи озвучивается скринридером как «крестик»."""
+        import re
+        src = open(os.path.join(ROOT, "src", "auth.js"), encoding="utf-8").read()
+        for m in re.finditer(r'<button class="modal-x"[^>]*>', src):
+            self.assertIn("aria-label", m.group(0))
+
+
 class ManifestAndShell(PwaBase):
     def test_manifest_is_valid_json(self):
         st, hdrs, body = self.get("/manifest.json", gzip_ok=False)

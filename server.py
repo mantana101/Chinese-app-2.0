@@ -441,14 +441,22 @@ def send_common_headers(handler):
     handler.send_header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     # Приложение — один HTML-файл с inline-скриптами, поэтому 'unsafe-inline'
     # неизбежен; зато внешние источники и загрузка чужих скриптов запрещены.
-    # frame-ancestors '*' сохраняет работу внутри iframe (превью).
+    # frame-ancestors 'self' + X-Frame-Options: чужая страница не сможет
+    # вставить уроки в свой iframe и подсунуть ученику фальшивую форму входа.
     handler.send_header(
         "Content-Security-Policy",
         "default-src 'self'; script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-        "connect-src 'self'; font-src 'self'; frame-ancestors *; "
-        "base-uri 'none'; form-action 'self'",
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+        "connect-src 'self'; font-src 'self'; "
+        "frame-ancestors 'self' https://*.e2b.app; "
+        "base-uri 'none'; form-action 'self'; worker-src 'self'",
     )
+    # В превью-окружении страница намеренно живёт в iframe — там заголовок
+    # не отправляем, иначе сайт не откроется. В обычном домене он защищает
+    # от подделки формы входа через чужой iframe.
+    host = (getattr(handler, "headers", {}) or {}).get("Host", "") or ""
+    if "e2b.app" not in host and "localhost" not in host and "127.0.0.1" not in host:
+        handler.send_header("X-Frame-Options", "SAMEORIGIN")
 
 
 # ---------------- сессии ----------------

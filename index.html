@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#171327">
-<meta name="app-build" content="0705fe78f001">
+<meta name="app-build" content="4753255ea472">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4146,7 +4146,7 @@ const Auth = (() => {
 
       modal.innerHTML = `
         <div class="modal-head"><h2>${esc(it.student)} · ${esc(title)}</h2>
-        <button class="modal-x">✕</button></div>
+        <button class="modal-x" aria-label="Закрыть">✕</button></div>
         <p class="page-sub">Отправлено ${timeAgo(it.updated_at)}${it.graded_at ? ' · проверено ' + timeAgo(it.graded_at) : ''}</p>
         <div class="hw-answers">${rows || '<div class="empty">Заданий не найдено</div>'}</div>
         <h3>Оценка работы</h3>
@@ -4390,7 +4390,7 @@ const Auth = (() => {
       const s = d.summary;
       modal.innerHTML = `
         <div class="modal-head"><h2>${esc(d.user.display_name)} <span class="lvl-chip">${ROLE_RU[d.user.role]}</span></h2>
-        <button class="modal-x">✕</button></div>
+        <button class="modal-x" aria-label="Закрыть">✕</button></div>
         <div class="stat-grid">
           <div><b>${s.lessons_done}/${s.lessons_total}</b><span>уроков</span></div>
           <div><b>${s.avg_score}%</b><span>средний балл</span></div>
@@ -5425,7 +5425,7 @@ function cardListPanel() {
       <span class="cl-p">${esc(c.p)}</span>
       <span class="cl-r">${esc(c.r || '—')}</span>
       <span class="cl-box" title="Коробка Лейтнера">${'▮'.repeat(box + 1)}<i>${'▯'.repeat(5 - box)}</i></span>
-      <button class="cl-del" data-del="${esc(c.h)}" title="Удалить">✕</button>`);
+      <button class="cl-del" data-del="${esc(c.h)}" title="Удалить" aria-label="Удалить ${esc(c.h)} из карточек">✕</button>`);
     list.appendChild(row);
   });
   p.appendChild(list);
