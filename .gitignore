@@ -19,10 +19,4 @@ venv/
 # Метка сборки — генерируется build.py
 build-info.json
 
-# Промежуточные файлы сборки видео
-video/tools/out/
-
-# большой статический бинарник: не храним в репозитории
-video/tools/ffmpeg
-video/tools/hz.ttf
 node_modules/
