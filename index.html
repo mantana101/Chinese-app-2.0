@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6efe3">
-<meta name="app-build" content="1d437c658102">
+<meta name="app-build" content="7e1608894fb3">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1817,8 +1817,8 @@ button { font-family: inherit; cursor: pointer; }
 .panel { position: relative; }
 /* «Наклеено руками»: панели стоят не идеально, но совсем чуть-чуть.
    Больше поворота — и текст начнёт «плыть», поэтому доли градуса. */
-.panel:nth-of-type(odd) { --tilt: -.18deg; }
-.panel:nth-of-type(even) { --tilt: .16deg; }
+.panel:nth-of-type(odd) { --tilt: -.45deg; }
+.panel:nth-of-type(even) { --tilt: .4deg; }
 .panel { transform: rotate(var(--tilt, 0deg)); }
 .panel > h3::before {
   content: ''; flex: 0 0 3px; width: 3px; height: 16px; border-radius: 1px 2px 2px 1px;
@@ -2022,6 +2022,64 @@ button { font-family: inherit; cursor: pointer; }
   border-bottom: 1.5px solid rgba(178,58,46,.55); border-radius: 50%;
   transform: rotate(-1.5deg); filter: url(#rough-line);
 }
+
+/* ---------- «Вырезано руками» ----------
+   Идеально одинаковые углы — признак машинной вёрстки. У живого листа
+   бумаги один угол подвёрнут сильнее другого, поэтому скругления
+   у карточек и кнопок асимметричны. Разница в пару пикселей: заметно
+   не глазом, а ощущением. */
+.tile { border-radius: 17px 13px 15px 12px; }
+.panel { border-radius: 16px 12px 14px 11px; }
+.btn { border-radius: 12px 9px 11px 8px; }
+.card-item, .hw-task, .vcard, .dict-row { border-radius: 12px 9px 11px 8px; }
+#nav a { border-radius: 11px 8px 10px 8px; }
+.panel::before { border-radius: 11px 8px 9px 7px; }
+
+/* Загнутый угол у панели — как у страницы, которую листали. */
+.panel::after {
+  content: ''; position: absolute; right: 0; top: 0; width: 22px; height: 22px;
+  background: linear-gradient(225deg, var(--bg2) 0 50%, transparent 50%);
+  border-bottom-left-radius: 6px;
+  box-shadow: -1px 1px 2px rgba(90,64,30,.10);
+  opacity: .85; pointer-events: none;
+}
+:root[data-theme="dark"] .panel::after {
+  background: linear-gradient(225deg, var(--panel2) 0 50%, transparent 50%);
+}
+
+/* Пунктир «карандашом» вместо ровной линии в служебных блоках. */
+.empty, .hw-note, .qd-unlock {
+  border-top: 1px dashed rgba(154,112,22,.35); padding-top: 8px;
+}
+
+/* Наклейка-заметка от руки: бумажка на «скотче», чуть повёрнутая. */
+.hand-note {
+  position: relative; display: inline-block; margin: 4px 0 14px;
+  padding: 9px 14px 8px;
+  background: linear-gradient(180deg, #fff9e6, #fdf2d6);
+  border: 1px solid rgba(154,112,22,.28);
+  font-family: "Bradley Hand", "Segoe Script", "Comic Sans MS", "Noto Serif SC", cursive;
+  font-size: 13.5px; line-height: 1.35; color: #6b4a12;
+  transform: rotate(-1.6deg);
+  box-shadow: 0 2px 6px rgba(90,64,30,.14), 0 12px 24px rgba(90,64,30,.08);
+  max-width: 320px;
+}
+/* Полоска «скотча» сверху и снизу. */
+.hand-note::before, .hand-note::after {
+  content: ''; position: absolute; left: 50%; width: 62px; height: 15px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(226,214,180,.55);
+  border-left: 1px solid rgba(255,255,255,.6);
+  border-right: 1px solid rgba(255,255,255,.6);
+}
+.hand-note::before { top: -7px; }
+.hand-note::after { bottom: -7px; transform: translateX(-50%) rotate(1.6deg); }
+:root[data-theme="dark"] .hand-note {
+  background: linear-gradient(180deg, #3a3150, #322a48);
+  border-color: rgba(240,182,79,.24); color: #f6dfae;
+}
+:root[data-theme="dark"] .hand-note::before,
+:root[data-theme="dark"] .hand-note::after { background: rgba(240,182,79,.16); }
 
 </style>
 </head>
@@ -5367,6 +5425,18 @@ function renderHome(root) {
     </div>
     <div class="progress-ring" style="--p:${pct}"><div><b>${pct}%</b></div></div>
   `));
+
+  /* Записка на «скотче»: совет дня, написанный будто от руки.
+     Живая деталь, которую видно сразу — в отличие от тонких штрихов. */
+  const tips = [
+    'Учите по 10 минут каждый день — это лучше, чем час раз в неделю.',
+    'Проговаривайте вслух: язык запоминается ртом, а не глазами.',
+    'Ошибаться полезно: ошибка, которую заметили, запоминается крепче.',
+    'Повторяйте вчерашние слова перед новым уроком — так держится база.',
+    'Смотрите видео-урок дважды: сначала целиком, потом по репликам.'
+  ];
+  const tip = tips[new Date().getDate() % tips.length];
+  root.appendChild(el('div', 'hand-note', esc(tip)));
 
   const grid = el('div', 'card-grid');
   const tiles = [
