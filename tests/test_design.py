@@ -74,12 +74,13 @@ class Palette(unittest.TestCase):
         rule = src[start:src.index("}", start)]
         self.assertIn("var(--red)", rule)
 
-    def test_no_pure_white_panels(self):
+    def test_panels_are_white(self):
+        """Главный экран белый и однотонным — решение пользователя."""
         src = css()
         root = src[src.index(":root {"):]
         root = root[: root.index("}")]
-        self.assertNotIn("--panel: #fff;", root)
-        self.assertNotIn("--panel: #ffffff;", root)
+        self.assertIn("--panel: #ffffff;", root)
+        self.assertIn("--bg: #ffffff;", root)
 
 
 class Markup(unittest.TestCase):
@@ -92,7 +93,7 @@ class Markup(unittest.TestCase):
     def test_page_builds_with_new_theme_color(self):
         with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as f:
             html = f.read()
-        self.assertIn('content="#f6efe3"', html)
+        self.assertIn('content="#ffffff"', html)
         self.assertIn("repeating-linear-gradient", html)
 
 

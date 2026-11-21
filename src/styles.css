@@ -17,11 +17,13 @@
    киноварь вместо красного (ею ставят печати), золото для мелочей,
    нефрит для успеха. Чистого белого нет: бумага всегда чуть тёплая. */
 :root {
-  --bg: #f6efe3;
-  --bg2: #efe4d3;
-  --panel: #fdf8ee;
-  --panel2: #f8f0e2;
-  --line: #e3d4bd;
+  /* Главный (правый) экран — белый, одним цветом: решение пользователя.
+     Левое меню и тёмная тема живут по своим правилам. */
+  --bg: #ffffff;
+  --bg2: #f3f0e9;
+  --panel: #ffffff;
+  --panel2: #ffffff;
+  --line: #e2ddd0;
   --txt: #231f2c;
   --txt2: #5b5350;
   --txt3: #786f67;
@@ -92,13 +94,9 @@
 /* Первый экран — «свиток»: тёплая бумага, угол тушью, киноварная печать.
    Пятна неяркие: это фон для текста, а не картинка ради картинки. */
 :root:not([data-theme="dark"]) .hero {
-  background:
-    radial-gradient(700px 340px at 92% -10%, rgba(178,58,46,.16), transparent 62%),
-    radial-gradient(520px 300px at 2% 108%, rgba(154,112,22,.18), transparent 60%),
-    radial-gradient(460px 260px at 72% 120%, rgba(36,110,88,.10), transparent 65%),
-    linear-gradient(128deg, #fdf8ee 0%, #faf1e2 48%, #f6ecdb 100%);
-  border-color: rgba(178,58,46,.22);
-  box-shadow: 0 2px 4px rgba(90,64,30,.06), 0 18px 40px rgba(90,64,30,.13);
+  background: var(--panel);
+  border-color: var(--line);
+  box-shadow: 0 2px 4px rgba(90,64,30,.05), 0 18px 40px rgba(90,64,30,.10);
 }
 :root:not([data-theme="dark"]) .hero-seal {
   border-color: rgba(178,58,46,.55); color: #a8332a;
@@ -111,22 +109,19 @@
 }
 :root:not([data-theme="dark"]) .vcard .vc-h, :root:not([data-theme="dark"]) .gram-ex b,
 :root:not([data-theme="dark"]) .gl-row b, :root:not([data-theme="dark"]) .rt-v { color: var(--red); }
-:root:not([data-theme="dark"]) .tile:hover, :root:not([data-theme="dark"]) .opt:hover:not(:disabled) { background: rgba(154,105,18,.08); }
+:root:not([data-theme="dark"]) .tile:hover, :root:not([data-theme="dark"]) .opt:hover:not(:disabled) { background: rgba(0,0,0,.05); }
 :root:not([data-theme="dark"]) .search, :root:not([data-theme="dark"]) .auth-form input,
 :root:not([data-theme="dark"]) .g-input, :root:not([data-theme="dark"]) .gap-input { background: var(--panel); color: var(--txt); }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  /* Бумага: тёплый фон, тонкая «сетка волокон» и лёгкое зерно.
-     Пятна по углам имитируют размытую тушь — от киновари к золоту. */
+  /* Главный экран белый и однотонный: из «бумажной» фактуры остаётся
+     только едва заметное зерно, цветных пятен туши больше нет. */
   background:
-    radial-gradient(1200px 620px at 88% -16%, rgba(178,58,46,.13), transparent 60%),
-    radial-gradient(900px 520px at -6% 8%, rgba(154,112,22,.11), transparent 58%),
-    radial-gradient(800px 520px at 60% 108%, rgba(36,110,88,.09), transparent 62%),
-    repeating-linear-gradient(90deg, rgba(120,90,50,.022) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(0deg, rgba(120,90,50,.018) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, #f8f1e5 0%, var(--bg) 45%, #f2e8d9 100%);
+    repeating-linear-gradient(90deg, rgba(120,90,50,.02) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(120,90,50,.016) 0 1px, transparent 1px 3px),
+    var(--bg);
   background-attachment: fixed;
   color: var(--txt);
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
@@ -973,7 +968,7 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(79,209,165,.10); border: 1px solid rgba(79,209,165,.26);
   color: var(--ok-txt); font-size: 12.5px; line-height: 1.5; text-align: left;
 }
-:root:not([data-theme="dark"]) .vid-tip { background: rgba(43,123,99,.08); color: #2b6b57; }
+:root:not([data-theme="dark"]) .vid-tip { background: rgba(0,0,0,.04); color: #2b6b57; }
 @media (max-width: 900px) {
   .vid-tip { font-size: 12px; margin-top: 10px; }
   .vid-who { font-size: 11px; }
@@ -1931,4 +1926,54 @@ button { font-family: inherit; cursor: pointer; }
 @media (max-width: 560px) {
   .dlg-row { flex-wrap: wrap; }
   .dlg-btns { order: 3; }
+}
+
+/* ---------- Голосовой учитель-панда Мэймэй ----------
+   Панель в каждом уроке: панда слева, объяснение текстом рядом.
+   Во время речи у панды анимируется рот, в покое она моргает. */
+
+.panda-teacher {
+  display: flex; gap: 16px; align-items: flex-start;
+  margin-bottom: 18px;
+}
+.pa-wrap {
+  flex: 0 0 84px; width: 84px; height: 84px; padding: 0;
+  background: none; border: none; cursor: pointer; border-radius: 50%;
+}
+.pa-wrap:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.pa-svg { width: 84px; height: 84px; display: block; }
+.pa-face { fill: #fff; stroke: #2b2430; stroke-width: 3; }
+.pa-dark { fill: #2b2430; }
+.pa-blush { fill: #f3b0a0; opacity: .55; }
+.pa-mouth-closed { stroke: #2b2430; stroke-width: 3; stroke-linecap: round; }
+.pa-mouth-open { fill: #7a4a48; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.pa-eye { transform-box: fill-box; transform-origin: center; animation: paBlink 4.4s infinite; }
+@keyframes paBlink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(.1); }
+  97% { transform: scaleY(1); }
+}
+.panda-teacher.talking .pa-mouth-open {
+  opacity: 1; animation: paTalk .3s infinite alternate;
+}
+.panda-teacher.talking .pa-mouth-closed { opacity: 0; }
+@keyframes paTalk {
+  from { transform: scaleY(.35); }
+  to { transform: scaleY(1.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pa-eye, .panda-teacher.talking .pa-mouth-open { animation: none; }
+}
+
+.pa-body { flex: 1 1 auto; min-width: 0; }
+.pa-name { font-weight: 700; font-size: 14.5px; color: var(--txt); }
+.pa-hint { font-weight: 400; font-size: 12px; color: var(--txt3); margin-left: 6px; }
+.pa-text {
+  font-size: 14px; line-height: 1.6; color: var(--txt2);
+  margin: 6px 0 10px; max-width: 680px;
+}
+.pa-actions { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 560px) {
+  .panda-teacher { flex-direction: column; align-items: center; text-align: center; }
+  .pa-actions { justify-content: center; }
 }
