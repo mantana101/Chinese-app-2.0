@@ -3,20 +3,262 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#171327">
-<meta name="app-build" content="4753255ea472">
+<meta name="theme-color" content="#fbf6ef">
+<meta name="app-build" content="ce298a10a368">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="汉语学习">
 <meta name="color-scheme" content="dark light">
 <link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-192.png">
 
 <title>汉语学习 — Учим китайский язык</title>
 <meta name="description" content="Программа для изучения китайского языка: уроки, карточки, тоны, пропись иероглифов, чтение, статистика и панель учителя.">
 <style>
+/* Иероглифический шрифт для устройств, где своего нет.
+   На телефонах и в Windows китайский шрифт обычно уже есть, и тогда
+   ни один файл отсюда не скачивается: браузер берёт более ранний шрифт
+   из списка. А на «пустой» системе вместо квадратиков подгружается
+   Noto Sans SC — только те куски, где есть нужные иероглифы.
+
+   Кусков: 29, вес: 696 КБ.
+   Набор символов собран из самого курса.
+   Лицензия SIL OFL 1.1. */
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-4-400-normal.woff2') format('woff2');
+  unicode-range: U+1f1e9-1f1f5,U+1f1f7-1f1ff,U+1f21a,U+1f232,U+1f234-1f237,U+1f250-1f251,U+1f300,U+1f302-1f308,U+1f30a-1f311,U+1f315,U+1f319-1f320,U+1f324,U+1f327,U+1f32a,U+1f32c-1f32d,U+1f330-1f357,U+1f359-1f37e;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-60-400-normal.woff2') format('woff2');
+  unicode-range: U+6cb1-6cb2,U+6cb4-6cb5,U+6cb7,U+6cba,U+6cbc-6cbd,U+6cc1-6cc3,U+6cc5-6cc7,U+6cd0-6cd4,U+6cd6-6cd7,U+6cd9-6cda,U+6cde-6ce0,U+6ce4,U+6ce6,U+6ce9,U+6ceb-6cef,U+6cf1-6cf2,U+6cf6-6cf7,U+6cfa,U+6cfe,U+6d03-6d05,U+6d07-6d08,U+6d0a,U+6d0c,U+6d0e-6d11,U+6d13-6d14,U+6d16,U+6d18-6d1a,U+6d1c,U+6d1f,U+6d22-6d23,U+6d26-6d29,U+6d2b,U+6d2e-6d30,U+6d33,U+6d35-6d36,U+6d38-6d3a,U+6d3c,U+6d3f,U+6d42-6d44,U+6d48-6d49,U+6d4d,U+6d50,U+6d52,U+6d54,U+6d56-6d58,U+6d5a-6d5c,U+6d5e,U+6d60-6d61,U+6d63-6d65,U+6d67,U+6d6c-6d6d,U+6d6f,U+6d75,U+6d7b-6d7d,U+6d87,U+6d8a,U+6d8e,U+6d90-6d9a,U+6d9c-6da0,U+6da2-6da3,U+6da7,U+6daa-6dac,U+6dae,U+6db3-6db4,U+6db6,U+6db8,U+6dbc,U+6dbf,U+6dc2;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-76-400-normal.woff2') format('woff2');
+  unicode-range: U+5820,U+5822-5823,U+5825-5826,U+582c,U+582f,U+5831,U+583a,U+583d,U+583f-5842,U+5844-5846,U+5848,U+584a,U+584d,U+5852,U+5857,U+5859-585a,U+585c-585d,U+5862,U+5868-5869,U+586c-586d,U+586f-5873,U+5875,U+5879,U+587d-587e,U+5880-5881,U+5888-588a,U+588d,U+5892,U+5896-5898,U+589a,U+589c-589d,U+58a0-58a1,U+58a3,U+58a6,U+58a9,U+58ab-58ae,U+58b0,U+58b3,U+58bb-58bf,U+58c2-58c3,U+58c5-58c8,U+58ca,U+58cc,U+58ce,U+58d1-58d3,U+58d5,U+58d8-58d9,U+58de-58df,U+58e2,U+58e9,U+58ec,U+58ef,U+58f1-58f2,U+58f5,U+58f7-58f8,U+58fa,U+58fd,U+5900,U+5902,U+5906,U+5908-590c,U+590e,U+5910,U+5914,U+5919,U+591b,U+591d-591e,U+5920,U+5922-5925,U+5928,U+592c-592d,U+592f,U+5932,U+5936,U+593c,U+593e,U+5940-5942,U+5944,U+594c-594d,U+5950,U+5953,U+5958,U+595a,U+5961,U+5966-5968;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-86-400-normal.woff2') format('woff2');
+  unicode-range: U+279f-27a2,U+27a4-27a5,U+27a8,U+27b0,U+27b2-27b3,U+27b9,U+27e8-27e9,U+27f6,U+2800,U+28ec,U+2913,U+2921-2922,U+2934-2935,U+2a2f,U+2b05-2b07,U+2b50,U+2b55,U+2bc5-2bc6,U+2e1c-2e1d,U+2ebb,U+2f00,U+2f08,U+2f24,U+2f2d,U+2f2f-2f30,U+2f3c,U+2f45,U+2f63-2f64,U+2f74,U+2f83,U+2f8f,U+2fbc,U+3003,U+3005-3007,U+3012-3013,U+301c-301e,U+3021,U+3023-3024,U+3030,U+3034-3035,U+3041,U+3043,U+3045,U+3047,U+3049,U+3056,U+3058,U+305c,U+305e,U+3062,U+306c,U+3074,U+3077,U+307a,U+307c-307d,U+3080,U+308e,U+3090-3091,U+3099-309b,U+309d-309e,U+30a5,U+30bc,U+30be,U+30c2,U+30c5,U+30cc,U+30d8,U+30e2,U+30e8,U+30ee,U+30f0-30f2,U+30f4-30f6,U+30fd-30fe,U+3105-3126,U+3128;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-87-400-normal.woff2') format('woff2');
+  unicode-range: U+2651-2655,U+2658,U+265a-265b,U+265d-265e,U+2660-266d,U+266f,U+267b,U+2688,U+2693-2696,U+2698-2699,U+269c,U+26a0-26a1,U+26a4,U+26aa-26ab,U+26bd-26be,U+26c4-26c5,U+26d4,U+26e9,U+26f0-26f1,U+26f3,U+26f5,U+26fd,U+2702,U+2704-2706,U+2708-270f,U+2712-2718,U+271a-271b,U+271d,U+271f,U+2721,U+2724-2730,U+2732-2734,U+273a,U+273d-2744,U+2747-2749,U+274c,U+274e-274f,U+2753-2757,U+275b,U+275d-275e,U+2763,U+2765-2767,U+276e-276f,U+2776-277e,U+2780-2782,U+278a-278c,U+278e,U+2794-2796,U+279c;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-88-400-normal.woff2') format('woff2');
+  unicode-range: U+2550-2551,U+2554,U+2557,U+255a-255b,U+255d,U+255f-2560,U+2562-2563,U+2565-2567,U+2569-256a,U+256c-2572,U+2579,U+2580-2595,U+25a1,U+25a3,U+25a9-25ad,U+25b0,U+25b3-25bb,U+25bd-25c2,U+25c4,U+25c8-25cb,U+25cd,U+25d0-25d1,U+25d4-25d5,U+25d8,U+25dc-25e6,U+25ea-25eb,U+25ef,U+25fe,U+2600-2604,U+2609,U+260e-260f,U+2611,U+2614-2615,U+2618,U+261a-2620,U+2622-2623,U+262a,U+262d-2630,U+2639-2640,U+2642,U+2648-2650;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-89-400-normal.woff2') format('woff2');
+  unicode-range: U+23f0,U+23f3,U+2445,U+2449,U+2465-2471,U+2474-249b,U+24b8,U+24c2,U+24c7,U+24c9,U+24d0,U+24d2,U+24d4,U+24d8,U+24dd-24de,U+24e3,U+24e6,U+24e8,U+2500-2509,U+250b-2526,U+2528-2534,U+2536-2537,U+253b-2548,U+254a-254b;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-90-400-normal.woff2') format('woff2');
+  unicode-range: U+207c-2083,U+208c-208e,U+2092,U+20a6,U+20a8-20ad,U+20af,U+20b1,U+20b4-20b5,U+20b8-20ba,U+20bd,U+20db,U+20dd,U+20e0,U+20e3,U+2105,U+2109,U+2113,U+2116-2117,U+2120-2121,U+2126,U+212b,U+2133,U+2139,U+2194,U+2196-2199,U+21a0,U+21a9-21aa,U+21af,U+21b3,U+21b5,U+21ba-21bb,U+21c4,U+21ca,U+21cc,U+21d0-21d4,U+21e1,U+21e6-21e9,U+2200,U+2202,U+2205-2208,U+220f,U+2211-2212,U+2215,U+2217-2219,U+221d-2220,U+2223,U+2225,U+2227-222b,U+222e,U+2234-2237,U+223c-223d,U+2248,U+224c,U+2252,U+2256,U+2260-2261,U+2266-2267,U+226a-226b,U+226e-226f,U+2282-2283,U+2295,U+2297,U+2299,U+22a5,U+22b0-22b1,U+22b9,U+22bf,U+22c5-22c6,U+22ef,U+2304,U+2307,U+230b,U+2312-2314,U+2318,U+231a-231b,U+2323,U+239b,U+239d-239e,U+23a0,U+23e9;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-91-400-normal.woff2') format('woff2');
+  unicode-range: U+1d34-1d35,U+1d38-1d3a,U+1d3c,U+1d3f-1d40,U+1d49,U+1d4e-1d4f,U+1d52,U+1d55,U+1d5b,U+1d5e,U+1d9c,U+1da0,U+1dc4-1dc5,U+1e69,U+1e73,U+1ea0-1ea9,U+1eab-1ead,U+1eaf,U+1eb1,U+1eb3,U+1eb5,U+1eb7,U+1eb9,U+1ebb,U+1ebd-1ebe,U+1ec0-1ec3,U+1ec5-1ec6,U+1ec9-1ecd,U+1ecf-1ed3,U+1ed5,U+1ed7-1edf,U+1ee1,U+1ee3,U+1ee5-1eeb,U+1eed,U+1eef-1ef1,U+1ef3,U+1ef7,U+1ef9,U+1f62,U+1f7b,U+2001-2002,U+2004-2006,U+2009-200a,U+200c-2012,U+2015-2016,U+201a,U+201e-2021,U+2023,U+2025,U+2028,U+202a-202d,U+202f-2030,U+2032-2033,U+2035,U+2038,U+203c,U+203e-203f,U+2043-2044,U+2049,U+204d-204e,U+2060-2061,U+2070,U+2074-2078,U+207a-207b;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-101-400-normal.woff2') format('woff2');
+  unicode-range: U+161,U+926,U+928,U+939,U+93f-940,U+94d,U+e17,U+e22,U+e44,U+25c7,U+25ce,U+2764,U+3009,U+3016-3017,U+4e4d,U+4e53,U+4f5a,U+4f70,U+4fae,U+4fd8,U+4ffa,U+5011,U+501a,U+51c4,U+5225,U+547b,U+5495,U+54e8,U+54ee,U+5594,U+55d3,U+55dc,U+55fd,U+560e,U+565c,U+5662,U+5669,U+566c,U+56bc,U+5742,U+5824,U+5834,U+598a,U+5992,U+59a9,U+5a04,U+5ac9,U+5b75,U+5b7d,U+5bc5,U+5c49,U+5c90,U+5e1c,U+5e27,U+5e2b,U+5e37,U+5e90,U+618b,U+61f5,U+620a,U+620c,U+6273,U+62c7,U+62f7,U+6320,U+6342,U+6401-6402,U+6413,U+6512,U+655b,U+65a7,U+65f1,U+65f7,U+665f,U+6687,U+66a7,U+673d,U+67b8,U+6854,U+68d8,U+68fa,U+696d,U+6a02,U+6a0a,U+6a80,U+6b7c,U+6bd9,U+6c2e,U+6c76,U+6cf8,U+6d4a,U+6d85,U+6e24,U+6e32,U+6ec7,U+6f88,U+700f,U+701a,U+7078,U+707c,U+70ac,U+70c1,U+72e9,U+7409,U+7422,U+745a,U+7480,U+74a8,U+752b,U+7574,U+7656,U+7699,U+7737,U+785d,U+78be,U+79b9,U+7a3d,U+7a91,U+7a9f,U+7ae3,U+7b77,U+7c3f,U+7d1a,U+7d50,U+7d93,U+8042,U+808b,U+8236,U+82b8-82b9,U+82ef,U+8309,U+836b,U+83ef,U+8431,U+85c9,U+865e,U+868c,U+8759,U+8760,U+8845,U+89ba,U+8a2a,U+8aaa,U+8c41,U+8d2c,U+8d4e,U+8e66,U+8e6d,U+8eaf,U+902e,U+914b,U+916e,U+919b,U+949b,U+94a0,U+94b0,U+9541-9542,U+9556,U+95eb,U+95f5,U+964b,U+968b,U+96cc-96cd,U+96cf,U+9713,U+9890,U+98a8,U+9985,U+9992,U+9a6d,U+9a81,U+9a86,U+9ab8,U+9ca4,U+e606-e607,U+e60a,U+e60c,U+e60e,U+fe0f,U+ff02,U+ff1e;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-102-400-normal.woff2') format('woff2');
+  unicode-range: U+10c,U+627-629,U+639,U+644,U+64a,U+203b,U+2265,U+2463,U+2573,U+25b2,U+3448-3449,U+4e1e,U+4e5e,U+4f3a,U+4f5f,U+4fea,U+5026,U+508d,U+516e,U+5189,U+5254,U+5288,U+52d8,U+52fa,U+5306,U+5308,U+5364,U+5384,U+53ed,U+543c,U+5450,U+5455,U+5466,U+54c4,U+5578,U+55a7,U+561f,U+5631,U+572d,U+575f,U+57ae,U+57e0,U+5830,U+594e,U+5984,U+5993,U+5bdd,U+5c0d,U+5c7f,U+5c82,U+5e62,U+5ed3,U+5f08,U+607a,U+60bc,U+625b,U+6292,U+62e2,U+6363,U+6467,U+6714,U+675e,U+6771,U+67a2,U+67ff,U+6805,U+68a7,U+68e0,U+6930,U+6986,U+69a8,U+69df,U+6a44,U+6a5f,U+6c13,U+6c1f,U+6c22,U+6c2f,U+6c40,U+6c81,U+6c9b,U+6ca5,U+6da4,U+6df3,U+6e85,U+6eba,U+6ed5,U+6f13,U+6f33,U+6f62,U+715e,U+72c4,U+73d1,U+7405,U+7487,U+7578,U+75a4,U+75eb,U+7693,U+7738,U+7741,U+776b,U+7792,U+77a7,U+77a9,U+77b3,U+788c,U+7984,U+79a7,U+79e4,U+7a1a,U+7a57,U+7aa6,U+7b0b,U+7b5d,U+7c27,U+7c7d,U+7caa,U+7cd9,U+7cef,U+7eda,U+7ede,U+7f24,U+803f,U+8046,U+80fa,U+81fb,U+8207,U+8258,U+8335,U+8339,U+8354,U+840e,U+85b0,U+85fb,U+8695,U+86aa,U+8717,U+8749,U+874c,U+8996,U+89bd,U+89c5,U+8bdb,U+8bf5,U+8c5a,U+8cec,U+8d3f,U+8d9f,U+8e44,U+8fed,U+9005,U+9019,U+9082,U+90af,U+90dd,U+90e1,U+90f8,U+916f,U+9176,U+949e,U+94a7,U+94c2,U+9525,U+9580,U+95dc,U+96e2,U+96fb,U+9704,U+9a7c,U+9a7f,U+9b41,U+9ca8,U+9cc4,U+9cde,U+9e92,U+9ede,U+9f9a,U+e60b,U+e610,U+ff10,U+ff13,U+ff3b,U+ff3d,U+f012b;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-103-400-normal.woff2') format('woff2');
+  unicode-range: U+60,U+631,U+2606,U+3014-3015,U+309c,U+33a1,U+4e52,U+4ec6,U+4f86,U+4f8d,U+4fde,U+4fef,U+500b,U+502a,U+515c,U+518a,U+51a5,U+51f3,U+5243,U+52c9,U+52d5,U+53a2,U+53ee,U+54ce,U+54fa,U+54fc,U+5580,U+5587,U+563f,U+56da,U+5792,U+5815,U+5960,U+59d7,U+5b78,U+5b9b,U+5be1,U+5c4e,U+5c51,U+5c6f,U+5c9a,U+5cfb,U+5d16,U+5ed6,U+5f27,U+5f6a,U+609a,U+60df,U+6168,U+61c8,U+6236,U+62f1,U+62fd,U+631a,U+6328,U+632b,U+6346,U+638f,U+63a0,U+63c9,U+655e,U+6590,U+6615,U+6627,U+66ae,U+66e6,U+66f0,U+67da,U+67ec,U+6813,U+6816,U+6869,U+6893,U+68ad,U+68f5,U+6977,U+6984,U+69db,U+6b72,U+6bb7,U+6ce3,U+6cfb,U+6d47,U+6da1,U+6dc4,U+6e43,U+6eaf,U+6eff,U+6f8e,U+7011,U+7063,U+7076,U+7096,U+70ba,U+70db,U+70ef,U+7119-711a,U+7172,U+718f,U+7194,U+727a,U+72d9,U+72ed,U+7325,U+73ae,U+73ba,U+73c0,U+73fe,U+7410,U+7426,U+7455,U+7554,U+7576,U+75ae,U+75b9,U+762b,U+766b,U+7682,U+7750,U+7779,U+7784,U+77eb,U+77ee,U+78f7,U+79e9,U+7a79,U+7b1b,U+7b28,U+7bf7,U+7db2,U+7ec5,U+7eee,U+7f14,U+7f1a,U+7fe1,U+8087,U+809b,U+81b3,U+8231,U+830e,U+835f,U+83e9,U+849c,U+851a,U+868a,U+8718,U+874e,U+8822,U+8910,U+8944,U+8a3b,U+8bb6,U+8bbc,U+8e72,U+8f9c,U+900d,U+904b,U+904e,U+9063,U+90a2,U+90b9,U+9119,U+94f2,U+952f,U+9576-9577,U+9593,U+95f8,U+961c,U+969b,U+96a7,U+96c1,U+9716,U+9761,U+97ad,U+97e7,U+98a4,U+997a,U+9a73,U+9b44,U+9e3d,U+9ecf,U+9ed4,U+ff11-ff12,U+fffd;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-104-400-normal.woff2') format('woff2');
+  unicode-range: U+2003,U+2193,U+2462,U+4e19,U+4e2b,U+4e36,U+4ea8,U+4ed1,U+4ed7,U+4f51,U+4f63,U+4f83,U+50e7,U+5112,U+5167,U+51a4,U+51b6,U+5239,U+5265,U+532a,U+5351,U+537f,U+5401,U+548f,U+5492,U+54af,U+54b3,U+54bd,U+54d1,U+54df,U+554f,U+5564,U+5598,U+5632,U+56a3,U+56e7,U+574e,U+575d-575e,U+57d4,U+584c,U+58e4,U+5937,U+5955,U+5a05,U+5a1f,U+5a49,U+5ac2,U+5c39,U+5c61,U+5d0e,U+5de9,U+5e9a,U+5eb8,U+5f0a,U+5f13,U+5f6c,U+5f8c,U+603c,U+608d,U+611b,U+6127,U+62a0,U+62d0,U+634f,U+635e,U+63fd,U+6577,U+658b,U+65bc,U+660a,U+6643,U+6656,U+6703,U+6760,U+67af,U+67c4,U+67e0,U+6817,U+68cd,U+690e,U+6960,U+69b4,U+6a71,U+6aac,U+6b67,U+6bb4,U+6c55,U+6c70,U+6c82,U+6ca6,U+6cb8,U+6cbe,U+6ede,U+6ee5,U+6f4d,U+6f84,U+6f9c,U+7115,U+7121,U+722a,U+7261,U+7272,U+7280,U+72f8,U+7504,U+754f,U+75d8,U+767c,U+76ef,U+778e,U+77bb,U+77f6,U+786b,U+78b1,U+7948,U+7985,U+79be,U+7a83,U+7a8d,U+7eac,U+7eef,U+7ef8,U+7efd,U+7f00,U+803d,U+8086,U+810a,U+8165,U+819d,U+81a8,U+8214,U+829c,U+831c,U+832b,U+8367,U+83e0,U+83f1,U+8403,U+846b,U+8475,U+84b2,U+8513,U+8574,U+85af,U+86d9,U+86db,U+8acb,U+8bbd,U+8be0-8be1,U+8c0e,U+8d29,U+8d50,U+8d63,U+8f7f,U+9032,U+9042,U+90b1,U+90b5,U+9165,U+9175,U+94a6,U+94c5,U+950c,U+9610,U+9631,U+9699,U+973e,U+978d,U+97ec,U+97f6,U+984c,U+987d,U+9882,U+9965,U+996a,U+9972,U+9a8f,U+9ad3,U+9ae6,U+9cb8,U+9edb,U+e600,U+e60f,U+e611,U+ff05,U+ff0b;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-105-400-normal.woff2') format('woff2');
+  unicode-range: U+5e,U+2190,U+250a,U+25bc,U+25cf,U+4e56,U+4ea9,U+4f3d,U+4f6c,U+4f88,U+4fa8,U+4fcf,U+5029,U+5188,U+51f9,U+5203,U+524a,U+5256,U+529d,U+5375,U+53db,U+541f,U+5435,U+5457,U+548b,U+54c7,U+54d4,U+54e9,U+556a,U+5589,U+55bb,U+55e8,U+55ef,U+563b,U+566a,U+576a,U+58f9,U+598d,U+599e,U+59a8,U+5a9b,U+5ae3,U+5bb0,U+5bde,U+5c4c,U+5c60,U+5d1b,U+5deb,U+5df7,U+5e18,U+5f26,U+5f64,U+601c,U+6084,U+60e9,U+614c,U+6208,U+621a,U+6233,U+6254,U+62d8,U+62e6,U+62ef,U+6323,U+632a,U+633d,U+6361,U+6405,U+640f,U+6614,U+6642,U+6657,U+67a3,U+6808,U+683d,U+6850,U+6897,U+68b3,U+68b5,U+68d5,U+6a58,U+6b47,U+6b6a,U+6c28,U+6c90,U+6ca7,U+6cf5,U+6d51,U+6da9,U+6dc7,U+6dd1,U+6e0a,U+6e5b,U+6e9c,U+6f47,U+6f6d,U+70ad,U+70f9,U+710a,U+7130,U+71ac,U+745f,U+7476,U+7490,U+7529,U+7538,U+75d2,U+7696,U+76b1,U+76fc,U+777f,U+77dc,U+789f,U+795b,U+79bd,U+79c9,U+7a3b,U+7a46,U+7aa5,U+7ad6,U+7ca5,U+7cb9,U+7cdf,U+7d6e,U+7f06,U+7f38,U+7fa1,U+7fc1,U+8015,U+803b,U+80a2,U+80aa,U+8116,U+813e,U+82bd,U+8305,U+8328,U+8346,U+846c,U+8549,U+859b,U+8611,U+8680,U+87f9,U+884d,U+8877,U+888d,U+88d4,U+898b,U+8a79,U+8a93,U+8c05,U+8c0d,U+8c26,U+8d1e,U+8d31,U+8d81,U+8e22,U+8e81,U+8f90,U+8f96,U+90ca,U+916c,U+917f,U+9187,U+918b,U+9499,U+94a9,U+9524,U+9540,U+958b,U+9600,U+9640,U+96b6,U+96c7,U+96ef,U+98d9,U+9976,U+997f,U+9a74,U+9a84,U+9c8d,U+9e26,U+9e9f,U+ad6d,U+c5b4,U+d55c,U+ff0f;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-106-400-normal.woff2') format('woff2');
+  unicode-range: U+b0,U+2191,U+2460-2461,U+25c6,U+300e-300f,U+4e1b,U+4e7e,U+4ed5,U+4ef2,U+4f10,U+4f1e,U+4f50,U+4fa6,U+4faf,U+5021,U+50f5,U+5179,U+5180,U+51d1,U+522e,U+52a3,U+52c3,U+52cb,U+5300,U+5319,U+5320,U+5349,U+5395,U+53d9,U+541e,U+5428,U+543e,U+54b1,U+54c0,U+54d2,U+570b,U+5858,U+58f6,U+5974,U+59a5,U+59e8,U+59ec,U+5a36,U+5a9a,U+5ab3,U+5b99,U+5baa,U+5ce1,U+5d14,U+5d4c,U+5dc5,U+5de2,U+5e99,U+5e9e,U+5f18,U+5f66,U+5f70,U+6070,U+60d5,U+60e7,U+6101,U+611a,U+61be,U+6241,U+6252,U+626f,U+6296,U+62bc,U+62cc,U+6380,U+63a9,U+644a,U+6454,U+64a9,U+64b8,U+6500,U+6572,U+65a5,U+65a9,U+65ec,U+660f,U+6749,U+6795,U+67ab,U+68da,U+6912,U+6bbf,U+6bef,U+6cab,U+6cca,U+6ccc,U+6cfc,U+6d3d,U+6d78,U+6dee,U+6e17,U+6e34,U+6e83,U+6ea2,U+6eb6,U+6f20,U+6fa1,U+707f,U+70d8,U+70eb,U+714c,U+714e,U+7235,U+7239,U+73ca,U+743c,U+745c,U+7624,U+763e,U+76f2,U+77db,U+77e9,U+780d,U+7838,U+7845,U+78ca,U+796d,U+7a84,U+7aed,U+7b3c,U+7eb2,U+7f05,U+7f20,U+7f34,U+7f62,U+7fc5,U+7fd8,U+7ff0,U+800d,U+8036,U+80ba,U+80be,U+80c0-80c1,U+8155,U+817a,U+8180,U+81e3,U+8206,U+8247,U+8270,U+8299,U+82ad,U+8304,U+8393,U+83b9,U+840d,U+8427,U+8469,U+8471,U+84c4,U+84ec,U+853d,U+8681-8682,U+8721,U+8854,U+88d5,U+88f9,U+8bc0,U+8c0a,U+8c29,U+8c2d,U+8d41,U+8dea,U+8eb2,U+8f9f,U+903b,U+903e,U+9102,U+9493,U+94a5,U+94f8,U+95f7,U+9706,U+9709,U+9774,U+98a0,U+9e64,U+9f9f,U+e603;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-107-400-normal.woff2') format('woff2');
+  unicode-range: U+200b,U+2103,U+4e18,U+4e27-4e28,U+4e38,U+4e59,U+4e8f,U+4ead,U+4ec7,U+4fe9,U+503a,U+5085,U+5146,U+51af,U+51f8,U+52ab,U+5339,U+535c,U+5378,U+538c,U+5398,U+53f9,U+5415,U+5475,U+54aa,U+54ac,U+54b8,U+5582,U+5760,U+5764,U+57cb,U+5835,U+5885,U+5951,U+5983,U+59da,U+5a77,U+5b5d,U+5b5f,U+5bb5,U+5bc2,U+5be8,U+5bfa,U+5c2c,U+5c34,U+5c41,U+5c48,U+5c65,U+5cad,U+5e06,U+5e42,U+5ef7,U+5f17,U+5f25,U+5f6d,U+5f79,U+6028,U+6064,U+6068,U+606d,U+607c,U+6094,U+6109,U+6124,U+6247,U+626d,U+6291,U+629a,U+62ac,U+62b9,U+62fe,U+6324,U+6349,U+6367,U+6398,U+6495,U+64a4,U+64b0,U+64bc,U+64ce,U+658c,U+65ed,U+6602,U+6674,U+6691,U+66a8,U+674f,U+679a,U+67ef,U+67f4,U+680b,U+6876,U+68a8,U+6a59,U+6a61,U+6b20,U+6bc5,U+6d12,U+6d46,U+6d8c,U+6dc0,U+6e14,U+6e23,U+6f06,U+7164,U+716e,U+7199,U+71e5,U+72ac,U+742a,U+755c,U+75ab,U+75b2,U+75f4,U+7897,U+78b3,U+78c5,U+7978,U+79fd,U+7a74,U+7b4b,U+7b5b,U+7ece,U+7ed2,U+7ee3,U+7ef3,U+7f50,U+7f55,U+7f9e,U+7fe0,U+809d,U+8106,U+814a,U+8154,U+817b,U+818f,U+81c2,U+81ed,U+821f,U+82a6,U+82d1,U+8302,U+83c7,U+83ca,U+845b,U+848b,U+84c9,U+85e4,U+86ee,U+8700,U+8774,U+8881,U+8c1c,U+8c79,U+8d2a,U+8d3c,U+8eba,U+8f70,U+8fa9,U+8fb1,U+900a,U+9017,U+901d,U+9022,U+906e,U+946b,U+94dd,U+94ed,U+953b,U+95ef,U+95fa,U+95fd,U+96c0,U+971e,U+9753,U+9756,U+97e6,U+9881,U+9887,U+9b4f,U+9e2d,U+9f0e,U+e601-e602,U+e604-e605,U+ff5c;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-108-400-normal.woff2') format('woff2');
+  unicode-range: U+24,U+4e08,U+4e43,U+4e4f,U+4ef0,U+4f2a,U+507f,U+50ac,U+50bb,U+5151,U+51bb,U+51f6,U+51fd,U+5272,U+52fe,U+5362,U+53c9,U+53d4,U+53e0,U+543b,U+54f2,U+5507,U+5524,U+558a,U+55b5,U+561b,U+56ca,U+5782,U+57c3,U+5893,U+5915,U+5949,U+5962,U+59ae,U+59dc,U+59fb,U+5bd3,U+5c38,U+5cb3,U+5d07,U+5d29,U+5de1,U+5dfe,U+5e15,U+5eca,U+5f2f,U+5f7c,U+5fcc,U+6021,U+609f,U+60f9,U+6108,U+6148,U+6155,U+6170,U+61d2,U+6251,U+629b,U+62ab,U+62e8,U+62f3,U+6321,U+6350,U+6566,U+659c,U+65e8,U+6635,U+6655,U+6670,U+66f9,U+6734,U+679d,U+6851,U+6905,U+6b49,U+6b96,U+6c1b,U+6c41,U+6c6a,U+6c83,U+6cf3,U+6d9b,U+6dcb,U+6e1d,U+6e20-6e21,U+6eaa,U+6ee4,U+6ee9,U+6f58,U+70e4,U+722c,U+7262,U+7267,U+72b9,U+72e0,U+72ee,U+72f1,U+7334,U+73ab,U+7433,U+7470,U+758f,U+75d5,U+764c,U+7686,U+76c6,U+76fe,U+7720,U+77e2,U+7802,U+7816,U+788d,U+7891,U+7a00,U+7a9d,U+7b52,U+7bad,U+7c98,U+7cca,U+7eba,U+7eea,U+7ef5,U+7f1d,U+7f69,U+806a,U+809a,U+80bf,U+80c3,U+81c0,U+820c,U+82ac,U+82af,U+82cd,U+82d7,U+838e,U+839e,U+8404,U+84b8,U+852c,U+8587,U+8650,U+8679,U+86c7,U+8702,U+87ba,U+886b-886c,U+8870,U+8c10,U+8c23,U+8c6b,U+8d3e,U+8d4b-8d4c,U+8d64,U+8d6b,U+8d74,U+8e29,U+8f69,U+8f74,U+8fb0,U+8fdf,U+901b,U+9038,U+9093,U+9171,U+9489,U+94ae,U+94c3,U+9508,U+9510,U+9601,U+9614,U+964c,U+9675,U+971c,U+97f5,U+9888,U+98d8,U+9971,U+9aa4,U+9e3f,U+9e45,U+9e4f,U+9e70,U+9f7f,U+e715;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-109-400-normal.woff2') format('woff2');
+  unicode-range: U+a5,U+2192,U+2605,U+4e11,U+4e22,U+4e32,U+4f0d,U+4f0f,U+4f69,U+4ff1,U+50b2,U+5154,U+51dd,U+51f0,U+5211,U+5269,U+533f,U+5366-5367,U+5389,U+5413,U+5440,U+5446,U+5561,U+574a,U+5751,U+57ab,U+5806,U+5821,U+582a,U+58f3,U+5938,U+5948,U+5978,U+59d1,U+5a03,U+5a07,U+5ac1,U+5acc,U+5ae9,U+5bb4,U+5bc4,U+5c3f,U+5e3d,U+5e7d,U+5f92,U+5faa,U+5fe0,U+5ffd,U+6016,U+60a0,U+60dc,U+60e8,U+614e,U+6212,U+6284,U+62c6,U+62d3-62d4,U+63f4,U+642c,U+6478,U+6491-6492,U+64e6,U+6591,U+65a4,U+664b,U+6735,U+6746,U+67f1,U+67f3,U+6842,U+68af,U+68c9,U+68cb,U+6a31,U+6b3a,U+6bc1,U+6c0f,U+6c27,U+6c57,U+6cc4,U+6ce5,U+6d2a,U+6d66,U+6d69,U+6daf,U+6e58,U+6ecb,U+6ef4,U+707e,U+7092,U+70ab,U+71d5,U+7275,U+7384,U+73b2,U+7434,U+74e6,U+74f7,U+75bc,U+76c8,U+76d0,U+7709,U+77ac,U+7855,U+78a7,U+78c1,U+7a77,U+7b79,U+7c92,U+7cae,U+7cd5,U+7ea4,U+7eb5,U+7ebd,U+7f5a,U+7fd4,U+7ffc,U+8083,U+8096,U+80a0,U+80d6,U+80de,U+8102,U+8109,U+810f,U+8179,U+8292,U+82b3,U+8352,U+8361,U+83cc,U+841d,U+8461,U+8482,U+8521,U+857e,U+85aa,U+866b,U+8776,U+8896,U+889c,U+88f8,U+8a9e,U+8bc8,U+8bf8,U+8c0b,U+8c28,U+8d2b,U+8d2f,U+8d37,U+8d3a,U+8d54,U+8dc3,U+8dcc,U+8df5,U+8e0f,U+8e48,U+8f86,U+8f88,U+8f9e,U+8fc1,U+8fc8,U+8feb,U+9065,U+90a6,U+90aa,U+90bb,U+90c1,U+94dc,U+9521,U+9676,U+96d5,U+970d,U+9897,U+997c,U+9a70,U+9a76,U+9a9a,U+9ad4,U+9e23,U+9e7f,U+9f3b,U+e675,U+e6b9,U+ffe5;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-110-400-normal.woff2') format('woff2');
+  unicode-range: U+300c-300d,U+4e54,U+4e58,U+4e95,U+4ec1,U+4f2f,U+4f38,U+4fa3,U+4fca,U+503e,U+5141,U+5144,U+517c,U+51cc,U+51ed,U+5242,U+52b2,U+52d2,U+52e4,U+540a,U+5439,U+5448,U+5496,U+54ed,U+5565,U+5761,U+5766,U+58ee,U+593a,U+594b,U+594f,U+5954,U+5996,U+59c6,U+59ff,U+5b64,U+5bff,U+5c18,U+5c1d,U+5c97,U+5ca9,U+5cb8,U+5e9f,U+5ec9,U+5f04,U+5f7b,U+5fa1,U+5fcd,U+6012,U+60a6,U+60ac,U+60b2,U+60ef,U+626e,U+6270,U+6276,U+62d6,U+62dc,U+6316,U+632f,U+633a,U+6355,U+63aa,U+6447,U+649e,U+64c5,U+654c,U+65c1,U+65cb,U+65e6,U+6606,U+6731,U+675c,U+67cf,U+67dc,U+6846,U+6b8b,U+6beb,U+6c61,U+6c88,U+6cbf,U+6cdb,U+6cea,U+6d45,U+6d53,U+6d74,U+6d82,U+6da8,U+6db5,U+6deb,U+6eda,U+6ee8,U+6f0f,U+706d,U+708e,U+70ae,U+70bc,U+70c2,U+70e6,U+7237-7238,U+72fc,U+730e,U+731b,U+739b,U+73bb,U+7483,U+74dc,U+74f6,U+7586,U+7626,U+775b,U+77ff,U+788e,U+78b0,U+7956,U+7965,U+79e6,U+7af9,U+7bee,U+7c97,U+7eb1,U+7eb7,U+7ed1,U+7ed5,U+7f6a,U+7f72,U+7fbd,U+8017,U+808c,U+80a9,U+80c6,U+80ce,U+8150,U+8170,U+819c,U+820d,U+8230,U+8239,U+827e,U+8377,U+8389,U+83b2,U+8428,U+8463,U+867e,U+88c2,U+88d9,U+8986,U+8bca,U+8bde,U+8c13,U+8c8c,U+8d21,U+8d24,U+8d56,U+8d60,U+8d8b,U+8db4,U+8e2a,U+8f68,U+8f89,U+8f9b,U+8fa8,U+8fbd,U+9003,U+90ce,U+90ed,U+9189,U+94bb,U+9505,U+95f9,U+963b,U+9655,U+966a,U+9677,U+96fe,U+9896,U+99a8,U+9a71,U+9a82,U+9a91,U+9b45,U+9ece,U+9f20,U+feff,U+ff0d;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-111-400-normal.woff2') format('woff2');
+  unicode-range: U+4e4c,U+4e88,U+4ea1,U+4ea6,U+4ed3-4ed4,U+4eff,U+4f30,U+4fa7,U+4fc4,U+4fd7,U+500d,U+504f,U+5076-5077,U+517d,U+5192,U+51c9,U+51ef,U+5238,U+5251,U+526a,U+52c7,U+52df,U+52ff,U+53a6,U+53a8,U+53ec,U+5410,U+559d,U+55b7,U+5634,U+573e,U+5783,U+585e,U+586b,U+58a8,U+5999,U+59d3,U+5a1c,U+5a46,U+5b54-5b55,U+5b85,U+5b8b,U+5b8f,U+5bbf,U+5bd2,U+5c16,U+5c24,U+5e05,U+5e45,U+5e7c,U+5e84,U+5f03,U+5f1f,U+5f31,U+5f84,U+5f90,U+5fbd,U+5fc6,U+5fd9,U+5fe7,U+6052,U+6062,U+6089,U+60a3,U+60d1,U+6167,U+622a,U+6234,U+624e,U+6269,U+626c,U+62b5,U+62d2,U+6325,U+63e1,U+643a,U+6446,U+6562,U+656c,U+65e2,U+65fa,U+660c,U+6628,U+6652,U+6668,U+6676,U+66fc,U+66ff,U+6717,U+676d,U+67aa,U+67d4,U+6843,U+6881,U+68d2,U+695a,U+69fd,U+6a2a,U+6b8a,U+6c60,U+6c64,U+6c9f,U+6caa,U+6cc9,U+6ce1,U+6cfd,U+6d1b,U+6d1e,U+6d6e,U+6de1,U+6e10,U+6e7f,U+6f5c,U+704c,U+7070,U+7089,U+70b8,U+718a,U+71c3,U+723d,U+732a,U+73cd,U+7518,U+756a,U+75af,U+75be,U+75c7,U+76d2,U+76d7,U+7763,U+78e8,U+795d,U+79df,U+7c4d,U+7d2f,U+7ee9,U+7f13,U+7f8a,U+8000,U+8010,U+80af,U+80f6,U+80f8,U+8212,U+8273,U+82f9,U+83ab,U+83b1,U+83f2,U+8584,U+871c,U+8861,U+888b,U+88c1,U+88e4,U+8bd1,U+8bf1,U+8c31,U+8d5a,U+8d75-8d76,U+8de8,U+8f85,U+8fa3,U+8fc5,U+9006,U+903c,U+904d,U+9075,U+9178,U+9274,U+950b,U+9526,U+95ea,U+9636,U+9686,U+978b,U+987f,U+9a7e,U+9b42,U+9e1f,U+9ea6,U+9f13,U+9f84,U+ff5e;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-112-400-normal.woff2') format('woff2');
+  unicode-range: U+23,U+3d,U+4e01,U+4e39,U+4e73,U+4ecd,U+4ed9,U+4eea,U+4f0a,U+4f1f,U+4f5b,U+4fa0,U+4fc3,U+501f,U+50a8,U+515a,U+5175,U+51a0,U+51c0,U+51e1,U+51e4,U+5200,U+520a,U+5224,U+523a,U+52aa,U+52b1,U+52b3,U+5348,U+5353,U+5360,U+5371,U+5377,U+539a,U+541b,U+5434,U+547c,U+54e6,U+5510,U+5531,U+5609,U+56f0,U+56fa,U+5733,U+574f,U+5851,U+5854,U+5899,U+58c1,U+592e,U+5939,U+5976,U+5986,U+59bb,U+5a18,U+5a74,U+5b59,U+5b87,U+5b97,U+5ba0,U+5bab,U+5bbd-5bbe,U+5bf8,U+5c0a,U+5c3a,U+5c4a,U+5e16,U+5e1d,U+5e2d,U+5e8a,U+6015,U+602a,U+6050,U+6069,U+6162,U+61c2,U+6293,U+6297,U+62b1,U+62bd,U+62df,U+62fc,U+6302,U+635f,U+638c,U+63ed,U+6458,U+6469,U+6563,U+6620,U+6653,U+6696-6697,U+66dd,U+675f,U+676f-6770,U+67d0,U+67d3,U+684c,U+6865,U+6885,U+68b0,U+68ee,U+690d,U+6b23,U+6b32,U+6bd5,U+6c89,U+6d01,U+6d25,U+6d89,U+6da6,U+6db2,U+6df7,U+6ed1,U+6f02,U+70c8,U+70df,U+70e7,U+7126,U+7236,U+7259,U+731c,U+745e,U+74e3,U+751a,U+751c,U+7532,U+7545,U+75db,U+7761,U+7a0d,U+7b51,U+7ca4,U+7cd6,U+7d2b,U+7ea0,U+7eb9,U+7ed8,U+7f18,U+7f29,U+8033,U+804a,U+80a4-80a5,U+80e1,U+817f,U+829d,U+82e6,U+8336,U+840c,U+8499,U+864e,U+8651,U+865a,U+88ad,U+89e6,U+8bd7,U+8bfa,U+8c37,U+8d25,U+8d38,U+8ddd,U+8fea,U+9010,U+9012,U+906d,U+907f-9080,U+90d1,U+9177,U+91ca,U+94fa,U+9501,U+9634-9635,U+9694,U+9707,U+9738,U+9769,U+9a7b,U+9a97,U+9aa8,U+9b3c,U+9c81,U+9ed8;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-113-400-normal.woff2') format('woff2');
+  unicode-range: U+26,U+3c,U+d7,U+4e4e,U+4e61,U+4e71,U+4ebf,U+4f26,U+5012,U+51ac,U+51b0,U+51b2,U+51b7,U+5218,U+521a,U+5220,U+5237,U+523b,U+526f,U+5385,U+53bf,U+53e5,U+53eb,U+53f3,U+53f6,U+5409,U+5438,U+54c8,U+54e5,U+552f,U+5584,U+5706,U+5723,U+5750,U+575a,U+5987-5988,U+59b9,U+59d0,U+59d4,U+5b88,U+5b9c,U+5bdf,U+5bfb,U+5c01,U+5c04,U+5c3e,U+5c4b,U+5c4f,U+5c9b,U+5cf0,U+5ddd,U+5de6,U+5de8,U+5e01,U+5e78,U+5e7b,U+5e9c,U+5ead,U+5ef6,U+5f39,U+5fd8,U+6000,U+6025,U+604b,U+6076,U+613f,U+6258,U+6263,U+6267,U+6298,U+62a2,U+62e5,U+62ec,U+6311,U+6377,U+6388-6389,U+63a2,U+63d2,U+641e,U+642d,U+654f,U+6551,U+6597,U+65cf,U+65d7,U+65e7,U+6682,U+66f2,U+671d,U+672b,U+6740,U+6751,U+6768,U+6811,U+6863,U+6982,U+6bd2,U+6cf0,U+6d0b,U+6d17,U+6d59,U+6dd8,U+6dfb,U+6e7e,U+6f6e,U+6fb3,U+706f,U+719f,U+72af,U+72d0,U+72d7,U+732b,U+732e,U+7389,U+73e0,U+7530,U+7687,U+76d6,U+76db,U+7840,U+786c,U+79cb,U+79d2,U+7a0e,U+7a33,U+7a3f,U+7a97,U+7ade-7adf,U+7b26,U+7e41,U+7ec3,U+7f3a,U+8089,U+80dc,U+811a,U+8131,U+8138,U+821e,U+8349,U+83dc,U+8457,U+867d,U+86cb,U+8a89,U+8ba8,U+8bad,U+8bef,U+8bfe,U+8c6a,U+8d1d,U+8d4f,U+8d62,U+8dd1,U+8df3,U+8f6e,U+8ff9,U+900f,U+9014,U+9057,U+9192,U+91ce,U+9488,U+94a2,U+9547,U+955c,U+95f2,U+9644,U+964d,U+96c4-96c5,U+96e8,U+96f6-96f7,U+9732,U+9759,U+9760,U+987a,U+989c,U+9910,U+996d-996e,U+9b54,U+9e21,U+9ebb,U+9f50;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-114-400-normal.woff2') format('woff2');
+  unicode-range: U+7e,U+2026,U+4e03,U+4e25,U+4e30,U+4e34,U+4e45,U+4e5d,U+4e89,U+4eae,U+4ed8,U+4f11,U+4f19,U+4f24,U+4f34,U+4f59,U+4f73,U+4f9d,U+4fb5,U+5047,U+505c,U+5170,U+519c,U+51cf,U+5267,U+5356,U+5374,U+5382,U+538b,U+53e6,U+5426,U+542b,U+542f,U+5462,U+5473,U+554a,U+5566,U+5708,U+571f,U+5757,U+57df,U+57f9,U+5802,U+590f,U+591c,U+591f,U+592b,U+5965,U+5979,U+5a01,U+5a5a,U+5b63,U+5b69,U+5b81,U+5ba1,U+5ba3,U+5c3c,U+5c42,U+5c81,U+5de7,U+5dee,U+5e0c,U+5e10,U+5e55,U+5e86,U+5e8f,U+5ea7,U+5f02,U+5f52,U+5f81,U+5ff5,U+60ca,U+60e0,U+6279,U+62c5,U+62ff,U+63cf,U+6444,U+64cd,U+653b,U+65bd,U+65e9,U+665a,U+66b4,U+66fe,U+6728,U+6742,U+677e,U+67b6,U+680f,U+68a6,U+68c0,U+699c,U+6b4c,U+6b66,U+6b7b,U+6bcd,U+6bdb,U+6c38,U+6c47,U+6c49,U+6cb3,U+6cb9,U+6ce2,U+6d32,U+6d3e,U+6d4f,U+6e56,U+6fc0,U+7075,U+7206,U+725b,U+72c2,U+73ed,U+7565,U+7591,U+7597,U+75c5,U+76ae,U+76d1,U+76df,U+7834,U+7968,U+7981,U+79c0,U+7a7f,U+7a81,U+7ae5,U+7b14,U+7c89,U+7d27,U+7eaf,U+7eb3,U+7eb8,U+7ec7,U+7ee7,U+7eff,U+7f57,U+7ffb,U+805a,U+80a1,U+822c,U+82cf,U+82e5,U+8363,U+836f,U+84dd,U+878d,U+8840,U+8857,U+8863,U+8865,U+8b66,U+8bb2,U+8bda,U+8c01,U+8c08,U+8c46,U+8d1f,U+8d35,U+8d5b,U+8d5e,U+8da3,U+8ddf,U+8f93,U+8fdd,U+8ff0,U+8ff7,U+8ffd,U+9000,U+9047,U+9152,U+949f,U+94c1,U+94f6,U+9646,U+9648,U+9669,U+969c,U+96ea,U+97e9,U+987b,U+987e,U+989d,U+9970,U+9986,U+9c7c,U+9c9c;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-115-400-normal.woff2') format('woff2');
+  unicode-range: U+25,U+4e14,U+4e1d,U+4e3d,U+4e49,U+4e60,U+4e9a,U+4eb2,U+4ec5,U+4efd,U+4f3c,U+4f4f,U+4f8b,U+4fbf,U+5019,U+5145,U+514b,U+516b,U+516d,U+5174,U+5178,U+517b,U+5199,U+519b,U+51b3,U+51b5,U+5207,U+5212,U+5219,U+521d,U+52bf,U+533b,U+5343,U+5347,U+534a,U+536b,U+5370,U+53e4,U+53f2,U+5403,U+542c,U+547d,U+54a8,U+54cd,U+54ea,U+552e,U+56f4,U+5747,U+575b,U+5883,U+589e,U+5931,U+5947,U+5956-5957,U+5a92,U+5b83,U+5ba4,U+5bb3,U+5bcc,U+5c14,U+5c1a,U+5c3d,U+5c40,U+5c45,U+5c5e,U+5df4,U+5e72,U+5e95,U+5f80,U+5f85,U+5fb7,U+5fd7,U+601d,U+626b,U+627f,U+62c9,U+62cd,U+6309,U+63a7,U+6545,U+65ad,U+65af,U+65c5,U+666e,U+667a,U+670b,U+671b,U+674e,U+677f,U+6781,U+6790,U+6797,U+6821,U+6838-6839,U+697c,U+6b27,U+6b62,U+6bb5,U+6c7d,U+6c99,U+6d4b,U+6d4e,U+6d6a,U+6e29,U+6e2f,U+6ee1,U+6f14,U+6f2b,U+72b6,U+72ec,U+7387,U+7533,U+753b,U+76ca,U+76d8,U+7701,U+773c,U+77ed,U+77f3,U+7814,U+793c,U+79bb,U+79c1,U+79d8,U+79ef,U+79fb,U+7a76,U+7b11,U+7b54,U+7b56,U+7b97,U+7bc7,U+7c73,U+7d20,U+7eaa,U+7ec8,U+7edd,U+7eed,U+7efc,U+7fa4,U+804c,U+8058,U+80cc,U+8111,U+817e,U+826f,U+8303,U+843d,U+89c9,U+89d2,U+8ba2,U+8bbf,U+8bc9,U+8bcd,U+8be6,U+8c22,U+8c61,U+8d22,U+8d26-8d27,U+8d8a,U+8f6f,U+8f7b,U+8f83,U+8f91,U+8fb9,U+8fd4,U+8fdc,U+9002,U+94b1,U+9519,U+95ed,U+961f,U+9632-9633,U+963f,U+968f-9690,U+96be,U+9876,U+9884,U+98de,U+9988,U+9999,U+9ec4,U+ff1b;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-116-400-normal.woff2') format('woff2');
+  unicode-range: U+2b,U+40,U+3000,U+300a-300b,U+4e16,U+4e66,U+4e70,U+4e91-4e92,U+4e94,U+4e9b,U+4ec0,U+4eca,U+4f01,U+4f17-4f18,U+4f46,U+4f4e,U+4f9b,U+4fee,U+503c,U+5065,U+50cf,U+513f,U+5148,U+518d,U+51c6,U+51e0,U+5217,U+529e-529f,U+5341,U+534f,U+5361,U+5386,U+53c2,U+53c8,U+53cc,U+53d7-53d8,U+53ea,U+5404,U+5411,U+5417,U+5427,U+5468,U+559c,U+5668,U+56e0,U+56e2,U+56ed,U+5740,U+57fa,U+58eb,U+5904,U+592a,U+59cb,U+5a31,U+5b58,U+5b9d,U+5bc6,U+5c71,U+5dde,U+5df1,U+5e08,U+5e26,U+5e2e,U+5e93,U+5e97,U+5eb7,U+5f15,U+5f20,U+5f3a,U+5f62,U+5f69,U+5f88,U+5f8b,U+5fc5,U+600e,U+620f,U+6218,U+623f,U+627e,U+628a,U+62a4,U+62db,U+62e9,U+6307,U+6362,U+636e,U+64ad,U+6539,U+653f,U+6548,U+6574,U+6613,U+6625,U+663e,U+666f,U+672a,U+6750,U+6784,U+6a21,U+6b3e,U+6b65,U+6bcf,U+6c11,U+6c5f,U+6df1,U+706b,U+7167,U+724c,U+738b,U+73a9,U+73af,U+7403,U+7537,U+754c,U+7559,U+767d,U+7740,U+786e,U+795e,U+798f,U+79f0,U+7aef,U+7b7e,U+7bb1,U+7ea2,U+7ea6,U+7ec4,U+7ec6,U+7ecd,U+7edc,U+7ef4,U+8003,U+80b2,U+81f3-81f4,U+822a,U+827a,U+82f1,U+83b7,U+8425,U+89c2,U+89c8,U+8ba9,U+8bb8,U+8bc6,U+8bd5,U+8be2,U+8be5,U+8bed,U+8c03,U+8d23,U+8d2d,U+8d34,U+8d70,U+8db3,U+8fbe,U+8fce,U+8fd1,U+8fde,U+9001,U+901f-9020,U+90a3,U+914d,U+91c7,U+94fe,U+9500,U+952e,U+9605,U+9645,U+9662,U+9664,U+9700,U+9752,U+975e,U+97f3,U+9879,U+9886,U+98df,U+9a6c,U+9a8c,U+9ed1,U+9f99;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-117-400-normal.woff2') format('woff2');
+  unicode-range: U+4e,U+201c-201d,U+3010-3011,U+4e07,U+4e1c,U+4e24,U+4e3e,U+4e48,U+4e50,U+4e5f,U+4e8b-4e8c,U+4ea4,U+4eab-4eac,U+4ecb,U+4ece,U+4ed6,U+4ee3,U+4ef6-4ef7,U+4efb,U+4f20,U+4f55,U+4f7f,U+4fdd,U+505a,U+5143,U+5149,U+514d,U+5171,U+5177,U+518c,U+51fb,U+521b,U+5229,U+522b,U+52a9,U+5305,U+5317,U+534e,U+5355,U+5357,U+535a,U+5373,U+539f,U+53bb,U+53ca,U+53cd,U+53d6,U+53e3,U+53f0,U+5458,U+5546,U+56db,U+573a,U+578b,U+57ce,U+58f0,U+590d,U+5934,U+5973,U+5b57,U+5b8c,U+5b98,U+5bb9,U+5bfc,U+5c06,U+5c11,U+5c31,U+5c55,U+5df2,U+5e03,U+5e38,U+5e76,U+5e94,U+5efa,U+5f71,U+5f97,U+5feb,U+6001,U+603b,U+60f3,U+611f,U+6216,U+624d,U+6253,U+6295,U+6301,U+6392,U+641c,U+652f,U+653e,U+6559,U+6599,U+661f,U+671f,U+672f,U+6761,U+67e5,U+6807,U+6837,U+683c,U+6848,U+6b22,U+6b64,U+6bd4,U+6c14,U+6c34,U+6c42,U+6ca1,U+6d41,U+6d77,U+6d88,U+6e05,U+6e38,U+6e90,U+7136,U+7231,U+7531,U+767e,U+76ee,U+76f4,U+771f,U+7801,U+793a,U+79cd,U+7a0b,U+7a7a,U+7acb,U+7ae0,U+7b2c,U+7b80,U+7ba1,U+7cbe,U+7d22,U+7ea7,U+7ed3,U+7ed9,U+7edf,U+7f16,U+7f6e,U+8001,U+800c,U+8272,U+8282,U+82b1,U+8350,U+88ab,U+88c5,U+897f,U+89c1,U+89c4,U+89e3,U+8a00,U+8ba1,U+8ba4,U+8bae-8bb0,U+8bbe,U+8bc1,U+8bc4,U+8bfb,U+8d28,U+8d39,U+8d77,U+8d85,U+8def,U+8eab,U+8f66,U+8f6c,U+8f7d,U+8fd0,U+9009,U+90ae,U+90fd,U+91cc-91cd,U+91cf,U+95fb,U+9650,U+96c6,U+9891,U+98ce,U+ff1f;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-118-400-normal.woff2') format('woff2');
+  unicode-range: U+d,U+3e,U+5f,U+7c,U+a0,U+a9,U+4e09-4e0b,U+4e0d-4e0e,U+4e13,U+4e1a,U+4e2a,U+4e3a-4e3b,U+4e4b,U+4e86,U+4e8e,U+4ea7,U+4eba,U+4ee4-4ee5,U+4eec,U+4f1a,U+4f4d,U+4f53,U+4f5c,U+4f60,U+4fe1,U+5165,U+5168,U+516c,U+5173,U+5176,U+5185,U+51fa,U+5206,U+5230,U+5236,U+524d,U+529b,U+52a0-52a1,U+52a8,U+5316,U+533a,U+53cb,U+53d1,U+53ef,U+53f7-53f8,U+5408,U+540c-540e,U+544a,U+548c,U+54c1,U+56de,U+56fd-56fe,U+5728,U+5730,U+5907,U+5916,U+591a,U+5927,U+5929,U+597d,U+5982,U+5b50,U+5b66,U+5b89,U+5b9a,U+5b9e,U+5ba2,U+5bb6,U+5bf9,U+5c0f,U+5de5,U+5e02,U+5e73-5e74,U+5e7f,U+5ea6,U+5f00,U+5f0f,U+5f53,U+5f55,U+5fae,U+5fc3,U+6027,U+606f,U+60a8,U+60c5,U+610f,U+6210-6211,U+6237,U+6240,U+624b,U+6280,U+62a5,U+63a5,U+63a8,U+63d0,U+6536,U+6570,U+6587,U+65b9,U+65e0,U+65f6,U+660e,U+662d,U+662f,U+66f4,U+6700,U+670d,U+672c,U+673a,U+6743,U+6765,U+679c,U+682a,U+6b21,U+6b63,U+6cbb,U+6cd5,U+6ce8,U+6d3b,U+70ed,U+7247-7248,U+7269,U+7279,U+73b0,U+7406,U+751f,U+7528,U+7535,U+767b,U+76f8,U+770b,U+77e5,U+793e,U+79d1,U+7ad9,U+7b49,U+7c7b,U+7cfb,U+7ebf,U+7ecf,U+7f8e,U+8005,U+8054,U+80fd,U+81ea,U+85cf,U+884c,U+8868,U+8981,U+89c6,U+8bba,U+8bdd,U+8bf4,U+8bf7,U+8d44,U+8fc7,U+8fd8-8fd9,U+8fdb,U+901a,U+9053,U+90e8,U+91d1,U+957f,U+95e8,U+95ee,U+95f4,U+9762,U+9875,U+9898,U+9996,U+9ad8,U+ff01,U+ff08-ff09;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-119-400-normal.woff2') format('woff2');
+  unicode-range: U+20-22,U+27-2a,U+2c-3b,U+3f,U+41-4d,U+4f-5d,U+61-7b,U+7d,U+ab,U+ae,U+b2,U+b7,U+bb,U+df-e5,U+e7-ea,U+ec-ed,U+f1-f4,U+f6,U+f9-fa,U+fc,U+101,U+103,U+113,U+12b,U+148,U+14d,U+16b,U+1ce,U+1d0,U+300-301,U+1ebf,U+1ec7,U+2013-2014,U+2022,U+2027,U+2039-203a,U+2122,U+3001-3002,U+3042,U+3044,U+3046,U+3048,U+304a-3055,U+3057,U+3059-305b,U+305d,U+305f-3061,U+3063-306b,U+306d-3073,U+3075-3076,U+3078-3079,U+307b,U+307e-307f,U+3081-308d,U+308f,U+3092-3093,U+30a1-30a4,U+30a6-30bb,U+30bd,U+30bf-30c1,U+30c3-30c4,U+30c6-30cb,U+30cd-30d7,U+30d9-30e1,U+30e3-30e7,U+30e9-30ed,U+30ef,U+30f3,U+30fb-30fc,U+3127,U+4e00,U+4e2d,U+65b0,U+65e5,U+6708-6709,U+70b9,U+7684,U+7f51,U+ff0c,U+ff0e,U+ff1a;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/noto-sans-sc-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
 /* ============================================================
    汉语学习 — стили
    ============================================================ */
@@ -26,35 +268,10 @@
    Теперь фон уходит в фиолетово-синий закат, тёплые акценты (янтарь,
    коралл) соседствуют с холодными (бирюза, лаванда), а плитки и номера
    уроков в каждом разделе получают свой цвет. */
+/* Белая тема — основная и единственная по умолчанию.
+   Мягкий тёплый фон и тёмный текст: страницу удобно читать днём,
+   на солнце и при слабом зрении, а иероглифы остаются контрастными. */
 :root {
-  --bg: #171327;
-  --bg2: #201a33;
-  --panel: #241d38;
-  --panel2: #2d2445;
-  --line: #3d3256;
-  --txt: #f7f1fb;
-  --txt2: #c3b6d6;
-  --txt3: #8f83a6;
-  --red: #e2544f;
-  --red2: #f37a5c;
-  --gold: #f0b64f;
-  --gold2: #ffd27a;
-  --jade: #4fd1a5;
-  --jade2: #7ef0cb;
-  --blue: #74a9ef;
-  --violet: #a98bf0;
-  --pink: #f28db4;
-  /* Цвета текста на цветных плашках: в светлой теме они темнее. */
-  --on-accent: #16101f;
-  --ok-txt: #a9f0d4;
-  --bad-txt: #ffc2bb;
-  --gold-txt: #ffe0a8;
-  --tint: 255,255,255;
-  --radius: 14px;
-  --shadow: 0 12px 32px rgba(10,6,24,.45);
-}
-/* Светлая тема — «бумага и закат»: тот же тёплый акцент, но светлый фон. */
-:root[data-theme="light"] {
   --bg: #fbf6ef;
   --bg2: #f3ece1;
   --panel: #fffdf9;
@@ -78,15 +295,49 @@
   --gold-txt: #8a5f12;
   --tint: 30,20,45;
   --shadow: 0 8px 24px rgba(60,40,25,.1);
+  --lift: 0 10px 26px rgba(60,40,25,.14);
+  --radius: 14px;
 }
-:root[data-theme="light"] #nav { background: rgba(255,253,248,.94); }
-:root[data-theme="light"] .mnav { background: rgba(255,253,248,.97); }
-:root[data-theme="light"] .hero { background: linear-gradient(135deg, #fffaf4, #f4ecf7); }
-:root[data-theme="light"] .vcard .vc-h, :root[data-theme="light"] .gram-ex b,
-:root[data-theme="light"] .gl-row b, :root[data-theme="light"] .rt-v { color: var(--red); }
-:root[data-theme="light"] .tile:hover, :root[data-theme="light"] .opt:hover:not(:disabled) { background: rgba(154,105,18,.08); }
-:root[data-theme="light"] .search, :root[data-theme="light"] .auth-form input,
-:root[data-theme="light"] .g-input, :root[data-theme="light"] .gap-input { background: #fff; color: var(--txt); }
+
+/* Тёмная тема «Закат» — включается кнопкой в настройках. */
+:root[data-theme="dark"] {
+  --bg: #171327;
+  --bg2: #201a33;
+  --panel: #241d38;
+  --panel2: #2d2445;
+  --line: #3d3256;
+  --txt: #f7f1fb;
+  --txt2: #c3b6d6;
+  --txt3: #8f83a6;
+  --red: #e2544f;
+  --red2: #f37a5c;
+  --gold: #f0b64f;
+  --gold2: #ffd27a;
+  --jade: #4fd1a5;
+  --jade2: #7ef0cb;
+  --blue: #74a9ef;
+  --violet: #a98bf0;
+  --pink: #f28db4;
+  --on-accent: #16101f;
+  --ok-txt: #a9f0d4;
+  --bad-txt: #ffc2bb;
+  --gold-txt: #ffe0a8;
+  --tint: 255,255,255;
+  --radius: 14px;
+  --shadow: 0 12px 32px rgba(10,6,24,.45);
+  --lift: 0 10px 26px rgba(0,0,0,.3);
+}
+
+/* Светлая тема — «бумага и закат»: тот же тёплый акцент, но светлый фон. */
+
+:root:not([data-theme="dark"]) #nav { background: rgba(255,253,248,.94); }
+:root:not([data-theme="dark"]) .mnav { background: rgba(255,253,248,.97); }
+:root:not([data-theme="dark"]) .hero { background: linear-gradient(135deg, #fffaf4, #f4ecf7); }
+:root:not([data-theme="dark"]) .vcard .vc-h, :root:not([data-theme="dark"]) .gram-ex b,
+:root:not([data-theme="dark"]) .gl-row b, :root:not([data-theme="dark"]) .rt-v { color: var(--red); }
+:root:not([data-theme="dark"]) .tile:hover, :root:not([data-theme="dark"]) .opt:hover:not(:disabled) { background: rgba(154,105,18,.08); }
+:root:not([data-theme="dark"]) .search, :root:not([data-theme="dark"]) .auth-form input,
+:root:not([data-theme="dark"]) .g-input, :root:not([data-theme="dark"]) .gap-input { background: #fff; color: var(--txt); }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -98,14 +349,19 @@ body {
     var(--bg);
   background-attachment: fixed;
   color: var(--txt);
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   font-size: 15px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   padding-bottom: 40px;
 }
+/* Иероглифы. Сначала шрифты, которые уже есть в системе (на телефонах и в
+   Windows китайский почти всегда установлен) — тогда ничего не качается.
+   Запасной вариант — Noto Sans SC, вшитый в сайт: он спасает от «квадратиков»
+   на устройствах без китайских шрифтов (см. fonts.css). */
 .zh, .vcard .vc-h, .fc-hanzi, .w-h, .d-h, .ph-h, .dict-row .d-h, .tt-s, .tc-s, .wi-h {
-  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", "PingFang SC", "Microsoft YaHei", serif;
+  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", serif;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -114,7 +370,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ---------- Каркас ---------- */
 .app { display: flex; min-height: 100vh; }
 #nav {
-  width: 232px; flex: 0 0 232px; background: rgba(23,19,39,.72); backdrop-filter: blur(14px);
+  width: 232px; flex: 0 0 232px; background: rgba(255,253,248,.9); backdrop-filter: blur(14px);
   border-right: 1px solid rgba(var(--tint),.06);
   border-right: 1px solid var(--line); padding: 18px 12px;
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
@@ -229,7 +485,7 @@ button { font-family: inherit; cursor: pointer; }
   display: flex; align-items: center; gap: 13px; padding: 15px 17px; border-radius: 14px;
   background: var(--panel); border: 1px solid var(--line); transition: .18s;
 }
-.tile:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 10px 26px rgba(0,0,0,.3), 0 0 0 1px var(--ic-line, rgba(240,182,79,.4)); }
+.tile:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: var(--lift), 0 0 0 1px var(--ic-line, rgba(240,182,79,.4)); }
 .tile-ic { font-size: 23px; width: 40px; height: 40px; display: grid; place-items: center; background: rgba(var(--tint),.045); border-radius: 10px; flex: 0 0 40px; }
 .tile b { display: block; font-size: 14.5px; }
 .tile span { font-size: 12px; color: var(--txt3); }
@@ -313,13 +569,13 @@ button { font-family: inherit; cursor: pointer; }
 .gap-row { display: flex; gap: 9px; }
 .gap-input {
   flex: 1; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line);
-  background: rgba(0,0,0,.3); color: var(--txt); font-size: 16px; font-family: "Noto Serif SC", serif;
+  background: rgba(var(--tint),.05); color: var(--txt); font-size: 16px; font-family: "Noto Serif SC", serif;
 }
 .gap-input:focus { outline: none; border-color: var(--gold); }
 .gap-input.right { border-color: var(--jade); background: rgba(79,209,165,.1); }
 .gap-input.wrong { border-color: var(--red); background: rgba(226,84,79,.1); }
 .order-line {
-  min-height: 50px; background: rgba(0,0,0,.28); border: 1px dashed var(--line); border-radius: 10px;
+  min-height: 50px; background: rgba(var(--tint),.05); border: 1px dashed var(--line); border-radius: 10px;
   padding: 10px; display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 12px;
 }
 .order-pool { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -386,11 +642,11 @@ button { font-family: inherit; cursor: pointer; }
 }
 .cc-in {
   padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line);
-  background: rgba(0,0,0,.28); color: var(--txt); font-size: 13.5px; min-width: 130px; flex: 1;
+  background: rgba(var(--tint),.05); color: var(--txt); font-size: 13.5px; min-width: 130px; flex: 1;
 }
 .cc-in.wide { flex: 1.6; min-width: 170px; }
 .cc-in:focus { outline: none; border-color: var(--gold); }
-:root[data-theme="light"] .cc-in { background: #fff; color: var(--txt); }
+:root:not([data-theme="dark"]) .cc-in { background: #fff; color: var(--txt); }
 .card-list { display: flex; flex-direction: column; gap: 5px; max-height: 430px; overflow-y: auto; }
 .cl-row { display: grid; grid-template-columns: 110px 120px 1fr 110px 30px; gap: 10px; align-items: center; padding: 8px 11px; border-radius: 8px; background: rgba(var(--tint),.028); font-size: 13.5px; }
 .cl-h { font-family: "Noto Serif SC", serif; font-size: 17px; }
@@ -471,7 +727,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ---------- Словарь ---------- */
 .search {
   width: 100%; padding: 12px 15px; border-radius: 11px; border: 1px solid var(--line);
-  background: rgba(0,0,0,.3); color: var(--txt); font-size: 14.5px; margin-bottom: 10px;
+  background: rgba(var(--tint),.05); color: var(--txt); font-size: 14.5px; margin-bottom: 10px;
 }
 .search:focus { outline: none; border-color: var(--gold); }
 .dict-count { color: var(--txt3); font-size: 12.5px; margin-bottom: 10px; }
@@ -547,7 +803,7 @@ button { font-family: inherit; cursor: pointer; }
 .field span { font-size: 12px; color: var(--txt3); text-transform: uppercase; letter-spacing: .7px; }
 .field input {
   padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line);
-  background: rgba(0,0,0,.3); color: var(--txt); font-size: 15px; font-family: inherit;
+  background: rgba(var(--tint),.05); color: var(--txt); font-size: 15px; font-family: inherit;
 }
 .field input:focus { outline: none; border-color: var(--gold); }
 .auth-error { background: rgba(226,84,79,.13); border-left: 3px solid var(--red); color: var(--bad-txt); padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: 13.5px; margin-top: 12px; }
@@ -608,7 +864,7 @@ button { font-family: inherit; cursor: pointer; }
 .lb-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); }
 .lb b { text-align: right; color: var(--gold); font-size: 12px; }
 .grade-edit { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-.g-input { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--txt); font-size: 14px; }
+.g-input { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); background: rgba(var(--tint),.05); color: var(--txt); font-size: 14px; }
 .g-input.wide { flex: 1; min-width: 200px; }
 .g-input:focus { outline: none; border-color: var(--gold); }
 .events { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
@@ -639,7 +895,7 @@ button { font-family: inherit; cursor: pointer; }
 .se-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
 .se-srv { background: rgba(226,84,79,.2); color: var(--bad-txt); }
 .se-cli { background: rgba(240,182,79,.18); color: var(--gold); }
-.se-det { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,.3); color: var(--txt2); font-size: 11.5px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.se-det { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: rgba(var(--tint),.05); color: var(--txt2); font-size: 11.5px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
 .site-foot {
   max-width: 960px; margin: 28px auto 0; padding: 14px 4px 8px;
   border-top: 1px solid var(--line); color: var(--txt3); font-size: 12.5px; text-align: center;
@@ -728,9 +984,9 @@ button { font-family: inherit; cursor: pointer; }
 .tutor-form { display: flex; gap: 8px; }
 .t-input {
   flex: 1; padding: 11px 14px; border-radius: 11px; border: 1px solid var(--line);
-  background: rgba(0,0,0,.28); color: var(--txt); font-size: 14.5px;
+  background: rgba(var(--tint),.05); color: var(--txt); font-size: 14.5px;
 }
-:root[data-theme="light"] .t-input { background: #fff; color: var(--txt); }
+:root:not([data-theme="dark"]) .t-input { background: #fff; color: var(--txt); }
 .t-input:focus { outline: none; border-color: var(--gold); }
 .tutor-fab {
   position: fixed; right: 20px; bottom: 22px; z-index: 35; width: 52px; height: 52px; border-radius: 50%;
@@ -854,7 +1110,7 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(116,169,239,.09); border: 1px solid rgba(116,169,239,.22);
   color: var(--txt2); font-size: 12.5px; line-height: 1.5;
 }
-:root[data-theme="light"] .tl-ru { border-top-color: rgba(0,0,0,.09); }
+:root:not([data-theme="dark"]) .tl-ru { border-top-color: rgba(0,0,0,.09); }
 /* на телефоне перевод удобнее читать с чуть большим межстрочным */
 @media (max-width: 900px) {
   .tl-ru { font-size: 14px; line-height: 1.55; }
@@ -873,7 +1129,7 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(79,209,165,.10); border: 1px solid rgba(79,209,165,.26);
   color: var(--ok-txt); font-size: 12.5px; line-height: 1.5; text-align: left;
 }
-:root[data-theme="light"] .vid-tip { background: rgba(43,123,99,.08); color: #2b6b57; }
+:root:not([data-theme="dark"]) .vid-tip { background: rgba(43,123,99,.08); color: #2b6b57; }
 @media (max-width: 900px) {
   .vid-tip { font-size: 12px; margin-top: 10px; }
   .vid-who { font-size: 11px; }
@@ -893,7 +1149,7 @@ button { font-family: inherit; cursor: pointer; }
   overflow: hidden;
   background: #0a0714;
   isolation: isolate;
-  box-shadow: 0 26px 60px rgba(0,0,0,.42), inset 0 0 0 1px rgba(var(--tint),.07);
+  box-shadow: var(--lift), inset 0 0 0 1px rgba(var(--tint),.07);
   animation: vs-in 1s cubic-bezier(.2,.8,.25,1) both;
 }
 @keyframes vs-in {
@@ -1232,7 +1488,7 @@ button { font-family: inherit; cursor: pointer; }
 .hw-line {
   min-height: 44px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
-  background: rgba(0,0,0,.28); border: 1px dashed var(--line);
+  background: rgba(var(--tint),.05); border: 1px dashed var(--line);
 }
 .hw-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .hw-chip {
@@ -1246,7 +1502,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .hw-input {
   width: 100%; padding: 10px 12px; border-radius: 10px; resize: vertical;
-  background: rgba(0,0,0,.3); border: 1px solid var(--line);
+  background: rgba(var(--tint),.05); border: 1px solid var(--line);
   color: var(--txt); font-size: 14.5px; font-family: inherit; line-height: 1.55;
 }
 .hw-input:focus { outline: none; border-color: var(--gold); }
@@ -1478,25 +1734,25 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ---------- Светлая тема: акценты темнее, ореолы мягче ---------- */
-:root[data-theme="light"] .hero::before { opacity: .32; }
-:root[data-theme="light"] .hero::after { opacity: .5; }
-:root[data-theme="light"] .tile { background: var(--panel); }
-:root[data-theme="light"] .tile::after { opacity: .35; }
-:root[data-theme="light"] .panel > h3::before { opacity: .85; }
+:root:not([data-theme="dark"]) .hero::before { opacity: .32; }
+:root:not([data-theme="dark"]) .hero::after { opacity: .5; }
+:root:not([data-theme="dark"]) .tile { background: var(--panel); }
+:root:not([data-theme="dark"]) .tile::after { opacity: .35; }
+:root:not([data-theme="dark"]) .panel > h3::before { opacity: .85; }
 
 @media (max-width: 900px) {
   .hero::before { width: 170px; height: 170px; right: -30px; top: -60px; }
   .page-title { font-size: 22px; }
 }
-:root[data-theme="light"] .progress-ring { box-shadow: 0 0 24px rgba(122,92,196,.2); }
-:root[data-theme="light"] #nav { border-right-color: rgba(30,20,45,.07); }
+:root:not([data-theme="dark"]) .progress-ring { box-shadow: 0 0 24px rgba(122,92,196,.2); }
+:root:not([data-theme="dark"]) #nav { border-right-color: rgba(30,20,45,.07); }
 
 .tile:hover { border-color: var(--ic-line, var(--gold)); }
 .tile:nth-child(12n+2):hover { border-color: var(--ic-line); }
 /* в светлой теме ореолы плиток мягче, чтобы не «кричали» */
-:root[data-theme="light"] .tile::after { opacity: .28; }
-:root[data-theme="light"] .tile:hover::after { opacity: .45; }
-:root[data-theme="light"] .tile:hover { box-shadow: 0 8px 20px rgba(60,40,25,.12); }
+:root:not([data-theme="dark"]) .tile::after { opacity: .28; }
+:root:not([data-theme="dark"]) .tile:hover::after { opacity: .45; }
+:root:not([data-theme="dark"]) .tile:hover { box-shadow: 0 8px 20px rgba(60,40,25,.12); }
 
 /* ---------- Чат помощника: «думаю» и живые карточки слов ---------- */
 .t-thinking { display: inline-flex; align-items: center; gap: 6px; color: var(--txt2); font-style: italic; }
@@ -1534,7 +1790,7 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(116,169,239,.16); color: var(--blue);
   border: 1px solid rgba(116,169,239,.35);
 }
-:root[data-theme="light"] .t-links a { color: #2f5f9e; }
+:root:not([data-theme="dark"]) .t-links a { color: #2f5f9e; }
 
 /* ---------- Кто сейчас на сайте ---------- */
 .live-list { display: flex; flex-direction: column; gap: 2px; }
@@ -3470,16 +3726,6 @@ function homeworkFor(id) {
 
 </script>
 <script>
-/* Карманный словарь помощника: HSK 1–6 с русским переводом
-   (LiudmilaLV/json_hsk) + HSK 2.0/3.0 и CC-CEDICT
-   (drkameleon/complete-hsk-vocabulary, MIT).
-   Файл генерируется: python3 tools/make-lexicon.py.
-   Строк: 1267. Формат: [иероглифы, пиньинь цифрами, пиньинь,
-   перевод, уровень HSK, частота, есть_в_курсе]. */
-const LEXICON_ROWS = [["了","le5","le","",1,3,1],["没有","mei2 you3","méi yǒu","haven't",1,46,1],["啊","a1","ā","interjection of surprise",1,47,1],["吧","ba1","bā","bar",1,58,1],["中","Zhong1","Zhōng","China",1,71,1],["吗","ma2","má","what?",1,83,1],["呢","ne5","ne","particle indicating that a previously asked question is to be applied to the preceding word",1,96,1],["手","shou3","shǒu","hand",1,190,1],["不要","bu4 yao4","bù yào","don't!",1,221,1],["不错","bu4 cuo4","bù cuò","correct",1,384,1],["回来","hui2 lai5","huí lai","to return",1,480,1],["学","xue2","xué","to learn",1,524,1],["面","mian4","miàn","face",1,604,1],["店","dian4","diàn","inn",1,732,1],["哪里","na3 li3","nǎ lǐ","where?",1,750,1],["那里","na4 li5","nà li","there",1,770,1],["出去","chu1 qu4","chū qù","to go out",1,784,1],["今年","jin1 nian2","jīn nián","this year",1,851,1],["不用","bu4 yong4","bù yòng","need not",1,1013,1],["山","Shan1","Shān","surname Shan",1,1030,1],["打开","da3 kai1","dǎ kāi","to open",1,1199,1],["肉","rou4","ròu","meat",1,1215,1],["国","Guo2","Guó","surname Guo",1,1527,1],["饭","fan4","fàn","cooked rice",1,1529,1],["有时候","you3 shi2 hou5","yǒu shí hou","sometimes",1,1725,1],["明年","ming2 nian2","míng nián","next year",1,2487,1],["这儿","zhe4 r5","zhè r","here",1,2522,1],["是不是","shi4 bu4 shi4","shì bù shì","is or isn't",1,2655,1],["开车","kai1 che1","kāi chē","to drive a car",1,2670,1],["上课","shang4 ke4","shàng kè","to go to class",1,3042,1],["下班","xia4 ban1","xià bān","to finish work",1,3207,1],["开会","kai1 hui4","kāi huì","to hold a meeting",1,4398,1],["车站","che1 zhan4","chē zhàn","rail station",1,4480,1],["走路","zou3 lu4","zǒu lù","to walk",1,4517,1],["爱","ai4","ài","любовь",1,5001,1],["八","ba1","bā","8",1,5002,1],["爸爸","ba4 ba","bà ba","папа",1,5003,1],["不客气","bu4 ke4 qi","bù kè qi","пожалуйста",1,5007,1],["不","bu4","bù","нет",1,5008,1],["菜","cai4","cài","блюдо",1,5009,1],["吃","chi1","chī","кушать",1,5011,1],["大","da4","dà","большой",1,5014,1],["点","dian3","diǎn","немного",1,5016,1],["都","dou1","dōu","все",1,5021,1],["读","du2","dú","читать",1,5022,1],["对不起","dui4 bu qi3","duì bu qǐ","извините",1,5023,1],["多少","duo1 shao","duō shao","сколько?",1,5025,1],["二","er4","èr","2",1,5027,1],["飞机","fei1 ji1","fēi jī","самолет",1,5029,1],["工作","gong1 zuo4","gōng zuò","работать",1,5033,1],["好","hao3","hǎo","хорошо",1,5036,1],["喝","he1","hē","пить",1,5037,1],["很","hen3","hěn","очень",1,5039,1],["会","hui4","huì","уметь",1,5042,1],["几","ji3","jǐ","несколько",1,5044,1],["家","jia1","jiā","семья",1,5045,1],["叫","jiao4","jiào","звать",1,5046,1],["今天","jin1 tian1","jīn tiān","сегодня",1,5047,1],["九","jiu3","jiǔ","9",1,5048,1],["看见","kan4 jian4","kàn jiàn","видеть",1,5051,1],["块","kuai4","kuài","кусок",1,5052,1],["零","ling2","líng","ноль",1,5058,1],["六","liu4","liù","6",1,5059,1],["妈妈","ma1 ma","mā ma","мама",1,5060,1],["买","mai3","mǎi","покупать",1,5062,1],["没","mei2","méi","нет",1,5064,1],["没关系","mei2 guan1 xi","méi guān xi","ничего страшного",1,5065,1],["明天","ming2 tian1","míng tiān","завтра",1,5067,1],["名字","ming2 zi","míng zi","имя",1,5068,1],["能","neng2","néng","мочь",1,5072,1],["你","ni3","nǐ","ты",1,5073,1],["七","qi1","qī","7",1,5079,1],["钱","qian2","qián","деньги",1,5080,1],["人","ren2","rén","человек",1,5085,1],["认识","ren4 shi","rèn shi","быть знакомым",1,5086,1],["日","ri4","rì","день",1,5087,1],["三","san1","sān","3",1,5088,1],["上","shang4","shàng","на",1,5090,1],["谁","shei2","shéi","кто?",1,5093,1],["十","shi2","shí","10",1,5095,1],["是","shi4","shì","являться",1,5097,1],["水","shui3","shuǐ","вода",1,5099,1],["四","si4","sì","4",1,5103,1],["岁","sui4","suì","год",1,5104,1],["他","ta1","tā","он",1,5105,1],["她","ta1","tā","она",1,5106,1],["天气","tian1 qi4","tiān qì","погода",1,5108,1],["我","wo3","wǒ","я",1,5112,1],["五","wu3","wǔ","5",1,5114,1],["喜欢","xi3 huan","xǐ huan","нравится ч-л или к-л",1,5115,1],["下","xia4","xià","под",1,5116,1],["下雨","xia4 yu3","xià yǔ","идет дождь",1,5118,1],["先生","xian1 sheng","xiān sheng","господин",1,5119,1],["现在","xian4 zai4","xiàn zài","сейчас",1,5120,1],["想","xiang3","xiǎng","хотеть",1,5121,1],["小","xiao3","xiǎo","маленький",1,5122,1],["小姐","xiao3 jie","xiǎo jie","мисс",1,5123,1],["写","xie3","xiě","писать",1,5125,1],["谢谢","xie4 xie","xiè xie","спасибо",1,5126,1],["星期","xing1 qi1","xīng qī","неделя",1,5127,1],["学校","xue2 xiao4","xué xiào","школа",1,5130,1],["一","yi1","yī","1",1,5131,1],["医院","yi1 yuan4","yī yuàn","больница",1,5134,1],["快要","kuai4 yao4","kuài yào","nearly at the point of",1,5135,1],["有","you3","yǒu","иметь",1,5136,1],["月","yue4","yuè","месяц",1,5137,1],["在","zai4","zài","находиться",1,5138,1],["再见","zai4 jian4","zài jiàn","до свидания",1,5139,1],["怎么样","zen3 me yang4","zěn me yàng","как? каким образом? как дела?",1,5141,1],["中国","Zhong1 guo2","Zhōng guó","Китай",1,5143,1],["昨天","zuo2 tian1","zuó tiān","вчера",1,5148,1],["坐","zuo4","zuò","сидеть",1,5149,1],["关上","guan1 shang4","guān shàng","to close",1,7234,1],["服务员","fu2 wu4 yuan2","fú wù yuán","официант",2,10,1],["把","ba3","bǎ","to hold",2,50,1],["鸡","ji1","jī","fowl",2,1356,1],["旅行","lü3 xing2","lǚ xíng","to travel",2,2385,1],["送给","song4 gei3","sòng gěi","to send",2,2733,1],["夏天","xia4 tian1","xià tiān","summer",2,2925,1],["冬天","dong1 tian1","dōng tiān","winter",2,3291,1],["邮件","you2 jian4","yóu jiàn","mail",2,3970,1],["春天","chun1 tian1","chūn tiān","spring",2,4411,1],["百","bai3","bǎi","100",2,5153,1],["别","bie2","bié","не надо",2,5157,1],["弟弟","di4 di","dì di","младший брат",2,5172,1],["房间","fang2 jian1","fáng jiān","комната",2,5175,1],["哥哥","ge1 ge","gē ge","старший брат",2,5180,1],["给","gei3","gěi","давать",2,5181,1],["公司","gong1 si1","gōng sī","фирма",2,5184,1],["贵","gui4","guì","дорогой",2,5185,1],["孩子","hai2 zi","hái zi","ребенок",2,5187,1],["好吃","hao3 chi1","hǎo chī","вкусный",2,5188,1],["号","hao4","hào","число",2,5189,1],["姐姐","jie3 jie","jiě jie","старшая сестра",2,5199,1],["可以","ke3 yi3","kě yǐ","мочь",2,5209,1],["卖","mai4","mài","продавать",2,5218,1],["忙","mang2","máng","занятой",2,5220,1],["妹妹","mei4 mei","mèi mei","младшая сестра",2,5222,1],["门","men2","mén","дверь",2,5223,1],["便宜","pian2 yi","pián yi","дешевый",2,5230,1],["起床","qi3 chuang2","qǐ chuáng","вставать с кровати",2,5233,1],["去年","qu4 nian2","qù nián","прошлый год",2,5236,1],["上班","shang4 ban1","shàng bān","ходить на работу",2,5238,1],["身体","shen1 ti3","shēn tǐ","тело",2,5239,1],["生病","sheng1 bing4","shēng bìng","заболеть",2,5240,1],["晚上","wan3 shang","wǎn shang","вечер",2,5255,1],["希望","xi1 wang4","xī wàng","надежда",2,5260,1],["洗","xi3","xǐ","мыть",2,5261,1],["休息","xiu1 xi","xiū xi","отдыхать",2,5267,1],["要","yao4","yào","хотеть",2,5273,1],["也","ye3","yě","тоже",2,5274,1],["已经","yi3 jing1","yǐ jīng","уже",2,5275,1],["因为","yin1 wei4","yīn wèi","так как",2,5279,1],["鱼","yu2","yú","рыба",2,5282,1],["早上","zao3 shang","zǎo shang","утром",2,5287,1],["知道","zhi1 dao4","zhī dào","знать",2,5295,1],["准备","zhun3 bei4","zhǔn bèi","готовиться",2,5296,1],["自行车","zi4 xing2 che1","zì xíng chē","велосипед",2,5297,1],["秋天","qiu1 tian1","qiū tiān","autumn",2,7055,1],["下雪","xia4 xue3","xià xuě","to snow",2,7185,1],["一路顺风","yi1 lu4 shun4 feng1","yī lù shùn fēng","to have a pleasant journey",2,17523,1],["不太","bu4 tai4","bù tài","Not too",2,58429,1],["出租车","chu1 zu1 che1","chū zū chē","такси",3,10,1],["地铁","di4 tie3","dì tiě","метро",3,10,1],["机场","ji1 chang3","jī chǎng","аэропорт",3,10,1],["火车","huo3 che1","huǒ chē","поезд",3,10,1],["药","yao4","yào","лекарство",3,10,1],["菜单","cai4 dan1","cài dān","меню",3,10,1],["父母","fu4 mu3","fù mǔ","father and mother",3,891,1],["发送","fa1 song4","fā sòng","to transmit",3,4350,1],["爱好","ai4 hao4","ài hào","хобби",3,5304,1],["比较","bi3 jiao4","bǐ jiào","сравнивать",3,5318,1],["必须","bi4 xu1","bì xū","должен",3,5320,1],["打算","da3 suan4","dǎ suàn","планировать",3,5345,1],["带","dai4","dài","носить",3,5346,1],["地方","di4 fang","dì fang","место",3,5353,1],["放","fang4","fàng","класть",3,5371,1],["附近","fu4 jin4","fù jìn","поблизости",3,5374,1],["花","hua1","huā","цветок",3,5398,1],["会议","hui4 yi4","huì yì","конференция",3,5405,1],["季节","ji4 jie2","jì jié","сезон",3,5411,1],["检查","jian3 cha2","jiǎn chá","проверять",3,5412,1],["经常","jing1 chang2","jīng cháng","часто",3,5428,1],["口","kou3","kǒu","рот",3,5441,1],["马上","ma3 shang4","mǎ shàng","сразу",3,5458,1],["拿","na2","ná","держать",3,5465,1],["努力","nu3 li4","nǔ lì","стараться",3,5473,1],["然后","ran2 hou4","rán hòu","потом",3,5488,1],["虽然","sui1 ran2","suī rán","although",3,5509,1],["太阳","tai4 yang2","tài yáng","солнце",3,5510,1],["疼","teng2","téng","больно",3,5513,1],["同事","tong2 shi4","tóng shì","коллега",3,5518,1],["完成","wan2 cheng2","wán chéng","заканчивать",3,5524,1],["为什么","wei4 shen2 me","wèi shén me","почему? зачем?",3,5529,1],["习惯","xi2 guan4","xí guàn","привыкать",3,5533,1],["一共","yi1 gong4","yī gòng","всего",3,5557,1],["以后","yi3 hou4","yǐ hòu","after",3,5560,1],["以前","yi3 qian2","yǐ qián","раньше",3,5561,1],["一直","yi1 zhi2","yī zhí","прямо",3,5565,1],["应该","ying1 gai1","yīng gāi","должен",3,5568,1],["愿意","yuan4 yi4","yuàn yì","желать",3,5575,1],["最近","zui4 jin4","zuì jìn","ближайший",3,5597,1],["暑假","shu3 jia4","shǔ jià","summer vacation",3,7249,1],["发烧","fa1 shao1","fā shāo","температура (у больного)",4,10,1],["感冒","gan3 mao4","gǎn mào","простуда",4,10,1],["打针","da3 zhen1","dǎ zhēn","сделать инъекцию",4,5664,1],["对面","dui4 mian4","duì miàn","напротив",4,5696,1],["翻译","fan1 yi4","fān yì","перевод",4,5705,1],["负责","fu4 ze2","fù zé","отвечать за",4,5723,1],["刚刚","gang1 gang","gāng gang","just recently",4,5735,1],["火","huo3","huǒ","огонь",4,5787,1],["寄","ji4","jì","отправлять",4,5797,1],["计划","ji4 hua4","jì huà","план",4,5800,1],["加班","jia1 ban1","jiā bān","работать сверхурочно",4,5804,1],["坚持","jian1 chi2","jiān chí","твёрдо придерживаться",4,5808,1],["将来","jiang1 lai2","jiāng lái","будущий",4,5811,1],["咳嗽","ke2 sou","ké sou","кашлять",4,5848,1],["穿上","chuan1 shang5","chuān shang","to put on",4,5899,1],["请假","qing3 jia4","qǐng jià","просить об отпуске",4,5941,1],["任务","ren4 wu","rèn wu","задача",4,5956,1],["性格","xing4 ge2","xìng gé","природа",4,6082,1],["买单","mai3 dan1","mǎi dān","оплатить счёт",5,10,1],["挂号","gua4 hao4","guà hào","записаться к врачу",5,10,1],["点菜","dian3 cai4","diǎn cài","заказывать блюда",5,10,1],["零钱","ling2 qian2","líng qián","мелочь",5,10,1],["田","Tian2","Tián","surname Tian",5,3192,1],["报告","bao4 gao4","bào gào","докладывать",5,6224,1],["不好意思","bu4 hao3 yi4 si","bù hǎo yì si","to feel embarrassed",5,6263,1],["过敏","guo4 min3","guò mǐn","непереносимость",5,6588,1],["开心","kai1 xin1","kāi xīn","весело",5,6757,1],["来自","lai2 zi4","lái zì","происходить из",5,6783,1],["老板","lao3 ban3","lǎo bǎn","хозяин",5,6790,1],["实现","shi2 xian4","shí xiàn","реализовать",5,7066,1],["温暖","wen1 nuan3","wēn nuǎn","тёплый",5,7203,1],["文件","wen2 jian4","wén jiàn","документ",5,7206,1],["项目","xiang4 mu4","xiàng mù","пункт",5,7248,1],["头疼","tou2 teng2","tóu téng","headache",6,5962,1],["凉爽","liang2 shuang3","liáng shuǎng","cool and refreshing",6,18060,1],["刮风","gua1 feng1","guā fēng","to be windy",7,35620,1],["杯子","bei1 zi","bēi zi","стакан",1,5004,0],["北京","Bei3 jing1","Běi jīng","Пекин",1,5005,0],["茶","cha2","chá","чай",1,5010,0],["打电话","da3 dian4 hua4","dǎ diàn huà","звонить по телефону",1,5013,0],["的","de","de","притяжательная частица",1,5015,0],["电脑","dian4 nao3","diàn nǎo","компьютер",1,5017,0],["电视","dian4 shi4","diàn shì","телевидение",1,5018,0],["电影","dian4 ying3","diàn yǐng","фильм",1,5019,0],["东西","dong1 xi","dōng xi","вещь",1,5020,0],["多","duo1","duō","много",1,5024,0],["儿子","er2 zi","ér zi","сын",1,5026,0],["饭馆","fan4 guan3","fàn guǎn","кафе",1,5028,0],["分钟","fen1 zhong1","fēn zhōng","минута",1,5030,0],["高兴","gao1 xing4","gāo xìng","радостный",1,5031,0],["狗","gou3","gǒu","собака",1,5034,0],["汉语","Han4 yu3","Hàn yǔ","китайский язык",1,5035,0],["和","he2","hé","и",1,5038,0],["后面","hou4 mian","hòu mian","сзади",1,5040,0],["回","hui2","huí","возвращаться",1,5041,0],["火车站","huo3 che1 zhan4","huǒ chē zhàn","ж/д возкал",1,5043,0],["开","kai1","kāi","открывать",1,5049,0],["看","kan4","kàn","смотреть",1,5050,0],["来","lai2","lái","приходить",1,5053,0],["老师","lao3 shi1","lǎo shī","учитель",1,5054,0],["冷","leng3","lěng","холодный",1,5056,0],["里","li3","lǐ","внутри",1,5057,0],["猫","mao1","māo","кошка",1,5063,0],["米饭","mi3 fan4","mǐ fàn","рис",1,5066,0],["哪","na3","nǎ","который?",1,5069,0],["那","na4","nà","тот",1,5070,0],["年","nian2","nián","год",1,5074,0],["女儿","nv3 er2","nǚ ér","дочь",1,5075,0],["朋友","peng2 you","péng you","друг",1,5076,0],["漂亮","piao4 liang","piào liang","красивый",1,5077,0],["苹果","ping2 guo3","píng guǒ","яблоко",1,5078,0],["前面","qian2 mian4","qián miàn","спереди",1,5081,0],["请","qing3","qǐng","приглашать",1,5082,0],["去","qu4","qù","идти",1,5083,0],["热","re4","rè","горячий",1,5084,0],["商店","shang1 dian4","shāng diàn","магазин",1,5089,0],["上午","shang4 wu3","shàng wǔ","утро",1,5091,0],["少","shao3","shǎo","мало",1,5092,0],["什么","shen2 me","shén me","что? какой?",1,5094,0],["时候","shi2 hou","shí hou","время",1,5096,0],["书","shu1","shū","книга",1,5098,0],["水果","shui3 guo3","shuǐ guǒ","фрукт",1,5100,0],["睡觉","shui4 jiao4","shuì jiào","спать",1,5101,0],["说话","shuo1 hua4","shuō huà","говорить",1,5102,0],["太","tai4","tài","слишком",1,5107,0],["听","ting1","tīng","слушать",1,5109,0],["同学","tong2 xue2","tóng xué","одногруппник",1,5110,0],["喂","wei4","wèi","алло",1,5111,0],["我们","wo3 men","wǒ men","мы",1,5113,0],["下午","xia4 wu3","xià wǔ","после обеда",1,5117,0],["些","xie1","xiē","некоторые",1,5124,0],["学生","xue2 sheng","xué sheng","студент",1,5128,0],["学习","xue2 xi2","xué xí","учиться",1,5129,0],["衣服","yi1 fu","yī fu","одежда",1,5132,0],["医生","yi1 sheng1","yī shēng","врач",1,5133,0],["椅子","yi3 zi","yǐ zi","стул",1,5135,0],["怎么","zen3 me","zěn me","как? каким образом?",1,5140,0],["这","zhe4","zhè","это",1,5142,0],["中午","zhong1 wu3","zhōng wǔ","полдень",1,5144,0],["住","zhu4","zhù","жить",1,5145,0],["桌子","zhuo1 zi","zhuō zi","стол",1,5146,0],["字","zi4","zì","иероглиф",1,5147,0],["做","zuo4","zuò","делать",1,5150,0],["饭店","fan4 dian4","fàn diàn","ресторан; гостиница",2,10,0],["白","bai2","bái","белый",2,5152,0],["帮助","bang1 zhu4","bāng zhù","помогать",2,5154,0],["报纸","bao4 zhi3","bào zhǐ","газета",2,5155,0],["比","bi3","bǐ","сравнивать",2,5156,0],["唱歌","chang4 ge1","chàng gē","петь",2,5159,0],["出","chu1","chū","выходить",2,5160,0],["穿","chuan1","chuān","носить",2,5161,0],["船","chuan2","chuán","корабль",2,5162,0],["次","ci4","cì","раз",2,5163,0],["从","cong2","cóng","из",2,5164,0],["错","cuo4","cuò","ошибка",2,5165,0],["打篮球","da2 lan2 qiu2","dá lán qiú","играть в баскетбол",2,5166,0],["大家","da4 jia1","dà jiā","все",2,5167,0],["但是","dan4 shi4","dàn shì","но",2,5168,0],["到","dao4","dào","достигать",2,5169,0],["得","dei3","děi","получать",2,5171,0],["第一","di4 yi1","dì yī","первый",2,5173,0],["懂","dong3","dǒng","понимать",2,5174,0],["非常","fei1 chang2","fēi cháng","очень",2,5176,0],["高","gao1","gāo","высокий",2,5178,0],["告诉","gao4 su","gào su","проинформировать",2,5179,0],["公共汽车","gong1 gong4 qi4 che1","gōng gòng qì chē","общественный автобус",2,5182,0],["公斤","gong1 jin1","gōng jīn","килограмм",2,5183,0],["黑","hei1","hēi","черный",2,5190,0],["红","hong2","hóng","красный",2,5191,0],["欢迎","huan1 ying2","huān yíng","добро пожаловать",2,5192,0],["还","huan2","huán","возвращать",2,5193,0],["回答","hui2 da2","huí dá","отвечать",2,5194,0],["鸡蛋","ji1 dan4","jī dàn","куриное яйцо",2,5196,0],["教室","jiao4 shi4","jiào shì","аудитория",2,5198,0],["介绍","jie4 shao4","jiè shào","знакомить с кем-либо/чем-либо",2,5200,0],["进","jin4","jìn","входить",2,5201,0],["近","jin4","jìn","ближний",2,5202,0],["就","jiu4","jiù","сразу же",2,5203,0],["觉得","jue2 de","jué de","думать",2,5204,0],["咖啡","ka1 fei1","kā fēi","кофе",2,5205,0],["开始","kai1 shi3","kāi shǐ","начинать",2,5206,0],["考试","kao3 shi4","kǎo shì","экзамен",2,5207,0],["可能","ke3 neng2","kě néng","возможно",2,5208,0],["课","ke4","kè","урок",2,5210,0],["快","kuai4","kuài","быстрый",2,5211,0],["快乐","kuai4 le4","kuài lè","веселый",2,5212,0],["累","lei4","lèi","уставший",2,5213,0],["离","li2","lí","разлучаться",2,5214,0],["两","liang3","liǎng","два",2,5215,0],["路","lu4","lù","дорога",2,5216,0],["旅游","lv3 you2","lǚ yóu","путешествовать",2,5217,0],["慢","man4","màn","медленный",2,5219,0],["每","mei3","měi","каждый",2,5221,0],["男人","nan2 ren2","nán rén","a man",2,5224,0],["您","nin2","nín","Вы",2,5225,0],["牛奶","niu2 nai3","niú nǎi","коровье молоко",2,5226,0],["女人","nv3 ren2","nǚ rén","женщина",2,5227,0],["旁边","pang2 bian1","páng biān","рядом",2,5228,0],["跑步","pao3 bu4","pǎo bù","бегать",2,5229,0],["票","piao4","piào","билет",2,5231,0],["妻子","qi1 zi","qī zi","жена",2,5232,0],["千","qian1","qiān","тысяча",2,5234,0],["晴","qing2","qíng","ясный",2,5235,0],["让","rang4","ràng","позволять",2,5237,0],["生日","sheng1 ri4","shēng rì","день рождения",2,5241,0],["时间","shi2 jian1","shí jiān","время",2,5242,0],["事情","shi4 qing","shì qing","дело",2,5243,0],["手表","shou3 biao3","shǒu biǎo","наручные часы",2,5244,0],["手机","shou3 ji1","shǒu jī","мобильный телефон",2,5245,0],["送","song4","sòng","доставлять",2,5246,0],["所以","suo3 yi3","suǒ yǐ","therefore",2,5247,0],["它","ta1","tā","оно",2,5248,0],["踢","ti1","tī","to kick",2,5249,0],["题","ti2","tí","тема",2,5250,0],["跳舞","tiao4 wu3","tiào wǔ","танцевать",2,5251,0],["外","wai4","wài","вне",2,5252,0],["完","wan2","wán","заканчивать",2,5253,0],["玩","wan2","wán","развлекаться",2,5254,0],["为","wei4","wèi","для",2,5256,0],["问","wen4","wèn","спрашивать",2,5257,0],["问题","wen4 ti2","wèn tí","вопрос",2,5258,0],["西瓜","xi1 gua1","xī guā","арбуз",2,5259,0],["向","xiang4","xiàng","направление",2,5262,0],["小时","xiao3 shi2","xiǎo shí","час",2,5263,0],["笑","xiao4","xiào","смеяться",2,5264,0],["新","xin1","xīn","новый",2,5265,0],["姓","xing4","xìng","фамилия",2,5266,0],["雪","xue3","xuě","снег",2,5268,0],["颜色","yan2 se4","yán sè","цвет",2,5269,0],["眼睛","yan3 jing","yǎn jing","глаз",2,5270,0],["羊肉","yang2 rou4","yáng ròu","баранина",2,5271,0],["一起","yi1 qi3","yī qǐ","вместе",2,5276,0],["意思","yi4 si","yì si","смысл",2,5277,0],["阴","yin1","yīn","инь",2,5278,0],["游泳","you2 yong3","yóu yǒng","плавать",2,5280,0],["右边","you4 bian","yòu bian","справа",2,5281,0],["元","yuan2","yuán","юань",2,5283,0],["远","yuan3","yuǎn","далекий",2,5284,0],["运动","yun4 dong4","yùn dòng","спорт",2,5285,0],["再","zai4","zài","снова",2,5286,0],["张","zhang1","zhāng","сч. слово для объектов с плоской поверхностью: стол",2,5288,0],["长","zhang3","zhǎng","главный",2,5289,0],["丈夫","zhang4 fu","zhàng fu","муж",2,5290,0],["找","zhao3","zhǎo","искать",2,5291,0],["真","zhen1","zhēn","правда",2,5293,0],["正在","zheng4 zai4","zhèng zài","сейчас",2,5294,0],["走","zou3","zǒu","ходить",2,5298,0],["最","zui4","zuì","самый",2,5299,0],["左边","zuo3 bian","zuǒ bian","слева",2,5300,0],["公交车","gong1 jiao1 che1","gōng jiāo chē","автобус",3,10,0],["宾馆","bin1 guan3","bīn guǎn","гостиница",3,10,0],["帮忙","bang1 mang2","bāng máng","помогать",3,10,0],["护照","hu4 zhao4","hù zhào","паспорт",3,10,0],["热水","re4 shui3","rè shuǐ","горячая вода",3,10,0],["病","bing4","bìng","болезнь",3,10,0],["警察","jing3 cha2","jǐng chá","полиция, полицейский",3,10,0],["车票","che1 piao4","chē piào","билет на транспорт",3,10,0],["酒店","jiu3 dian4","jiǔ diàn","отель",3,10,0],["阿姨","a1 yi2","ā yí","тетя",3,5301,0],["矮","ai3","ǎi","низкий",3,5303,0],["安静","an1 jing4","ān jìng","тихий",3,5305,0],["搬","ban1","bān","переезжать",3,5307,0],["班","ban1","bān","группа",3,5308,0],["半","ban4","bàn","половина",3,5309,0],["办法","ban4 fa3","bàn fǎ","способ",3,5310,0],["办公室","ban4 gong1 shi4","bàn gōng shì","офис",3,5311,0],["包","bao1","bāo","обертывать",3,5313,0],["饱","bao3","bǎo","сытый",3,5314,0],["北方","bei3 fang1","běi fāng","север",3,5315,0],["鼻子","bi2 zi","bí zi","нос",3,5317,0],["比赛","bi3 sai4","bǐ sài","соревнование",3,5319,0],["变化","bian4 hua4","biàn huà","перемена",3,5321,0],["表示","biao3 shi4","biǎo shì","выражать",3,5322,0],["表演","biao3 yan3","biǎo yǎn","выступать",3,5323,0],["别人","bie2 ren","bié ren","другие",3,5324,0],["冰箱","bing1 xiang1","bīng xiāng","холодильник",3,5326,0],["才","cai2","cái","то",3,5327,0],["参加","can1 jia1","cān jiā","принимать участие",3,5329,0],["草","cao3","cǎo","трава",3,5330,0],["层","ceng2","céng","этаж",3,5331,0],["差","cha4","chà","отличаться",3,5332,0],["衬衫","chen4 shan1","chèn shān","рубашка",3,5334,0],["成绩","cheng2 ji4","chéng jì","оценки/успеваемость",3,5335,0],["城市","cheng2 shi4","chéng shì","город",3,5336,0],["迟到","chi2 dao4","chí dào","опаздывать",3,5337,0],["出现","chu1 xian4","chū xiàn","появляться",3,5338,0],["除了","chu2 le","chú le","кроме",3,5339,0],["厨房","chu2 fang2","chú fáng","кухня",3,5340,0],["春","chun1","chūn","весна",3,5341,0],["词语","ci2 yu3","cí yǔ","слова",3,5342,0],["聪明","cong1 ming","cōng ming","умный",3,5343,0],["打扫","da3 sao3","dǎ sǎo","убираться",3,5344,0],["担心","dan1 xin1","dān xīn","волноваться",3,5347,0],["蛋糕","dan4 gao1","dàn gāo","торт",3,5348,0],["当然","dang1 ran2","dāng rán","конечно",3,5349,0],["灯","deng1","dēng","лампа",3,5351,0],["低","di1","dī","низкий",3,5352,0],["地图","di4 tu2","dì tú","карта",3,5355,0],["电梯","dian4 ti1","diàn tī","лифт",3,5356,0],["电子","dian4 zi3","diàn zǐ","electronic",3,5357,0],["冬","dong1","dōng","зима",3,5358,0],["东","dong1","dōng","восток",3,5359,0],["动物","dong4 wu4","dòng wù","животное",3,5360,0],["短","duan3","duǎn","короткий",3,5361,0],["段","duan4","duàn","параграф",3,5362,0],["锻炼","duan4 lian4","duàn liàn","закаляться",3,5363,0],["多么","duo1 me","duō me","настолько",3,5364,0],["饿","e4","è","голодный",3,5365,0],["而且","er2 qie3","ér qiě","но и",3,5366,0],["耳朵","er3 duo","ěr duo","уши",3,5367,0],["发现","fa1 xian4","fā xiàn","обнаружить",3,5369,0],["方便","fang1 bian4","fāng biàn","удобный",3,5370,0],["放心","fang4 xin1","fàng xīn","успокаиваться",3,5372,0],["分","fen1","fēn","делить",3,5373,0],["复习","fu4 xi2","fù xí","повторять",3,5375,0],["干净","gan1 jing4","gān jìng","чистый",3,5376,0],["敢","gan3","gǎn","сметь",3,5377,0],["刚才","gang1 cai2","gāng cái","только что",3,5379,0],["根据","gen1 ju4","gēn jù","согласно",3,5380,0],["跟","gen1","gēn","с",3,5381,0],["更","geng4","gèng","более",3,5382,0],["公园","gong1 yuan2","gōng yuán","парк",3,5383,0],["故事","gu4 shi","gù shi","история",3,5384,0],["刮","gua1","guā","to blow",3,5385,0],["关","guan1","guān","закрывать",3,5386,0],["关系","guan1 xi4","guān xì","отношения",3,5387,0],["关心","guan1 xin1","guān xīn","заботиться",3,5388,0],["关于","guan1 yu2","guān yú","о",3,5389,0],["国家","guo2 jia1","guó jiā","страна",3,5390,0],["果汁","guo3 zhi1","guǒ zhī","фруктовый сок",3,5391,0],["过去","guo4 qu","guò qu","прошлое",3,5392,0],["还是","hai2 shi","hái shi","все еще",3,5393,0],["害怕","hai4 pa4","hài pà","бояться",3,5394,0],["河","he2","hé","река",3,5395,0],["黑板","hei1 ban3","hēi bǎn","доска",3,5396,0],["花园","hua1 yuan2","huā yuán","garden",3,5399,0],["画","hua4","huà","рисовать",3,5400,0],["坏","huai4","huài","плохой",3,5401,0],["环境","huan2 jing4","huán jìng","окружающая среда",3,5402,0],["换","huan4","huàn","обменять",3,5403,0],["黄","huang2","huáng","yellow",3,5404,0],["或者","huo4 zhe3","huò zhě","или",3,5406,0],["机会","ji1 hui4","jī huì","возможность",3,5407,0],["几乎","ji1 hu1","jī hū","почти",3,5408,0],["极","ji2","jí","крайне",3,5409,0],["记得","ji4 de","jì de","помнить",3,5410,0],["简单","jian3 dan1","jiǎn dān","простой",3,5413,0],["见面","jian4 mian4","jiàn miàn","встречаться",3,5414,0],["健康","jian4 kang1","jiàn kāng","здоровый",3,5415,0],["讲","jiang3","jiǎng","говорить",3,5416,0],["教","jiao1","jiāo","обучать",3,5417,0],["脚","jiao3","jiǎo","нога",3,5418,0],["角","jiao3","jiǎo","угол",3,5419,0],["接","jie1","jiē","встречать/принимать",3,5420,0],["街道","jie1 dao4","jiē dào","улица",3,5421,0],["节目","jie2 mu4","jié mù","программа",3,5422,0],["节日","jie2 ri4","jié rì","праздник",3,5423,0],["结婚","jie2 hun1","jié hūn","вступить в брак",3,5424,0],["结束","jie2 shu4","jié shù","заканчивать",3,5425,0],["解决","jie3 jue2","jiě jué","решать",3,5426,0],["借","jie4","jiè","одалживать",3,5427,0],["经过","jing1 guo4","jīng guò","проходить",3,5429,0],["经理","jing1 li3","jīng lǐ","менеджер",3,5430,0],["久","jiu3","jiǔ","длительное время",3,5431,0],["旧","jiu4","jiù","старый",3,5432,0],["举行","ju3 xing2","jǔ xíng","проводить",3,5433,0],["句子","ju4 zi","jù zi","предложение",3,5434,0],["决定","jue2 ding4","jué dìng","решать",3,5435,0],["渴","ke3","kě","испытывать жажду",3,5436,0],["可爱","ke3 ai4","kě ài","милый",3,5437,0],["刻","ke4","kè","четверть",3,5438,0],["客人","ke4 ren2","kè rén","гость",3,5439,0],["哭","ku1","kū","плакать",3,5442,0],["裤子","ku4 zi","kù zi","штаны",3,5443,0],["筷子","kuai4 zi","kuài zi","палочки",3,5444,0],["蓝","lan2","lán","голубой",3,5445,0],["老","lao3","lǎo","старый",3,5446,0],["离开","li2 kai1","lí kāi","покидать",3,5447,0],["礼物","li3 wu4","lǐ wù","подарок",3,5448,0],["历史","li4 shi3","lì shǐ","история",3,5449,0],["脸","lian3","liǎn","лицо",3,5450,0],["练习","lian4 xi2","liàn xí","упражняться",3,5451,0],["辆","liang4","liàng","сч. слово для наземного транспорта",3,5452,0],["了解","liao3 jie3","liǎo jiě","понимать",3,5453,0],["邻居","lin2 ju1","lín jū","сосед",3,5454,0],["楼","lou2","lóu","многоэтажный дом",3,5455,0],["绿","lv4","lǜ","зеленый",3,5456,0],["马","ma3","mǎ","лошадь",3,5457,0],["满意","man3 yi4","mǎn yì","быть удовлетворенным",3,5459,0],["帽子","mao4 zi","mào zi","головной убор",3,5460,0],["米","mi3","mǐ","рис",3,5461,0],["面包","mian4 bao1","miàn bāo","хлеб",3,5462,0],["面条","mian4 tiao2","miàn tiáo","лапша",3,5463,0],["明白","ming2 bai","míng bai","ясно",3,5464,0],["奶奶","nai3 nai","nǎi nai","бабушка",3,5466,0],["南","nan2","nán","юг",3,5467,0],["难","nan2","nán","трудный",3,5468,0],["难过","nan2 guo4","nán guò","трудно пережить",3,5469,0],["年级","nian2 ji2","nián jí","класс",3,5470,0],["年轻","nian2 qing1","nián qīng","молодой",3,5471,0],["鸟","niao3","niǎo","птица",3,5472,0],["爬山","pa2 shan1","pá shān","ходить в горы",3,5474,0],["盘子","pan2 zi","pán zi","тарелка",3,5475,0],["胖","pang4","pàng","толстый",3,5476,0],["啤酒","pi2 jiu3","pí jiǔ","пиво",3,5477,0],["葡萄","pu2 tao","pú tao","виноград",3,5478,0],["普通话","pu3 tong1 hua4","pǔ tōng huà","путунхуа",3,5479,0],["骑","qi2","qí","ездить верхом",3,5480,0],["其实","qi2 shi2","qí shí","на самом деле",3,5481,0],["其他","qi2 ta1","qí tā","другие",3,5482,0],["奇怪","qi2 guai4","qí guài","странный",3,5483,0],["铅笔","qian1 bi3","qiān bǐ","карандаш",3,5484,0],["清楚","qing1 chu","qīng chu","ясный",3,5485,0],["秋","qiu1","qiū","осень",3,5486,0],["裙子","qun2 zi","qún zi","юбка",3,5487,0],["热情","re4 qing2","rè qíng","сердечность",3,5489,0],["认为","ren4 wei2","rèn wéi","считать",3,5490,0],["认真","ren4 zhen1","rèn zhēn","серьёзный",3,5491,0],["容易","rong2 yi4","róng yì","легкий",3,5492,0],["如果","ru2 guo3","rú guǒ","если",3,5493,0],["伞","san3","sǎn","зонтик",3,5494,0],["上网","shang4 wang3","shàng wǎng","заходить в интернет",3,5495,0],["生气","sheng1 qi4","shēng qì","злиться",3,5496,0],["声音","sheng1 yin1","shēng yīn","голос",3,5497,0],["使","shi3","shǐ","применять",3,5498,0],["世界","shi4 jie4","shì jiè","мир",3,5499,0],["瘦","shou4","shòu","худой",3,5500,0],["舒服","shu1 fu","shū fu","удобный",3,5501,0],["叔叔","shu1 shu","shū shu","дядя",3,5502,0],["树","shu4","shù","дерево",3,5503,0],["数学","shu4 xue2","shù xué","математика",3,5504,0],["刷","shua1","shuā","to brush",3,5505,0],["双","shuang1","shuāng","пара",3,5506,0],["水平","shui3 ping2","shuǐ píng","уровень",3,5507,0],["司机","si1 ji1","sī jī","шофер",3,5508,0],["糖","tang2","táng","сахар",3,5511,0],["特别","te4 bie2","tè bié","особенно",3,5512,0],["提高","ti2 gao1","tí gāo","повышать",3,5514,0],["体育","ti3 yu4","tǐ yù","физкультура",3,5515,0],["甜","tian2","tián","сладкий",3,5516,0],["条","tiao2","tiáo","линия",3,5517,0],["同意","tong2 yi4","tóng yì","соглашаться",3,5519,0],["头发","tou2 fa","tóu fa","волосы",3,5520,0],["突然","tu1 ran2","tū rán","вдруг",3,5521,0],["图书馆","tu2 shu1 guan3","tú shū guǎn","библиотека",3,5522,0],["腿","tui3","tuǐ","нога",3,5523,0],["碗","wan3","wǎn","плошка",3,5525,0],["万","wan4","wàn","10 000",3,5526,0],["忘记","wang4 ji4","wàng jì","забывать",3,5527,0],["为了","wei4 le","wèi le","для",3,5528,0],["位","wei4","wèi","позиция",3,5530,0],["文化","wen2 hua4","wén huà","культура",3,5531,0],["西","xi1","xī","запад",3,5532,0],["洗手间","xi3 shou3 jian1","xǐ shǒu jiān","уборная",3,5534,0],["洗澡","xi3 zao3","xǐ zǎo","мыться",3,5535,0],["夏","xia4","xià","лето",3,5536,0],["先","xian1","xiān","сначала",3,5537,0],["香蕉","xiang1 jiao1","xiāng jiāo","банан",3,5538,0],["相同","xiang1 tong2","xiāng tóng","одинаковый",3,5539,0],["相信","xiang1 xin4","xiāng xìn","верить",3,5540,0],["像","xiang4","xiàng","быть похожим",3,5541,0],["小心","xiao3 xin1","xiǎo xīn","осторожно",3,5542,0],["校长","xiao4 zhang3","xiào zhǎng","директор школы",3,5543,0],["鞋","xie2","xié","shoe",3,5544,0],["新闻","xin1 wen2","xīn wén","новости",3,5545,0],["新鲜","xin1 xian1","xīn xiān","свежий",3,5546,0],["信","xin4","xìn","letter",3,5547,0],["行李箱","xing2 li xiang1","xíng li xiāng","suitcase",3,5548,0],["兴趣","xing4 qu4","xìng qù","интерес к ч-л",3,5549,0],["熊猫","xiong2 mao1","xióng māo","панда",3,5550,0],["需要","xu1 yao4","xū yào","нужно",3,5551,0],["选择","xuan3 ze2","xuǎn zé","выбирать",3,5552,0],["眼镜","yan3 jing4","yǎn jìng","очки",3,5553,0],["要求","yao1 qiu2","yāo qiú","требовать",3,5554,0],["爷爷","ye2 ye","yé ye","дедушка",3,5555,0],["一定","yi1 ding4","yī dìng","обязательно",3,5556,0],["一会儿","yi1 hui4 r","yī huì r","чуть-чуть",3,5558,0],["一样","yi1 yang4","yī yàng","одинаковый",3,5559,0],["以为","yi3 wei2","yǐ wéi","полагать",3,5562,0],["一般","yi1 ban1","yī bān","обычно",3,5563,0],["一边","yi1 bian1","yī biān","одна сторона",3,5564,0],["音乐","yin1 yue4","yīn yuè","музыка",3,5566,0],["银行","yin2 hang2","yín háng","банк",3,5567,0],["影响","ying3 xiang3","yǐng xiǎng","влиять",3,5569,0],["用","yong4","yòng","использовать",3,5570,0],["游戏","you2 xi4","yóu xì","игра",3,5571,0],["有名","you3 ming2","yǒu míng","известный",3,5572,0],["又","you4","yòu","снова",3,5573,0],["遇到","yu4 dao4","yù dào","повстречаться с",3,5574,0],["越","yue4","yuè","перейти через",3,5576,0],["月亮","yue4 liang","yuè liang","луна",3,5577,0],["云","yun2","yún","облако",3,5578,0],["站","zhan4","zhàn","остановка",3,5579,0],["着急","zhao2 ji2","zháo jí","волноваться",3,5580,0],["照顾","zhao4 gu","zhào gu","присматривать",3,5581,0],["照片","zhao4 pian4","zhào piàn","фотография",3,5582,0],["照相机","zhao4 xiang4 ji1","zhào xiàng jī","фотоаппарат",3,5583,0],["只","zhi3","zhǐ","сч. слово для многих животных и др. объектов",3,5585,0],["终于","zhong1 yu2","zhōng yú","в конце концов",3,5586,0],["中间","zhong1 jian1","zhōng jiān","среди",3,5587,0],["种","zhong3","zhǒng","тип",3,5588,0],["重要","zhong4 yao4","zhòng yào","важный",3,5589,0],["周末","zhou1 mo4","zhōu mò","выходные",3,5590,0],["主要","zhu3 yao4","zhǔ yào","главный",3,5591,0],["祝","zhu4","zhù","to wish",3,5592,0],["注意","zhu4 yi4","zhù yì","обращать внимание",3,5593,0],["字典","zi4 dian3","zì diǎn","dictionary",3,5594,0],["自己","zi4 ji3","zì jǐ","сам",3,5595,0],["总是","zong3 shi4","zǒng shì","постоянно",3,5596,0],["作业","zuo4 ye4","zuò yè","домашняя работа/задание",3,5598,0],["作用","zuo4 yong4","zuò yòng","роль",3,5599,0],["丢","diu1","diū","потерять",4,10,0],["现金","xian4 jin1","xiàn jīn","наличные",4,10,0],["空调","kong1 tiao2","kōng tiáo","кондиционер",4,10,0],["钥匙","yao4 shi","yào shi","ключ",4,10,0],["爱情","ai4 qing2","ài qíng","любовь",4,5600,0],["安排","an1 pai2","ān pái","назначать",4,5601,0],["安全","an1 quan2","ān quán","безопасность",4,5602,0],["暗","an4","àn","тёмный",4,5603,0],["按时","an4 shi2","àn shí","в срок",4,5604,0],["按照","an4 zhao4","àn zhào","в соответствии с",4,5605,0],["包括","bao1 kuo4","bāo kuò","содержать",4,5606,0],["保护","bao3 hu4","bǎo hù","защищать",4,5607,0],["保证","bao3 zheng4","bǎo zhèng","гарантировать",4,5608,0],["抱","bao4","bào","держать",4,5609,0],["抱歉","bao4 qian4","bào qiàn","сожалеть",4,5610,0],["报道","bao4 dao4","bào dào","сообщать",4,5611,0],["报名","bao4 ming2","bào míng","зарегистрироваться",4,5612,0],["倍","bei4","bèi","удваиваться",4,5613,0],["本来","ben3 lai2","běn lái","изначально",4,5614,0],["笨","ben4","bèn","глупый",4,5615,0],["笔记本","bi3 ji4 ben3","bǐ jì běn","блокнот",4,5616,0],["毕业","bi4 ye4","bì yè","заканчивать",4,5617,0],["遍","bian4","biàn","повсюду",4,5618,0],["标准","biao1 zhun3","biāo zhǔn","стандарт",4,5619,0],["表达","biao3 da2","biǎo dá","выражать",4,5620,0],["表格","biao3 ge2","biǎo gé","таблица",4,5621,0],["表扬","biao3 yang2","biǎo yáng","хвалить",4,5622,0],["饼干","bing3 gan1","bǐng gān","печенье",4,5623,0],["并且","bing4 qie3","bìng qiě","к тому же",4,5624,0],["博士","bo2 shi4","bó shì","доктор",4,5625,0],["不但","bu4 dan4","bù dàn","not only",4,5626,0],["不过","bu4 guo4","bù guò","но",4,5627,0],["不得不","bu4 de2 bu4","bù dé bù","нельзя не…",4,5628,0],["不管","bu4 guan3","bù guǎn","несмотря на",4,5629,0],["不仅","bu4 jin3","bù jǐn","не только",4,5630,0],["部分","bu4 fen4","bù fèn","часть",4,5631,0],["擦","ca1","cā","вытирать",4,5632,0],["猜","cai1","cāi","угадывать",4,5633,0],["材料","cai2 liao4","cái liào","материалы",4,5634,0],["参观","can1 guan1","cān guān","посещать",4,5635,0],["差不多","cha4 bu duo1","chà bu duō","почти",4,5636,0],["长城","Chang2 cheng2","Cháng chéng","Великая китайская стена",4,5637,0],["长江","Chang2 Jiang1","Cháng Jiāng","река Янцзы",4,5638,0],["尝","chang2","cháng","пробовать",4,5639,0],["场","chang3","chǎng","площадь",4,5640,0],["超过","chao1 guo4","chāo guò","обогнать",4,5641,0],["吵","chao3","chǎo","шуметь",4,5642,0],["乘坐","cheng2 zuo4","chéng zuò","ехать",4,5643,0],["成功","cheng2 gong1","chéng gōng","успех",4,5644,0],["成熟","cheng2 shu2","chéng shú","созревать",4,5645,0],["成为","cheng2 wei2","chéng wéi","становиться",4,5646,0],["诚实","cheng2 shi2","chéng shí","правдивый",4,5647,0],["吃惊","chi1 jing1","chī jīng","перепугаться",4,5648,0],["重新","chong2 xin1","chóng xīn","снова",4,5649,0],["抽烟","chou1 yan1","chōu yān","курить",4,5650,0],["出差","chu1 chai1","chū chāi","отправляться в командировку",4,5651,0],["出发","chu1 fa1","chū fā","отправляться",4,5652,0],["出生","chu1 sheng1","chū shēng","рождаться",4,5653,0],["传真","chuan2 zhen1","chuán zhēn","факс",4,5654,0],["窗户","chuang1 hu","chuāng hu","окно",4,5655,0],["词典","ci2 dian3","cí diǎn","словарь",4,5656,0],["从来","cong2 lai2","cóng lái","всегда",4,5657,0],["粗心","cu1 xin1","cū xīn","небрежный",4,5658,0],["答案","da2 an4","dá àn","ответ",4,5659,0],["打扮","da3 ban","dǎ ban","наряжать",4,5660,0],["打扰","da3 rao3","dǎ rǎo","тревожить",4,5661,0],["打印","da3 yin4","dǎ yìn","распечатать",4,5662,0],["大概","da4 gai4","dà gài","вероятно",4,5665,0],["大使馆","da4 shi3 guan3","dà shǐ guǎn","посольство",4,5666,0],["大约","da4 yue1","dà yuē","приблизительно",4,5667,0],["戴","dai4","dài","носить",4,5668,0],["代表","dai4 biao3","dài biǎo","представитель",4,5669,0],["代替","dai4 ti4","dài tì","заменять",4,5670,0],["大夫","dai4 fu","dài fu","врач",4,5671,0],["当","dang1","dāng","быть",4,5672,0],["当地","dang1 di4","dāng dì","данное место",4,5673,0],["当时","dang1 shi2","dāng shí","тогда",4,5674,0],["刀","dao1","dāo","нож",4,5675,0],["导游","dao3 you2","dǎo yóu","вести",4,5676,0],["到处","dao4 chu4","dào chù","повсюду",4,5677,0],["到底","dao4 di3","dào dǐ","до конца",4,5678,0],["道歉","dao4 qian4","dào qiàn","приносить извинения",4,5679,0],["得意","de2 yi4","dé yì","довольный",4,5680,0],["等","deng3","děng","ждать",4,5682,0],["底","di3","dǐ","дно",4,5683,0],["地球","di4 qiu2","dì qiú","Земля",4,5684,0],["地址","di4 zhi3","dì zhǐ","адрес",4,5685,0],["掉","diao4","diào","падать",4,5686,0],["调查","diao4 cha2","diào chá","исследовать",4,5687,0],["动作","dong4 zuo4","dòng zuò","движение",4,5689,0],["堵车","du3 che1","dǔ chē","автомобильная пробка",4,5690,0],["肚子","du4 zi","dù zi","живот",4,5691,0],["断","duan4","duàn","перерезать",4,5692,0],["对","dui4","duì","правильный",4,5694,0],["对话","dui4 hua4","duì huà","диалог",4,5695,0],["而","er2","ér","и",4,5699,0],["儿童","er2 tong2","ér tóng","подросток",4,5700,0],["发","fa1","fā","посылать",4,5701,0],["发生","fa1 sheng1","fā shēng","возникать",4,5702,0],["发展","fa1 zhan3","fā zhǎn","развивать",4,5703,0],["法律","fa3 lv4","fǎ lǜ","закон",4,5704,0],["烦恼","fan2 nao3","fán nǎo","быть удручённым",4,5706,0],["反对","fan3 dui4","fǎn duì","противостоять",4,5707,0],["反映","fan3 ying4","fǎn yìng","отражать",4,5708,0],["范围","fan4 wei2","fàn wéi","объем",4,5709,0],["方法","fang1 fa3","fāng fǎ","способ",4,5710,0],["方面","fang1 mian4","fāng miàn","сторона",4,5711,0],["方向","fang1 xiang4","fāng xiàng","направление",4,5712,0],["访问","fang3 wen4","fǎng wèn","визит",4,5713,0],["放弃","fang4 qi4","fàng qì","отказаться",4,5714,0],["放暑假","fang4 shu3 jia4","fàng shǔ jià","находиться на летних каникулах",4,5715,0],["份","fen4","fèn","часть",4,5717,0],["风景","feng1 jing3","fēng jǐng","вид",4,5718,0],["丰富","feng1 fu4","fēng fù","богатый",4,5719,0],["否则","fou3 ze2","fǒu zé","иначе",4,5720,0],["符合","fu2 he2","fú hé","соответствовать",4,5721,0],["富","fu4","fù","богатый",4,5722,0],["复印","fu4 yin4","fù yìn","копировать",4,5724,0],["复杂","fu4 za2","fù zá","сложный",4,5725,0],["父亲","fu4 qin1","fù qīn","отец",4,5726,0],["改变","gai3 bian4","gǎi biàn","изменять",4,5727,0],["干杯","gan1 bei1","gān bēi","выпить до дна",4,5728,0],["干燥","gan1 zao4","gān zào","сушить",4,5729,0],["感动","gan3 dong4","gǎn dòng","растрогаться",4,5730,0],["感觉","gan3 jue2","gǎn jué","чувство",4,5731,0],["感情","gan3 qing2","gǎn qíng","чувство",4,5732,0],["感谢","gan3 xie4","gǎn xiè","быть благодарным",4,5733,0],["干","gan4","gàn","делать",4,5734,0],["高级","gao1 ji2","gāo jí","высшая ступень",4,5736,0],["个子","ge4 zi","gè zi","рост",4,5737,0],["各","ge4","gè","каждый",4,5738,0],["公里","gong1 li3","gōng lǐ","километр",4,5739,0],["工具","gong1 ju4","gōng jù","инструмент",4,5740,0],["工资","gong1 zi1","gōng zī","заработная плата",4,5741,0],["共同","gong4 tong2","gòng tóng","совместный",4,5742,0],["够","gou4","gòu","достаточно",4,5743,0],["购物","gou4 wu4","gòu wù","покупка товаров",4,5744,0],["孤单","gu1 dan1","gū dān","lone",4,5745,0],["估计","gu1 ji4","gū jì","предполагать",4,5746,0],["鼓励","gu3 li4","gǔ lì","поощрять",4,5747,0],["鼓掌","gu3 zhang3","gǔ zhǎng","хлопать в ладоши",4,5748,0],["顾客","gu4 ke4","gù kè","клиент",4,5749,0],["故意","gu4 yi4","gù yì","преднамеренно",4,5750,0],["挂","gua4","guà","вешать",4,5751,0],["关键","guan1 jian4","guān jiàn","главный пункт",4,5752,0],["观众","guan1 zhong4","guān zhòng","зрители",4,5753,0],["管理","guan3 li3","guǎn lǐ","контролировать",4,5754,0],["光","guang1","guāng","свет",4,5755,0],["广播","guang3 bo1","guǎng bō","широковещание",4,5756,0],["广告","guang3 gao4","guǎng gào","объявление",4,5757,0],["逛","guang4","guàng","прогуливаться",4,5758,0],["规定","gui1 ding4","guī dìng","определять",4,5759,0],["国际","guo2 ji4","guó jì","международный",4,5760,0],["果然","guo3 ran2","guǒ rán","действительно",4,5761,0],["过","guo4","guò","переходить",4,5763,0],["过程","guo4 cheng2","guò chéng","процесс",4,5764,0],["海洋","hai3 yang2","hǎi yáng","моря и океаны",4,5765,0],["害羞","hai4 xiu1","hài xiū","стесняться",4,5766,0],["寒假","han2 jia4","hán jià","зимние каникулы",4,5767,0],["汗","han4","hàn","пот",4,5768,0],["好处","hao3 chu","hǎo chu","преимущество",4,5770,0],["好像","hao3 xiang4","hǎo xiàng","похоже",4,5771,0],["号码","hao4 ma3","hào mǎ","номер",4,5772,0],["合格","he2 ge2","hé gé","соответствовать стандарту",4,5773,0],["合适","he2 shi4","hé shì","удобный",4,5774,0],["盒子","he2 zi","hé zi","ящик",4,5775,0],["猴子","hou2 zi","hóu zi","обезьяна",4,5776,0],["厚","hou4","hòu","толстый",4,5777,0],["后悔","hou4 hui3","hòu huǐ","сожалеть",4,5778,0],["后来","hou4 lai2","hòu lái","потом",4,5779,0],["忽然","hu1 ran2","hū rán","вдруг",4,5780,0],["互相","hu4 xiang1","hù xiāng","друг друга",4,5781,0],["护士","hu4 shi","hù shi","медсестра",4,5782,0],["怀疑","huai2 yi2","huái yí","сомневаться",4,5783,0],["回忆","hui2 yi4","huí yì","вспоминать",4,5784,0],["活动","huo2 dong4","huó dòng","действовать",4,5785,0],["活泼","huo2 po","huó po","живой",4,5786,0],["获得","huo4 de2","huò dé","получить",4,5788,0],["基础","ji1 chu3","jī chǔ","основание",4,5789,0],["激动","ji1 dong4","jī dòng","возбуждать",4,5790,0],["积极","ji1 ji2","jī jí","активный",4,5791,0],["积累","ji1 lei3","jī lěi","накапливать",4,5792,0],["极其","ji2 qi2","jí qí","чрезвычайно",4,5793,0],["即使","ji2 shi3","jí shǐ","пусть даже",4,5794,0],["及时","ji2 shi2","jí shí","вовремя",4,5795,0],["集合","ji2 he2","jí hé","соединение",4,5796,0],["继续","ji4 xu4","jì xù","продолжать",4,5798,0],["记者","ji4 zhe3","jì zhě","журналист",4,5799,0],["技术","ji4 shu4","jì shù","техника",4,5801,0],["既然","ji4 ran2","jì rán","раз уже",4,5802,0],["家具","jia1 ju4","jiā jù","мебель",4,5803,0],["加油站","jia1 you2 zhan4","jiā yóu zhàn","заправочная станция",4,5805,0],["假","jia3","jiǎ","ложный",4,5806,0],["价格","jia4 ge2","jià gé","цена",4,5807,0],["减肥","jian3 fei2","jiǎn féi","худеть",4,5809,0],["减少","jian3 shao3","jiǎn shǎo","уменьшать",4,5810,0],["奖金","jiang3 jin1","jiǎng jīn","приз",4,5812,0],["降低","jiang4 di1","jiàng dī","снизить",4,5813,0],["交","jiao1","jiāo","сдавать",4,5814,0],["交流","jiao1 liu2","jiāo liú","связь",4,5815,0],["交通","jiao1 tong1","jiāo tōng","связь",4,5816,0],["骄傲","jiao1 ao4","jiāo ào","надменный",4,5817,0],["饺子","jiao3 zi","jiǎo zi","цзяоцзы",4,5818,0],["教授","jiao4 shou4","jiào shòu","профессор",4,5819,0],["教育","jiao4 yu4","jiào yù","просвещение",4,5820,0],["接受","jie1 shou4","jiē shòu","принимать",4,5821,0],["节约","jie2 yue1","jié yuē","экономить",4,5822,0],["结果","jie2 guo3","jié guǒ","результат",4,5823,0],["解释","jie3 shi4","jiě shì","объяснять",4,5824,0],["紧张","jin3 zhang1","jǐn zhāng","напряжение",4,5825,0],["尽管","jin3 guan3","jǐn guǎn","несмотря на",4,5826,0],["进行","jin4 xing2","jìn xíng","проводить",4,5827,0],["禁止","jin4 zhi3","jìn zhǐ","прекратить",4,5828,0],["精彩","jing1 cai3","jīng cǎi","яркий",4,5829,0],["精神","jing1 shen2","jīng shén","дух",4,5830,0],["经济","jing1 ji4","jīng jì","экономика",4,5831,0],["经历","jing1 li4","jīng lì","опыт",4,5832,0],["经验","jing1 yan4","jīng yàn","опыт",4,5833,0],["京剧","Jing1 ju4","Jīng jù","пекинская опера",4,5834,0],["竟然","jing4 ran2","jìng rán","в конце концов",4,5836,0],["竞争","jing4 zheng1","jìng zhēng","соперничать",4,5837,0],["镜子","jing4 zi","jìng zi","зеркало",4,5838,0],["究竟","jiu1 jing4","jiū jìng","в конце концов",4,5839,0],["举办","ju3 ban4","jǔ bàn","организовать",4,5840,0],["拒绝","ju4 jue2","jù jué","отвергать",4,5841,0],["距离","ju4 li2","jù lí","расстояние",4,5842,0],["开玩笑","kai1 wan2 xiao4","kāi wán xiào","шутить",4,5843,0],["看法","kan4 fa3","kàn fǎ","подход",4,5844,0],["考虑","kao3 lv4","kǎo lǜ","думать",4,5845,0],["科学","ke1 xue2","kē xué","наука",4,5847,0],["可怜","ke3 lian2","kě lián","жалкий",4,5849,0],["可是","ke3 shi4","kě shì","но",4,5850,0],["可惜","ke3 xi1","kě xī","жалеть",4,5851,0],["肯定","ken3 ding4","kěn dìng","утвердительный",4,5852,0],["空气","kong1 qi4","kōng qì","воздух",4,5853,0],["恐怕","kong3 pa4","kǒng pà","бояться",4,5854,0],["苦","ku3","kǔ","горький",4,5855,0],["宽","kuan1","kuān","широкий",4,5856,0],["困","kun4","kùn","утомиться",4,5857,0],["困难","kun4 nan","kùn nan","трудность",4,5858,0],["扩大","kuo4 da4","kuò dà","увеличивать",4,5859,0],["拉","la1","lā","тянуть",4,5860,0],["垃圾桶","la1 ji1 tong3","lā jī tǒng","мусорное ведро",4,5861,0],["辣","la4","là","острый",4,5862,0],["来不及","lai2 bu ji2","lái bu jí","не успеть",4,5863,0],["来得及","lai2 de ji2","lái de jí","успеть",4,5864,0],["懒","lan3","lǎn","ленивый",4,5865,0],["浪费","lang4 fei4","làng fèi","расточительство",4,5866,0],["浪漫","lang4 man4","làng màn","романтичный",4,5867,0],["老虎","lao3 hu3","lǎo hǔ","тигр",4,5868,0],["冷静","leng3 jing4","lěng jìng","невозмутимый",4,5869,0],["礼貌","li3 mao4","lǐ mào","этикет",4,5870,0],["理发","li3 fa4","lǐ fà","стричься",4,5871,0],["理解","li3 jie3","lǐ jiě","понимать",4,5872,0],["理想","li3 xiang3","lǐ xiǎng","идеал",4,5873,0],["厉害","li4 hai","lì hai","невыносимый",4,5874,0],["力气","li4 qi","lì qi","сила",4,5875,0],["例如","li4 ru2","lì rú","например",4,5876,0],["俩","lia3","liǎ","два",4,5877,0],["连","lian2","lián","соединять",4,5878,0],["联系","lian2 xi4","lián xì","связываться",4,5879,0],["凉快","liang2 kuai","liáng kuai","прохладный",4,5880,0],["亮","liang4","liàng","светлый",4,5881,0],["聊天","liao2 tian1","liáo tiān","болтать",4,5882,0],["另外","ling4 wai4","lìng wài","кроме того",4,5883,0],["留","liu2","liú","остаться",4,5884,0],["留学","liu2 xue2","liú xué","учиться за границей",4,5885,0],["流泪","liu2 lei4","liú lèi","проливать слёзы",4,5886,0],["流利","liu2 li4","liú lì","свободный",4,5887,0],["流行","liu2 xing2","liú xíng","модный",4,5888,0],["乱","luan4","luàn","беспорядочный",4,5889,0],["律师","lv4 shi1","lǜ shī","адвокат",4,5890,0],["麻烦","ma2 fan","má fan","хлопотливый",4,5891,0],["马虎","ma3 hu","mǎ hu","небрежный",4,5892,0],["满","man3","mǎn","полный",4,5893,0],["毛巾","mao2 jin1","máo jīn","полотенце",4,5894,0],["美丽","mei3 li4","měi lì","красивый",4,5895,0],["梦","meng4","mèng","мечта",4,5896,0],["密码","mi4 ma3","mì mǎ","пароль",4,5897,0],["免费","mian3 fei4","miǎn fèi","бесплатный",4,5898,0],["民族","min2 zu2","mín zú","нация",4,5899,0],["母亲","mu3 qin1","mǔ qīn","мать",4,5900,0],["目的","mu4 di4","mù dì","цель",4,5901,0],["耐心","nai4 xin1","nài xīn","терпеливый",4,5902,0],["难道","nan2 dao4","nán dào","неужто",4,5903,0],["难受","nan2 shou4","nán shòu","тяжело переживать",4,5904,0],["内","nei4","nèi","внутренний",4,5905,0],["内容","nei4 rong2","nèi róng","содержание",4,5906,0],["能力","neng2 li4","néng lì","способность",4,5907,0],["年龄","nian2 ling2","nián líng","возраст",4,5908,0],["农村","nong2 cun1","nóng cūn","деревня",4,5909,0],["弄","nong4","nòng","играть",4,5910,0],["暖和","nuan3 huo","nuǎn huo","тёплый",4,5911,0],["偶尔","ou3 er3","ǒu ěr","случайно",4,5912,0],["排列","pai2 lie4","pái liè","располагать",4,5913,0],["判断","pan4 duan4","pàn duàn","определять",4,5914,0],["陪","pei2","péi","составить компанию",4,5915,0],["批评","pi1 ping2","pī píng","критиковать",4,5916,0],["皮肤","pi2 fu1","pí fū","кожа",4,5917,0],["脾气","pi2 qi","pí qi","характер",4,5918,0],["篇","pian1","piān","глава",4,5919,0],["骗","pian4","piàn","обманывать",4,5920,0],["乒乓球","ping1 pang1 qiu2","pīng pāng qiú","мяч для пинг-понга",4,5921,0],["平时","ping2 shi2","píng shí","обычно",4,5922,0],["瓶子","ping2 zi","píng zi","бутылка",4,5923,0],["破","po4","pò","сломать",4,5924,0],["普遍","pu3 bian4","pǔ biàn","повсеместный",4,5925,0],["其次","qi2 ci4","qí cì","затем",4,5926,0],["其中","qi2 zhong1","qí zhōng","среди них",4,5927,0],["起飞","qi3 fei1","qǐ fēi","взлетать",4,5928,0],["气候","qi4 hou4","qì hòu","климат",4,5930,0],["千万","qian1 wan4","qiān wàn","во что бы то ни стало",4,5931,0],["墙","qiang2","qiáng","стена",4,5933,0],["敲","qiao1","qiāo","стучать",4,5934,0],["桥","qiao2","qiáo","мост",4,5935,0],["巧克力","qiao3 ke4 li4","qiǎo kè lì","шоколад",4,5936,0],["亲戚","qin1 qi","qīn qi","родные",4,5937,0],["轻","qing1","qīng","лёгкий",4,5938,0],["轻松","qing1 song1","qīng sōng","лёгкий",4,5939,0],["情况","qing2 kuang4","qíng kuàng","обстановка",4,5940,0],["请客","qing3 ke4","qǐng kè","to give a dinner party",4,5942,0],["穷","qiong2","qióng","бедный",4,5943,0],["区别","qu1 bie2","qū bié","различать",4,5944,0],["取","qu3","qǔ","брать",4,5945,0],["全部","quan2 bu4","quán bù","целиком",4,5946,0],["缺点","que1 dian3","quē diǎn","недостаток",4,5947,0],["缺少","que1 shao3","quē shǎo","недоставать",4,5948,0],["却","que4","què","однако",4,5949,0],["确实","que4 shi2","què shí","достоверный",4,5950,0],["群","qun2","qún","стадо",4,5951,0],["然而","ran2 er2","rán ér","но",4,5952,0],["热闹","re4 nao","rè nao","оживлённый",4,5953,0],["人民币","ren2 min2 bi4","rén mín bì","китайский юань",4,5954,0],["任何","ren4 he2","rèn hé","любой",4,5955,0],["扔","reng1","rēng","бросать",4,5957,0],["仍然","reng2 ran2","réng rán","по-прежнему",4,5958,0],["日记","ri4 ji4","rì jì","дневник",4,5959,0],["入口","ru4 kou3","rù kǒu","вход",4,5960,0],["软","ruan3","ruǎn","мягкий",4,5961,0],["散步","san4 bu4","sàn bù","прогуливаться",4,5962,0],["森林","sen1 lin2","sēn lín","лес",4,5963,0],["沙发","sha1 fa1","shā fā","софа",4,5964,0],["商量","shang1 liang","shāng liang","консультироваться",4,5965,0],["伤心","shang1 xin1","shāng xīn","горевать",4,5966,0],["稍微","shao1 wei1","shāo wēi","слегка",4,5967,0],["社会","she4 hui4","shè huì","общество",4,5968,0],["深","shen1","shēn","глубокий",4,5969,0],["申请","shen1 qing3","shēn qǐng","подавать заявление",4,5970,0],["甚至","shen4 zhi4","shèn zhì","вплоть до того",4,5971,0],["生活","sheng1 huo2","shēng huó","жизнь",4,5972,0],["生命","sheng1 ming4","shēng mìng","жизнь",4,5973,0],["省","sheng3","shěng","экономить",4,5974,0],["剩","sheng4","shèng","оставаться",4,5975,0],["失败","shi1 bai4","shī bài","потерпеть поражение",4,5976,0],["失望","shi1 wang4","shī wàng","потерять надежду",4,5977,0],["师傅","shi1 fu","shī fu","мастер",4,5978,0],["湿润","shi1 run4","shī rùn","влажный",4,5979,0],["狮子","shi1 zi","shī zi","лев",4,5980,0],["十分","shi2 fen1","shí fēn","в полной мере",4,5981,0],["实际","shi2 ji4","shí jì","реальный",4,5982,0],["实在","shi2 zai4","shí zài","настоящий",4,5983,0],["食品","shi2 pin3","shí pǐn","foodstuff",4,5984,0],["使用","shi3 yong4","shǐ yòng","использовать",4,5985,0],["试","shi4","shì","пробовать",4,5986,0],["市场","shi4 chang3","shì chǎng","рынок",4,5987,0],["世纪","shi4 ji4","shì jì","век",4,5988,0],["适合","shi4 he2","shì hé","соответствовать",4,5989,0],["适应","shi4 ying4","shì yìng","годиться",4,5990,0],["收","shou1","shōu","получать",4,5991,0],["收入","shou1 ru4","shōu rù","доход",4,5992,0],["收拾","shou1 shi","shōu shi","собирать",4,5993,0],["首都","shou3 du1","shǒu dū","столица",4,5994,0],["首先","shou3 xian1","shǒu xiān","сначала",4,5995,0],["受不了","shou4 bu4 liao3","shòu bù liǎo","не стерпеть",4,5996,0],["受到","shou4 dao4","shòu dào","получить",4,5997,0],["售货员","shou4 huo4 yuan2","shòu huò yuán","продавец",4,5998,0],["输","shu1","shū","транспортировать",4,5999,0],["熟悉","shu2 xi1","shú xī","быть в курсе дела",4,6000,0],["数量","shu4 liang4","shù liàng","количество",4,6001,0],["数字","shu4 zi4","shù zì","цифра",4,6002,0],["帅","shuai4","shuài","красивый",4,6003,0],["顺便","shun4 bian4","shùn biàn","попутно",4,6004,0],["顺利","shun4 li4","shùn lì","гладко",4,6005,0],["顺序","shun4 xu4","shùn xù","порядок",4,6006,0],["说明","shuo1 ming2","shuō míng","объяснить",4,6007,0],["硕士","shuo4 shi4","shuò shì","специалист",4,6008,0],["死","si3","sǐ","умирать",4,6009,0],["速度","su4 du4","sù dù","скорость",4,6010,0],["塑料袋","su4 liao4 dai4","sù liào dài","пластиковый пакет",4,6011,0],["酸","suan1","suān","кислый",4,6012,0],["算","suan4","suàn","to regard as",4,6013,0],["随便","sui2 bian4","suí biàn","как угодно",4,6014,0],["随着","sui2 zhe","suí zhe","следуя",4,6015,0],["孙子","sun1 zi","sūn zi","дети и внуки",4,6016,0],["所有","suo3 you3","suǒ yǒu","всё",4,6017,0],["抬","tai2","tái","поднимать",4,6018,0],["台","tai2","tái","башня",4,6019,0],["态度","tai4 du","tài du","отношение",4,6020,0],["谈","tan2","tán","беседовать",4,6021,0],["弹","tan2","tán","to pluck",4,6022,0],["汤","tang1","tāng","отвар",4,6023,0],["躺","tang3","tǎng","лечь",4,6024,0],["趟","tang4","tàng","раз",4,6025,0],["讨论","tao3 lun4","tǎo lùn","обсуждать",4,6026,0],["讨厌","tao3 yan4","tǎo yàn","испытывать отвращение",4,6027,0],["特点","te4 dian3","tè diǎn","особенность",4,6028,0],["提供","ti2 gong1","tí gōng","предоставлять",4,6029,0],["提前","ti2 qian2","tí qián","быть досрочным",4,6030,0],["提醒","ti2 xing3","tí xǐng","напоминать",4,6031,0],["填空","tian2 kong4","tián kòng","заполнять пустые места",4,6032,0],["条件","tiao2 jian4","tiáo jiàn","условие",4,6033,0],["停止","ting2 zhi3","tíng zhǐ","to stop",4,6034,0],["挺","ting3","tǐng","весьма",4,6035,0],["通过","tong1 guo4","tōng guò","проходить через",4,6036,0],["通知","tong1 zhi1","tōng zhī","сообщать",4,6037,0],["同情","tong2 qing2","tóng qíng","сочувствие",4,6038,0],["推","tui1","tuī","толкать",4,6039,0],["推迟","tui1 chi2","tuī chí","спускать на тормозах",4,6040,0],["脱","tuo1","tuō","снять",4,6041,0],["袜子","wa4 zi","wà zi","носки",4,6042,0],["完全","wan2 quan2","wán quán","полный",4,6043,0],["往","wang3","wǎng","к",4,6044,0],["往往","wang3 wang3","wǎng wǎng","зачастую",4,6045,0],["网球","wang3 qiu2","wǎng qiú","теннис",4,6046,0],["网站","wang3 zhan4","wǎng zhàn","сайт",4,6047,0],["危险","wei1 xian3","wēi xiǎn","опасность",4,6048,0],["味道","wei4 dao","wèi dao","вкус",4,6049,0],["温度","wen1 du4","wēn dù","температура",4,6050,0],["文章","wen2 zhang1","wén zhāng","статья",4,6051,0],["握手","wo4 shou3","wò shǒu","пожать руку",4,6052,0],["污染","wu1 ran3","wū rǎn","загрязнить",4,6053,0],["无","wu2","wú","не",4,6054,0],["无聊","wu2 liao2","wú liáo","скука",4,6055,0],["无论","wu2 lun4","wú lùn","независимо от ч-л",4,6056,0],["误会","wu4 hui4","wù huì","ошибочно понимать",4,6057,0],["西红柿","xi1 hong2 shi4","xī hóng shì","помидор",4,6058,0],["吸引","xi1 yin3","xī yǐn","вовлекать",4,6059,0],["洗衣机","xi3 yi1 ji1","xǐ yī jī","washer",4,6060,0],["咸","xian2","xián","соленый",4,6061,0],["现代","xian4 dai4","xiàn dài","современный",4,6062,0],["羡慕","xian4 mu4","xiàn mù","завидовать",4,6063,0],["限制","xian4 zhi4","xiàn zhì","ограничить",4,6064,0],["香","xiang1","xiāng","ароматный",4,6065,0],["相反","xiang1 fan3","xiāng fǎn","противоположный",4,6066,0],["详细","xiang2 xi4","xiáng xì","детальный",4,6067,0],["响","xiang3","xiǎng","звучный",4,6068,0],["消息","xiao1 xi","xiāo xi","новость",4,6069,0],["小说","xiao3 shuo1","xiǎo shuō","роман",4,6070,0],["笑话","xiao4 hua4","xiào huà","шутка",4,6071,0],["效果","xiao4 guo3","xiào guǒ","результат",4,6072,0],["心情","xin1 qing2","xīn qíng","настроение",4,6073,0],["辛苦","xin1 ku3","xīn kǔ","упорно трудиться",4,6074,0],["信任","xin4 ren4","xìn rèn","доверие",4,6075,0],["信心","xin4 xin1","xìn xīn","вера",4,6076,0],["信用卡","xin4 yong4 ka3","xìn yòng kǎ","кредитная карта",4,6077,0],["兴奋","xing1 fen4","xīng fèn","волноваться",4,6078,0],["行","xing2","xíng","идти",4,6079,0],["醒","xing3","xǐng","проснуться",4,6080,0],["性别","xing4 bie2","xìng bié","пол",4,6081,0],["幸福","xing4 fu2","xìng fú","счастье",4,6083,0],["修","xiu1","xiū","to decorate",4,6084,0],["许多","xu3 duo1","xǔ duō","очень много",4,6085,0],["血","xue4","xuè","кровь",4,6086,0],["压力","ya1 li4","yā lì","давление",4,6087,0],["牙膏","ya2 gao1","yá gāo","зубная паста",4,6088,0],["亚洲","Ya4 zhou1","Yà zhōu","Азия",4,6089,0],["呀","ya","ya","досаду: ой!",4,6090,0],["盐","yan2","yán","соль",4,6091,0],["严格","yan2 ge2","yán gé","строгий",4,6092,0],["严重","yan2 zhong4","yán zhòng","серьёзный",4,6093,0],["研究生","yan2 jiu1 sheng1","yán jiū shēng","graduate student",4,6094,0],["演出","yan3 chu1","yǎn chū","представлять",4,6095,0],["演员","yan3 yuan2","yǎn yuán","артист",4,6096,0],["阳光","yang2 guang1","yáng guāng","солнечный свет",4,6097,0],["养成","yang3 cheng2","yǎng chéng","воспитывать",4,6098,0],["样子","yang4 zi","yàng zi","образец",4,6099,0],["邀请","yao1 qing3","yāo qǐng","приглашать",4,6100,0],["也许","ye3 xu3","yě xǔ","возможно",4,6102,0],["页","ye4","yè","страница",4,6103,0],["叶子","ye4 zi","yè zi","лист",4,6104,0],["一切","yi1 qie4","yī qiè","весь",4,6105,0],["以","yi3","yǐ","с помощью",4,6106,0],["亿","yi4","yì","сто миллионов",4,6107,0],["意见","yi4 jian4","yì jiàn","мнение",4,6108,0],["艺术","yi4 shu4","yì shù","искусство",4,6109,0],["因此","yin1 ci3","yīn cǐ","поэтому",4,6110,0],["引起","yin3 qi3","yǐn qǐ","возбуждать",4,6111,0],["饮料","yin3 liao4","yǐn liào","напиток",4,6112,0],["印象","yin4 xiang4","yìn xiàng","впечатление",4,6113,0],["赢","ying2","yíng","выигрывать",4,6114,0],["硬","ying4","yìng","твёрдый",4,6115,0],["勇敢","yong3 gan3","yǒng gǎn","храбрый",4,6116,0],["永远","yong3 yuan3","yǒng yuǎn","вечный",4,6117,0],["优点","you1 dian3","yōu diǎn","плюс",4,6118,0],["优秀","you1 xiu4","yōu xiù","лучший",4,6119,0],["幽默","you1 mo4","yōu mò","юмор",4,6120,0],["由","you2","yóu","из",4,6121,0],["由于","you2 yu2","yóu yú","по причине",4,6122,0],["尤其","you2 qi2","yóu qí","в особенности",4,6123,0],["有趣","you3 qu4","yǒu qù","интересный",4,6124,0],["友好","you3 hao3","yǒu hǎo","дружба",4,6125,0],["友谊","you3 yi4","yǒu yì","дружба",4,6126,0],["愉快","yu2 kuai4","yú kuài","приятный",4,6127,0],["于是","yu2 shi4","yú shì","и тогда",4,6128,0],["与","yu3","yǔ","и",4,6129,0],["语法","yu3 fa3","yǔ fǎ","грамматика",4,6130,0],["语言","yu3 yan2","yǔ yán","речь",4,6131,0],["羽毛球","yu3 mao2 qiu2","yǔ máo qiú","бадминтон",4,6132,0],["预习","yu4 xi2","yù xí","подготовительный упражнение",4,6133,0],["圆","yuan2","yuán","круглый",4,6134,0],["原来","yuan2 lai2","yuán lái","первоначально",4,6135,0],["原谅","yuan2 liang4","yuán liàng","извинять",4,6136,0],["原因","yuan2 yin1","yuán yīn","причина",4,6137,0],["约会","yue1 hui4","yuē huì","договориться о свидании",4,6138,0],["阅读","yue4 du2","yuè dú","читать",4,6139,0],["允许","yun3 xu3","yǔn xǔ","разрешать",4,6140,0],["杂志","za2 zhi4","zá zhì","журнал",4,6141,0],["咱们","zan2 men","zán men","мы",4,6142,0],["暂时","zan4 shi2","zàn shí","временный",4,6143,0],["脏","zang1","zāng","грязный",4,6144,0],["责任","ze2 ren4","zé rèn","ответственность",4,6145,0],["增加","zeng1 jia1","zēng jiā","увеличить",4,6146,0],["增长","zeng1 zhang3","zēng zhǎng","to grow",4,6147,0],["窄","zhai3","zhǎi","узкий",4,6148,0],["招聘","zhao1 pin4","zhāo pìn","нанимать",4,6149,0],["真正","zhen1 zheng4","zhēn zhèng","подлинный",4,6150,0],["整理","zheng3 li3","zhěng lǐ","привести в порядок",4,6151,0],["整齐","zheng3 qi2","zhěng qí","правильный",4,6152,0],["正常","zheng4 chang2","zhèng cháng","нормальный",4,6153,0],["正好","zheng4 hao3","zhèng hǎo","как раз",4,6154,0],["正确","zheng4 que4","zhèng què","достоверный",4,6155,0],["正式","zheng4 shi4","zhèng shì","официальный",4,6156,0],["证明","zheng4 ming2","zhèng míng","удостоверять",4,6157,0],["支持","zhi1 chi2","zhī chí","поддерживать",4,6159,0],["知识","zhi1 shi","zhī shi","знание",4,6160,0],["直接","zhi2 jie1","zhí jiē","прямой",4,6161,0],["值得","zhi2 de","zhí de","стоить",4,6162,0],["职业","zhi2 ye4","zhí yè","занятие",4,6163,0],["植物","zhi2 wu4","zhí wù","растение",4,6164,0],["指","zhi3","zhǐ","палец",4,6165,0],["只好","zhi3 hao3","zhǐ hǎo","только и мочь",4,6166,0],["只要","zhi3 yao4","zhǐ yào","нужно лишь",4,6167,0],["制造","zhi4 zao4","zhì zào","изготавливать",4,6168,0],["至少","zhi4 shao3","zhì shǎo","самое малое",4,6169,0],["质量","zhi4 liang4","zhì liàng","качество",4,6170,0],["中文","Zhong1 wen2","Zhōng wén","китайский язык",4,6171,0],["重点","zhong4 dian3","zhòng diǎn","ключевой пункт",4,6172,0],["重视","zhong4 shi4","zhòng shì","придавать значение",4,6173,0],["周围","zhou1 wei2","zhōu wéi","круг",4,6174,0],["猪","zhu1","zhū","свинья",4,6175,0],["逐渐","zhu2 jian4","zhú jiàn","постепенно",4,6176,0],["主动","zhu3 dong4","zhǔ dòng","по собственной инициативе",4,6177,0],["主意","zhu3 yi","zhǔ yi","мнение",4,6178,0],["祝贺","zhu4 he4","zhù hè","поздравлять",4,6179,0],["著名","zhu4 ming2","zhù míng","знаменитый",4,6180,0],["专门","zhuan1 men2","zhuān mén","специальный",4,6181,0],["专业","zhuan1 ye4","zhuān yè","профессия",4,6182,0],["赚","zhuan4","zhuàn","зарабатывать",4,6183,0],["撞","zhuang4","zhuàng","толкнуть",4,6184,0],["准确","zhun3 que4","zhǔn què","точный",4,6185,0],["准时","zhun3 shi2","zhǔn shí","вовремя",4,6186,0],["仔细","zi3 xi4","zǐ xì","тщательный",4,6187,0],["自然","zi4 ran2","zì rán","природа",4,6188,0],["总结","zong3 jie2","zǒng jié","общий итог",4,6189,0],["租","zu1","zū","арендовать",4,6190,0],["组成","zu3 cheng2","zǔ chéng","образовать",4,6191,0],["组织","zu3 zhi1","zǔ zhī","организовать",4,6192,0],["嘴","zui3","zuǐ","рот",4,6193,0],["最好","zui4 hao3","zuì hǎo","лучше всего",4,6194,0],["最后","zui4 hou4","zuì hòu","самый последний",4,6195,0],["尊重","zun1 zhong4","zūn zhòng","уважать",4,6196,0],["做生意","zuo4 sheng1 yi4","zuò shēng yì","to do business",4,6197,0],["座","zuo4","zuò","место",4,6198,0],["座位","zuo4 wei4","zuò wèi","место",4,6199,0],["作者","zuo4 zhe3","zuò zhě","автор",4,6200,0],["打包","da3 bao1","dǎ bāo","упаковать с собой",5,10,0],["打折","da3 zhe2","dǎ zhé","делать скидку",5,10,0],["签证","qian1 zheng4","qiān zhèng","виза",5,10,0],["结账","jie2 zhang4","jié zhàng","рассчитаться, оплатить счёт",5,10,0],["航班","hang2 ban1","háng bān","рейс (самолёта)",5,10,0],["药店","yao4 dian4","yào diàn","аптека",5,10,0],["账单","zhang4 dan1","zhàng dān","счёт (в ресторане)",5,10,0],["超市","chao1 shi4","chāo shì","супермаркет",5,10,0],["身份证","shen1 fen4 zheng4","shēn fèn zhèng","удостоверение личности",5,10,0],["迷路","mi2 lu4","mí lù","заблудиться",5,10,0],["餐厅","can1 ting1","cān tīng","ресторан, столовая",5,10,0],["停电","ting2 dian4","tíng diàn","отключение электричества",6,10,0],["小费","xiao3 fei4","xiǎo fèi","чаевые",6,10,0],["收据","shou1 ju4","shōu jù","квитанция, чек",6,10,0],["收银台","shou1 yin2 tai2","shōu yín tái","касса",6,10,0],["救护车","jiu4 hu4 che1","jiù hù chē","скорая помощь",6,10,0],["退货","tui4 huo4","tuì huò","вернуть товар",6,10,0],["高铁","gao1 tie3","gāo tiě","скоростной поезд",6,10,0]];
-
-</script>
-<script>
 /* Чтение иероглифов курса. Сгенерировано tools/make-pinyin.py — не править вручную. */
 const PY_CHAR = {"一":"yī","七":"qī","三":"sān","上":"shàng","下":"xià","不":"bù","东":"dōng","两":"liǎng","严":"yán","个":"gè","中":"zhōng","为":"wèi","久":"jiǔ","么":"me","乐":"lè","九":"jiǔ","也":"yě","习":"xí","书":"shū","买":"mǎi","了":"le","事":"shì","二":"èr","五":"wǔ","交":"jiāo","京":"jīng","亮":"liàng","人":"rén","什":"shén","今":"jīn","从":"cóng","他":"tā","付":"fù","以":"yǐ","们":"men","件":"jiàn","任":"rèn","份":"fèn","休":"xiū","众":"zhòng","会":"huì","伟":"wěi","但":"dàn","低":"dī","住":"zhù","体":"tǐ","作":"zuò","你":"nǐ","便":"pián","俄":"é","候":"hòu","假":"jiǎ","做":"zuò","傅":"fù","儿":"ér","元":"yuán","兄":"xiōng","先":"xiān","克":"kè","入":"rù","八":"bā","公":"gōng","六":"liù","共":"gòng","关":"guān","兴":"xīng","再":"zài","冒":"mào","写":"xiě","冬":"dōng","冷":"lěng","准":"zhǔn","凉":"liáng","几":"jǐ","出":"chū","分":"fēn","划":"huà","刚":"gāng","利":"lì","别":"bié","刮":"guā","到":"dào","刷":"shuā","前":"qián","力":"lì","加":"jiā","务":"wù","动":"dòng","助":"zhù","努":"nǔ","包":"bāo","化":"huà","北":"běi","医":"yī","十":"shí","午":"wǔ","半":"bàn","单":"dān","卖":"mài","卡":"kǎ","即":"jí","去":"qù","及":"jí","友":"yǒu","发":"fā","口":"kǒu","古":"gǔ","叫":"jiào","可":"kě","右":"yòu","号":"hào","司":"sī","吃":"chī","吉":"jí","同":"tóng","名":"míng","后":"hòu","吗":"ma","吧":"ba","听":"tīng","吼":"hǒu","告":"gào","员":"yuán","呢":"ne","和":"hé","咖":"kā","咳":"ké","哥":"gē","哪":"nǎ","售":"shòu","啊":"a","啡":"fēi","喜":"xǐ","喝":"hē","嗨":"hāi","嗽":"sòu","四":"sì","回":"huí","因":"yīn","国":"guó","在":"zài","地":"de","场":"chǎng","坐":"zuò","块":"kuài","坚":"jiān","坦":"tǎn","城":"chéng","塔":"tǎ","墙":"qiáng","声":"shēng","备":"bèi","夏":"xià","多":"duō","大":"dà","天":"tiān","太":"tài","夭":"yāo","头":"tóu","女":"nǚ","她":"tā","好":"hǎo","妈":"mā","妹":"mèi","始":"shǐ","姐":"jiě","姑":"gū","姓":"xìng","娘":"niáng","子":"zi","字":"zì","季":"jì","学":"xué","孩":"hái","安":"ān","完":"wán","宜":"yí","实":"shí","客":"kè","家":"jiā","寄":"jì","密":"mì","察":"chá","对":"duì","将":"jiāng","小":"xiǎo","少":"shǎo","尚":"shàng","就":"jiù","尺":"chǐ","尼":"ní","屋":"wū","山":"shān","岁":"suì","工":"gōng","左":"zuǒ","已":"yǐ","师":"shī","希":"xī","带":"dài","帮":"bāng","常":"cháng","年":"nián","幸":"xìng","床":"chuáng","应":"yīng","店":"diàn","座":"zuò","开":"kāi","弟":"dì","张":"zhāng","弹":"dàn","形":"xíng","影":"yǐng","往":"wǎng","很":"hěn","得":"de","心":"xīn","必":"bì","忙":"máng","快":"kuài","态":"tài","怎":"zěn","思":"sī","急":"jí","性":"xìng","息":"xī","您":"nín","惯":"guàn","想":"xiǎng","意":"yì","感":"gǎn","愿":"yuàn","慢":"màn","懂":"dǒng","成":"chéng","我":"wǒ","或":"huò","房":"fáng","手":"shǒu","打":"dǎ","把":"bǎ","投":"tóu","护":"hù","报":"bào","抱":"bào","担":"dān","拔":"bá","拜":"bài","拼":"pīn","拿":"ná","持":"chí","挂":"guà","放":"fàng","敏":"mǐn","教":"jiào","敬":"jìng","数":"shù","文":"wén","斯":"sī","新":"xīn","方":"fāng","旅":"lǚ","日":"rì","早":"zǎo","时":"shí","明":"míng","星":"xīng","春":"chūn","昨":"zuó","是":"shì","晚":"wǎn","晶":"jīng","暑":"shǔ","暖":"nuǎn","更":"gèng","最":"zuì","月":"yuè","有":"yǒu","朋":"péng","服":"fú","望":"wàng","期":"qī","木":"mù","本":"běn","机":"jī","李":"lǐ","杜":"dù","来":"lái","杯":"bēi","板":"bǎn","林":"lín","果":"guǒ","查":"chá","树":"shù","校":"xiào","样":"yàng","格":"gé","桌":"zhuō","检":"jiǎn","森":"sēn","楼":"lóu","概":"gài","次":"cì","欢":"huān","歉":"qiàn","此":"cǐ","母":"mǔ","每":"měi","比":"bǐ","气":"qì","水":"shuǐ","汁":"zhī","汉":"hàn","池":"chí","没":"méi","油":"yóu","泠":"líng","泥":"ní","洗":"xǐ","消":"xiāo","温":"wēn","漂":"piāo","火":"huǒ","点":"diǎn","烦":"fán","烧":"shāo","热":"rè","然":"rán","照":"zhào","熟":"shú","爱":"ài","父":"fù","爷":"yé","爸":"bà","爽":"shuǎng","牙":"yá","牛":"niú","状":"zhuàng","猫":"māo","王":"wáng","现":"xiàn","班":"bān","琴":"qín","生":"shēng","用":"yòng","田":"tián","电":"diàn","疼":"téng","病":"bìng","痛":"tòng","白":"bái","百":"bǎi","的":"de","盆":"pén","目":"mù","直":"zhí","看":"kàn","真":"zhēn","着":"zhe","睡":"shuì","知":"zhī","石":"shí","码":"mǎ","碗":"wǎn","示":"shì","礼":"lǐ","票":"piào","秋":"qiū","租":"zū","程":"chéng","稍":"shāo","空":"kōng","穿":"chuān","站":"zhàn","第":"dì","等":"děng","算":"suàn","系":"xì","累":"lèi","经":"jīng","给":"gěi","继":"jì","续":"xù","绵":"mián","绿":"lǜ","罗":"luó","翻":"fān","老":"lǎo","者":"zhě","肉":"ròu","肚":"dù","背":"bèi","能":"néng","自":"zì","致":"zhì","舒":"shū","舞":"wǔ","节":"jié","花":"huā","苹":"píng","茶":"chá","药":"yào","菜":"cài","葱":"cōng","虽":"suī","行":"xíng","袋":"dài","西":"xī","要":"yào","见":"jiàn","计":"jì","订":"dìng","认":"rèn","议":"yì","设":"shè","识":"shí","译":"yì","话":"huà","该":"gāi","语":"yǔ","说":"shuō","请":"qǐng","读":"dú","课":"kè","谁":"shuí","调":"diào","谈":"tán","谢":"xiè","负":"fù","责":"zé","贵":"guì","走":"zǒu","起":"qǐ","跑":"pǎo","路":"lù","身":"shēn","车":"chē","转":"zhuǎn","较":"jiào","输":"shū","辣":"là","边":"biān","过":"guò","迎":"yíng","近":"jìn","还":"hái","这":"zhè","进":"jìn","迟":"chí","迷":"mí","送":"sòng","道":"dào","那":"nà","邮":"yóu","部":"bù","都":"dōu","酒":"jiǔ","里":"lǐ","重":"zhòng","针":"zhēn","钟":"zhōng","钢":"gāng","钱":"qián","铁":"tiě","银":"yín","销":"xiāo","错":"cuò","门":"mén","问":"wèn","间":"jiān","阳":"yáng","阿":"ā","附":"fù","院":"yuàn","雨":"yǔ","雪":"xuě","零":"líng","面":"miàn","音":"yīn","项":"xiàng","顺":"shùn","须":"xū","题":"tí","风":"fēng","飞":"fēi","餐":"cān","饭":"fàn","饱":"bǎo","饿":"è","马":"mǎ","骂":"mà","骑":"qí","高":"gāo","鱼":"yú","鸡":"jī","麻":"má","龄":"líng"};
 
@@ -4657,16 +4903,26 @@ function touchDay() {
 const PREFS = {
   get slow() { return Store.get('zh_rate') === 'slow'; },
   set slow(v) { Store.set('zh_rate', v ? 'slow' : 'normal'); },
-  get theme() { return Store.get('zh_theme') === 'light' ? 'light' : 'dark'; },
+  // Светлая тема — основная: у неё нет своего значения, она «по умолчанию».
+  // Тёмную выбирают вручную, и выбор запоминается.
+  get theme() { return Store.get('zh_theme') === 'dark' ? 'dark' : 'light'; },
   set theme(v) {
-    Store.set('zh_theme', v === 'light' ? 'light' : 'dark');
-    if (typeof document !== 'undefined') document.documentElement.dataset.theme = v === 'light' ? 'light' : '';
+    Store.set('zh_theme', v === 'dark' ? 'dark' : 'light');
+    if (typeof document !== 'undefined') {
+      if (v === 'dark') document.documentElement.dataset.theme = 'dark';
+      else document.documentElement.removeAttribute('data-theme');
+    }
+    // Цвет адресной строки на телефоне подстраивается под тему.
+    const meta = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#fbf6ef');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
   set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
 };
-if (typeof document !== 'undefined' && PREFS.theme === 'light') {
-  document.documentElement.dataset.theme = 'light';
+// Тему ставим до первой отрисовки, иначе страница мигнёт тёмным фоном.
+if (typeof document !== 'undefined') {
+  if (PREFS.theme === 'dark') document.documentElement.dataset.theme = 'dark';
+  else document.documentElement.removeAttribute('data-theme');
 }
 
 /* ---------- Речь (TTS) ---------- */
@@ -4745,11 +5001,30 @@ function launchConfetti() {
 }
 
 /* ---------- Уведомления ---------- */
+/* Скрытый канал для скринридеров: любую короткую новость («верно»,
+   «добавлено в карточки») озвучиваем через него. Иначе ученик без зрения
+   узнаёт о результате, только переставив фокус вручную. */
+let liveRegion;
+function announce(msg) {
+  if (typeof document === 'undefined' || !msg) return;
+  if (!liveRegion) {
+    liveRegion = el('div', 'sr-only');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(liveRegion);
+  }
+  // Пустая строка между сообщениями заставляет диктор прочитать повтор.
+  liveRegion.textContent = '';
+  setTimeout(() => { liveRegion.textContent = msg; }, 60);
+}
+
 let toastEl;
 function toast(msg) {
   if (!toastEl) { toastEl = el('div', 'toast'); document.body.appendChild(toastEl); }
   toastEl.textContent = msg;
   toastEl.classList.add('show');
+  announce(msg);
   clearTimeout(toast._t);
   toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
@@ -4786,6 +5061,16 @@ function route() {
   const fn = ROUTES[name] || renderHome;
   view.scrollTop = 0;
   fn(view, rest);
+  // Помощнику нужен полный словарь: если он ещё не доехал, догружаем
+  // и перерисовываем раздел, чтобы ответы не были беднее, чем обычно.
+  if (name === 'tutor' && typeof LEXICON_ROWS === 'undefined' && typeof loadLexicon === 'function') {
+    loadLexicon().then(ok => {
+      if (!ok || location.hash.replace(/^#\/?/, '').split('/')[0] !== 'tutor') return;
+      if (typeof TUTOR_LEX !== 'undefined') TUTOR_LEX.reload();
+      const v = $('#view');
+      if (v) { v.innerHTML = ''; renderTutor(v, []); }
+    });
+  }
   $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
   $$('#mnav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
   const fab = $('#tutorFab');
@@ -4801,6 +5086,16 @@ window.__showAuth = () => { window.__guest = false; renderAuthGate(); };
 window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); if (typeof refreshHomeworkBadge === 'function') refreshHomeworkBadge(); route(); };
 window.__guestMode = () => { window.__guest = true; route(); };
 window.addEventListener('hashchange', route);
+
+/* Словарь догружаем после того, как страница отрисована: ученик уже
+   видит урок, а словарь доезжает фоном. В офлайне он берётся из кэша. */
+(function warmLexicon() {
+  const start = () => loadLexicon().then(ok => {
+    if (ok && typeof TUTOR_LEX !== 'undefined') TUTOR_LEX.reload();
+  });
+  if (document.readyState === 'complete') setTimeout(start, 400);
+  else window.addEventListener('load', () => setTimeout(start, 400));
+})();
 
 /* ============================================================
    ДАШБОРД
@@ -5091,7 +5386,8 @@ function renderQuestion(host) {
     playSfx(ok ? 'ok' : 'bad');
     fb.className = 'q-feedback ' + (ok ? 'ok' : 'bad');
     fb.setAttribute('role', 'status');
-    fb.setAttribute('aria-live', 'polite');
+    fb.setAttribute('aria-live', 'assertive');
+    fb.setAttribute('aria-atomic', 'true');
     fb.innerHTML = (ok ? '✅ Верно! ' : '❌ Не совсем. ') + (expl || '');
     fb.style.display = 'block';
     const next = el('button', 'btn btn-primary', quizState.idx + 1 >= l.quiz.length ? 'Итоги →' : 'Далее →');
@@ -6334,7 +6630,10 @@ function tutorAllVocab() {
 
   /* Карманный словарь HSK: 4000+ слов, которых нет в 15 уроках.
      Раньше на «а как будет «билет»?» помощник честно отвечал «нет в курсе»
-     — теперь он знает слово и подсказывает уровень HSK. */
+     — теперь он знает слово и подсказывает уровень HSK.
+     Словарь грузится отдельным файлом уже после первого экрана: 30 КБ
+     в сжатом виде, которые нужны только помощнику и поиску по словарю.
+     Пока он едет, приложение работает на словаре курса. */
   (typeof LEXICON_ROWS !== 'undefined' ? LEXICON_ROWS : []).forEach(row => {
     const [h, pnum, py, ru, level] = row;
     /* Берём только переводы на русском или из курса: английский перевод
@@ -6345,6 +6644,31 @@ function tutorAllVocab() {
     list.push({ h, p: py || pnum || '', r: ru, lesson: level ? `HSK ${level}` : 'Словарь HSK', hsk: level, num: pnum });
   });
   return list;
+}
+
+/* ---------- Ленивая загрузка словаря ----------
+   Первый экран не должен ждать 30 КБ, которые нужны только помощнику.
+   Поэтому словарь подключается отдельным скриптом: сразу после отрисовки
+   (чтобы не мешать) и повторно — при входе в раздел помощника, если сеть
+   была недоступна. Офлайн словарь уже лежит в кэше service worker. */
+let lexLoading = null;
+function loadLexicon() {
+  if (typeof LEXICON_ROWS !== 'undefined') return Promise.resolve(true);
+  if (lexLoading) return lexLoading;
+  lexLoading = new Promise(resolve => {
+    const done = ok => { lexLoading = null; resolve(ok); };
+    if (typeof document === 'undefined') return done(false);
+    const s = document.createElement('script');
+    s.src = 'lexicon.js';
+    s.async = true;
+    s.onload = () => done(typeof LEXICON_ROWS !== 'undefined');
+    s.onerror = () => done(false);
+    document.head.appendChild(s);
+    // Сеть бывает медленной: ждём не дольше 8 секунд, чтобы поиск
+    // не «висел» вечно — он просто ответит по словарю курса.
+    setTimeout(() => done(typeof LEXICON_ROWS !== 'undefined'), 8000);
+  });
+  return lexLoading;
 }
 
 /* Сколько слов знает помощник и откуда они: видно в интерфейсе */
@@ -8361,6 +8685,8 @@ function paintAccountFoot() {
   spd.title = 'Скорость озвучки';
   spd.onclick = () => { PREFS.slow = !PREFS.slow; toast(PREFS.slow ? 'Медленная озвучка (0.7×)' : 'Обычная озвучка (1.0×)'); paintAccountFoot(); };
   const thm = el('button', 'btn btn-sm btn-ghost', PREFS.theme === 'light' ? '🌙' : '☀️');
+  thm.setAttribute('aria-label', PREFS.theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему');
+  thm.title = thm.getAttribute('aria-label');
   thm.title = 'Переключить тему';
   thm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); };
   quick.appendChild(spd); quick.appendChild(thm);
@@ -8490,7 +8816,7 @@ function renderAccount(root) {
   const pr = el('div', 'btn-row');
   const bSpd = el('button', 'btn btn-ghost', PREFS.slow ? '🐢 Озвучка: медленно (0.7×)' : '🐇 Озвучка: обычно (1.0×)');
   bSpd.onclick = () => { PREFS.slow = !PREFS.slow; paintAccountFoot(); route(); };
-  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '☀️ Тема: светлая' : '🌇 Тема: закат');
+  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '🌙 Тема: белая' : '☀️ Тема: тёмная');
   bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
   const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
   bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
@@ -8979,6 +9305,10 @@ function maybeFrameBanner() {
     const ok = Number(value) === task.a;
     const box = el('div', 'hw-live ' + (ok ? 'ok' : 'bad'),
       ok ? '✅ Верно' : `❌ Правильно: ${ruby((task.o || [])[task.a] || '')}`);
+    // Скринридер должен услышать результат сам: ученик нажимает вариант
+    // и раньше не получал никакой обратной связи, пока не перейдёт дальше.
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-live', 'polite');
     row.appendChild(box);
   }
 

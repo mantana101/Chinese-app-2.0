@@ -149,16 +149,26 @@ function touchDay() {
 const PREFS = {
   get slow() { return Store.get('zh_rate') === 'slow'; },
   set slow(v) { Store.set('zh_rate', v ? 'slow' : 'normal'); },
-  get theme() { return Store.get('zh_theme') === 'light' ? 'light' : 'dark'; },
+  // Светлая тема — основная: у неё нет своего значения, она «по умолчанию».
+  // Тёмную выбирают вручную, и выбор запоминается.
+  get theme() { return Store.get('zh_theme') === 'dark' ? 'dark' : 'light'; },
   set theme(v) {
-    Store.set('zh_theme', v === 'light' ? 'light' : 'dark');
-    if (typeof document !== 'undefined') document.documentElement.dataset.theme = v === 'light' ? 'light' : '';
+    Store.set('zh_theme', v === 'dark' ? 'dark' : 'light');
+    if (typeof document !== 'undefined') {
+      if (v === 'dark') document.documentElement.dataset.theme = 'dark';
+      else document.documentElement.removeAttribute('data-theme');
+    }
+    // Цвет адресной строки на телефоне подстраивается под тему.
+    const meta = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#fbf6ef');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
   set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
 };
-if (typeof document !== 'undefined' && PREFS.theme === 'light') {
-  document.documentElement.dataset.theme = 'light';
+// Тему ставим до первой отрисовки, иначе страница мигнёт тёмным фоном.
+if (typeof document !== 'undefined') {
+  if (PREFS.theme === 'dark') document.documentElement.dataset.theme = 'dark';
+  else document.documentElement.removeAttribute('data-theme');
 }
 
 /* ---------- Речь (TTS) ---------- */
@@ -237,11 +247,30 @@ function launchConfetti() {
 }
 
 /* ---------- Уведомления ---------- */
+/* Скрытый канал для скринридеров: любую короткую новость («верно»,
+   «добавлено в карточки») озвучиваем через него. Иначе ученик без зрения
+   узнаёт о результате, только переставив фокус вручную. */
+let liveRegion;
+function announce(msg) {
+  if (typeof document === 'undefined' || !msg) return;
+  if (!liveRegion) {
+    liveRegion = el('div', 'sr-only');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(liveRegion);
+  }
+  // Пустая строка между сообщениями заставляет диктор прочитать повтор.
+  liveRegion.textContent = '';
+  setTimeout(() => { liveRegion.textContent = msg; }, 60);
+}
+
 let toastEl;
 function toast(msg) {
   if (!toastEl) { toastEl = el('div', 'toast'); document.body.appendChild(toastEl); }
   toastEl.textContent = msg;
   toastEl.classList.add('show');
+  announce(msg);
   clearTimeout(toast._t);
   toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
@@ -278,6 +307,16 @@ function route() {
   const fn = ROUTES[name] || renderHome;
   view.scrollTop = 0;
   fn(view, rest);
+  // Помощнику нужен полный словарь: если он ещё не доехал, догружаем
+  // и перерисовываем раздел, чтобы ответы не были беднее, чем обычно.
+  if (name === 'tutor' && typeof LEXICON_ROWS === 'undefined' && typeof loadLexicon === 'function') {
+    loadLexicon().then(ok => {
+      if (!ok || location.hash.replace(/^#\/?/, '').split('/')[0] !== 'tutor') return;
+      if (typeof TUTOR_LEX !== 'undefined') TUTOR_LEX.reload();
+      const v = $('#view');
+      if (v) { v.innerHTML = ''; renderTutor(v, []); }
+    });
+  }
   $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
   $$('#mnav a').forEach(a => a.classList.toggle('active', a.dataset.route === (name || 'home')));
   const fab = $('#tutorFab');
@@ -293,6 +332,16 @@ window.__showAuth = () => { window.__guest = false; renderAuthGate(); };
 window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); if (typeof refreshHomeworkBadge === 'function') refreshHomeworkBadge(); route(); };
 window.__guestMode = () => { window.__guest = true; route(); };
 window.addEventListener('hashchange', route);
+
+/* Словарь догружаем после того, как страница отрисована: ученик уже
+   видит урок, а словарь доезжает фоном. В офлайне он берётся из кэша. */
+(function warmLexicon() {
+  const start = () => loadLexicon().then(ok => {
+    if (ok && typeof TUTOR_LEX !== 'undefined') TUTOR_LEX.reload();
+  });
+  if (document.readyState === 'complete') setTimeout(start, 400);
+  else window.addEventListener('load', () => setTimeout(start, 400));
+})();
 
 /* ============================================================
    ДАШБОРД
@@ -583,7 +632,8 @@ function renderQuestion(host) {
     playSfx(ok ? 'ok' : 'bad');
     fb.className = 'q-feedback ' + (ok ? 'ok' : 'bad');
     fb.setAttribute('role', 'status');
-    fb.setAttribute('aria-live', 'polite');
+    fb.setAttribute('aria-live', 'assertive');
+    fb.setAttribute('aria-atomic', 'true');
     fb.innerHTML = (ok ? '✅ Верно! ' : '❌ Не совсем. ') + (expl || '');
     fb.style.display = 'block';
     const next = el('button', 'btn btn-primary', quizState.idx + 1 >= l.quiz.length ? 'Итоги →' : 'Далее →');
@@ -1826,7 +1876,10 @@ function tutorAllVocab() {
 
   /* Карманный словарь HSK: 4000+ слов, которых нет в 15 уроках.
      Раньше на «а как будет «билет»?» помощник честно отвечал «нет в курсе»
-     — теперь он знает слово и подсказывает уровень HSK. */
+     — теперь он знает слово и подсказывает уровень HSK.
+     Словарь грузится отдельным файлом уже после первого экрана: 30 КБ
+     в сжатом виде, которые нужны только помощнику и поиску по словарю.
+     Пока он едет, приложение работает на словаре курса. */
   (typeof LEXICON_ROWS !== 'undefined' ? LEXICON_ROWS : []).forEach(row => {
     const [h, pnum, py, ru, level] = row;
     /* Берём только переводы на русском или из курса: английский перевод
@@ -1837,6 +1890,31 @@ function tutorAllVocab() {
     list.push({ h, p: py || pnum || '', r: ru, lesson: level ? `HSK ${level}` : 'Словарь HSK', hsk: level, num: pnum });
   });
   return list;
+}
+
+/* ---------- Ленивая загрузка словаря ----------
+   Первый экран не должен ждать 30 КБ, которые нужны только помощнику.
+   Поэтому словарь подключается отдельным скриптом: сразу после отрисовки
+   (чтобы не мешать) и повторно — при входе в раздел помощника, если сеть
+   была недоступна. Офлайн словарь уже лежит в кэше service worker. */
+let lexLoading = null;
+function loadLexicon() {
+  if (typeof LEXICON_ROWS !== 'undefined') return Promise.resolve(true);
+  if (lexLoading) return lexLoading;
+  lexLoading = new Promise(resolve => {
+    const done = ok => { lexLoading = null; resolve(ok); };
+    if (typeof document === 'undefined') return done(false);
+    const s = document.createElement('script');
+    s.src = 'lexicon.js';
+    s.async = true;
+    s.onload = () => done(typeof LEXICON_ROWS !== 'undefined');
+    s.onerror = () => done(false);
+    document.head.appendChild(s);
+    // Сеть бывает медленной: ждём не дольше 8 секунд, чтобы поиск
+    // не «висел» вечно — он просто ответит по словарю курса.
+    setTimeout(() => done(typeof LEXICON_ROWS !== 'undefined'), 8000);
+  });
+  return lexLoading;
 }
 
 /* Сколько слов знает помощник и откуда они: видно в интерфейсе */
@@ -3853,6 +3931,8 @@ function paintAccountFoot() {
   spd.title = 'Скорость озвучки';
   spd.onclick = () => { PREFS.slow = !PREFS.slow; toast(PREFS.slow ? 'Медленная озвучка (0.7×)' : 'Обычная озвучка (1.0×)'); paintAccountFoot(); };
   const thm = el('button', 'btn btn-sm btn-ghost', PREFS.theme === 'light' ? '🌙' : '☀️');
+  thm.setAttribute('aria-label', PREFS.theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему');
+  thm.title = thm.getAttribute('aria-label');
   thm.title = 'Переключить тему';
   thm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); };
   quick.appendChild(spd); quick.appendChild(thm);
@@ -3982,7 +4062,7 @@ function renderAccount(root) {
   const pr = el('div', 'btn-row');
   const bSpd = el('button', 'btn btn-ghost', PREFS.slow ? '🐢 Озвучка: медленно (0.7×)' : '🐇 Озвучка: обычно (1.0×)');
   bSpd.onclick = () => { PREFS.slow = !PREFS.slow; paintAccountFoot(); route(); };
-  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '☀️ Тема: светлая' : '🌇 Тема: закат');
+  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '🌙 Тема: белая' : '☀️ Тема: тёмная');
   bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
   const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
   bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
