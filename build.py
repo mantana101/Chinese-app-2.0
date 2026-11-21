@@ -16,9 +16,10 @@ import time
 base = pathlib.Path(__file__).parent
 src = base / "src"
 
-SOURCE_FILES = ("styles.css", "data.js", "lexicon.js", "pinyin.js", "homework.js", "auth.js", "app.js", "index.template.html")
+SOURCE_FILES = ("styles.css", "fonts.css", "data.js", "lexicon.js", "pinyin.js", "homework.js", "auth.js", "app.js", "index.template.html")
 
 styles = (src / "styles.css").read_text(encoding="utf-8")
+fonts_css = (src / "fonts.css").read_text(encoding="utf-8")
 data = (src / "data.js").read_text(encoding="utf-8")
 lexicon = (src / "lexicon.js").read_text(encoding="utf-8")
 pinyin_src = (src / "pinyin.js").read_text(encoding="utf-8")
@@ -57,9 +58,8 @@ else:
 
 out = (
     tpl.replace("{{BUILD_ID}}", BUILD_ID)
-    .replace("{{STYLES}}", styles)
+    .replace("{{STYLES}}", fonts_css + "\n" + styles)
     .replace("{{DATA}}", safe(data))
-    .replace("{{LEXICON}}", safe(lexicon))
     .replace("{{PINYIN}}", safe(pinyin_src))
     .replace("{{HOMEWORK}}", safe(hw))
     .replace("{{AUTH}}", safe(auth))
@@ -68,7 +68,7 @@ out = (
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{LEXICON}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
@@ -95,12 +95,17 @@ _tpl_close = tpl.count("</script>")
 if _tpl_open != _tpl_close:
     sys.exit(f"ОШИБКА: дисбаланс тегов script в шаблоне ({_tpl_open} против {_tpl_close})")
 if out.count("</script>") != _tpl_close + sum(
-    f.count("</script>") for f in (styles, data, lexicon, pinyin_src, hw, auth, app)
+    f.count("</script>") for f in (styles, data, pinyin_src, hw, auth, app)
 ):
     sys.exit("ОШИБКА: в собранной странице потерян закрывающий тег script")
 
 target = base / "index.html"
 target.write_bytes(out.encode("utf-8"))
+
+# Словарь помощника — отдельным файлом. Он нужен только помощнику и поиску,
+# и в сборке занимал 30 КБ сжатого веса на каждом открытии. Теперь первый
+# экран его не ждёт, а app.js подгружает файл сам (см. loadLexicon).
+(base / "lexicon.js").write_bytes(safe(lexicon).encode("utf-8"))
 
 # PWA-обвязка: манифест и service worker копируются рядом со страницей,
 # иначе установка на телефон и офлайн-режим не работают.
@@ -110,6 +115,15 @@ for name in ("manifest.json", "sw.js"):
 # Метка сборки в service worker: при обновлении страницы кэш обновится сам.
 _sw = (base / "sw.js").read_text(encoding="utf-8").replace("zh-app-v1", f"zh-app-{BUILD_ID}")
 (base / "sw.js").write_text(_sw, encoding="utf-8")
+# Иероглифический шрифт: только те куски, которые нужны курсу.
+fonts_dir = base / "fonts"
+fonts_dir.mkdir(exist_ok=True)
+for f in (src / "fonts").iterdir():
+    if f.is_file():
+        target_f = fonts_dir / f.name
+        if not target_f.exists() or target_f.read_bytes() != f.read_bytes():
+            shutil.copyfile(f, target_f)
+
 for name in ("icon-192.png", "icon-512.png"):
     if (base / name).exists():
         continue

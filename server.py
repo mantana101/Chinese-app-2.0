@@ -1083,11 +1083,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Vary", "Accept-Encoding")
         if self._gzip_on:
             self.send_header("Content-Encoding", "gzip")
-        # Страница обновляется часто, а внутри неё вся логика приложения:
-        # браузер и прокси не должны отдавать старую копию из кэша.
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-        self.send_header("Pragma", "no-cache")
-        self.send_header("Expires", "0")
+        # Минута кэша: возврат на главную или «назад» из урока не тянет
+        # 180 КБ заново. Каждое открытие всё равно сверяется по ETag
+        # (must-revalidate), поэтому новая сборка доезжает сразу.
+        self.send_header("Cache-Control", "private, max-age=60, must-revalidate")
         if build:
             # ETag зависит от кодировки: иначе браузер получит «304» на gzip
             # и попробует прочитать его как обычный HTML.
@@ -1145,16 +1144,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # ---------- статика ----------
 
+    # Ставится в _maybe_gzip: сжали ли мы текущий ответ (для ETag).
+    _gzip_on = False
+
     # Что можно попросить как файл рядом со страницей (PWA)
     STATIC_FILES = {
         "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8", True),
         "/sw.js": ("sw.js", "text/javascript; charset=utf-8", False),
+        # Словарь помощника: грузится фоном, поэтому кэшировать можно надолго.
+        "/lexicon.js": ("lexicon.js", "text/javascript; charset=utf-8", True),
         "/icon-192.png": ("icon-192.png", "image/png", False),
         "/icon-512.png": ("icon-512.png", "image/png", False),
     }
 
     def serve_static(self, name: str) -> bool:
-        """Отдаёт манифест, service worker и иконки. True, если отдал."""
+        """Отдаёт манифест, service worker, иконки и шрифты. True, если отдал."""
+        # Шрифты лежат в отдельной папке и меняются только со сборкой.
+        if name.startswith("/fonts/") and name.endswith(".woff2"):
+            fname = os.path.basename(name)
+            if not fname or "/" in fname or ".." in fname:
+                return False
+            path = os.path.join(BASE, "fonts", fname)
+            try:
+                with open(path, "rb") as f:
+                    body = f.read()
+            except OSError:
+                return False
+            self.send_response(200)
+            self.send_header("Content-Type", "font/woff2")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            send_common_headers(self)
+            self.end_headers()
+            _safe_write(self, body)
+            return True
         spec = self.STATIC_FILES.get(name)
         if not spec:
             return False
@@ -1178,8 +1201,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Vary", "Accept-Encoding")
         # Service worker обязан обновляться сразу: иначе старая версия
         # держит старую страницу в кэше.
-        self.send_header("Cache-Control", "no-cache" if fname == "sw.js"
-                         else ("public, max-age=604800" if cache_ok else "no-store"))
+        if fname == "sw.js":
+            self.send_header("Cache-Control", "no-cache")
+        elif cache_ok:
+            # Файл меняется только вместе со сборкой, поэтому надолго.
+            self.send_header("Cache-Control", "public, max-age=604800")
+        else:
+            self.send_header("Cache-Control", "no-store")
         send_common_headers(self)
         self.end_headers()
         _safe_write(self, payload)
@@ -1193,13 +1221,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
             body = b"<h1>index.html not found - run build.py</h1>"
             return self.send_html(503, body)
         build = build_id()
-        # Если браузер пришёл со старой меткой сборки — отдаём страницу заново.
+        # Если браузер пришёл с той же меткой сборки — страницу не передаём.
+        # Суффикс кодировки важен: для gzip и обычной версии ETag разные,
+        # иначе браузер получит «304» и прочитает gzip как обычный HTML.
+        suffix = "-gz" if self._gzip_on else ""
         etag = (self.headers.get("If-None-Match") or "").strip().strip('"')
-        if build and etag and etag == build:
+        if build and etag and etag in (build, build + "-gz"):
             self.send_response(304)
-            self.send_header("ETag", f'"{build}"')
+            self.send_header("ETag", f'"{build}{suffix}"')
             self.send_header("X-App-Build", build)
-            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+            self.send_header("Vary", "Accept-Encoding")
+            # Держим страницу «свежей» на минуту: повторное открытие урока и
+            # возврат «назад» не тратят мобильный трафик. Новую сборку
+            # сервер всё равно отдаст раньше — по ETag.
+            self.send_header("Cache-Control", "private, max-age=60, must-revalidate")
             self.send_header("Content-Length", "0")
             send_common_headers(self)
             self.end_headers()

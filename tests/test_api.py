@@ -628,12 +628,19 @@ class BuildVersionTestCase(ApiTestCase):
         self.assertEqual(status, 200)
         self.assertIn("build", data)
 
-    def test_index_is_not_cached(self):
+    def test_index_cache_is_revalidated(self):
+        """Минута кэша экономит трафик, но версия всегда сверяется по ETag.
+
+        Раньше страница уходила с «no-store» и каждый возврат на главную
+        заново тянул 160 КБ. Кэш без проверки был бы опасен: ученик увидел
+        бы старую сборку, поэтому must-revalidate и ETag обязательны.
+        """
         import urllib.request
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}/")
         with urllib.request.urlopen(req) as res:
             self.assertEqual(res.status, 200)
             cache = res.headers.get("Cache-Control", "")
-            self.assertIn("no-store", cache,
-                          "страница не должна кэшироваться: иначе обновления не доезжают")
+            self.assertIn("must-revalidate", cache, "кэш обязан сверяться с сервером")
+            self.assertIn("max-age=60", cache)
+            self.assertNotIn("no-store", cache)
             self.assertTrue(res.headers.get("ETag"), "нужен ETag для проверки версии")

@@ -12,6 +12,8 @@ COPY build.py server.py docker-entrypoint.py ./
 COPY src ./src
 # PWA: манифест, service worker и иконки нужны рядом со страницей
 COPY manifest.json sw.js icon-192.png icon-512.png ./
+# Изображения-заглушки папки шрифтов: build.py наполнит её из src/fonts
+RUN mkdir -p /app/fonts /app/lexicon.js
 # Словарь помощника (11 470 слов, сжатый): по нему он ищет офлайн.
 COPY data/cedict.txt.gz ./data/cedict.txt.gz
 

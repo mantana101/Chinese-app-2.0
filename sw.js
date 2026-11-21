@@ -1,8 +1,9 @@
 /* Service worker: приложение должно открываться без интернета.
    Ученик часто едет в метро или сидит без сети — раньше в этот момент
    сайт не открывался вовсе, хотя весь курс и так лежит в одном файле. */
-const CACHE = 'zh-app-4753255ea472';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'zh-app-ce298a10a368';
+// Словарь помощника тоже в оболочке: без сети он должен открыться.
+const SHELL = ['./', './index.html', './lexicon.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

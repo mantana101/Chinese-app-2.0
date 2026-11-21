@@ -363,6 +363,10 @@
     const ok = Number(value) === task.a;
     const box = el('div', 'hw-live ' + (ok ? 'ok' : 'bad'),
       ok ? '✅ Верно' : `❌ Правильно: ${ruby((task.o || [])[task.a] || '')}`);
+    // Скринридер должен услышать результат сам: ученик нажимает вариант
+    // и раньше не получал никакой обратной связи, пока не перейдёт дальше.
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-live', 'polite');
     row.appendChild(box);
   }
 

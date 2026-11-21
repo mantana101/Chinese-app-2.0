@@ -32,6 +32,11 @@ const dom = new JSDOM(fs.readFileSync(process.cwd() + '/index.html', 'utf8'), {
 });
 const w = dom.window;
 setTimeout(() => {
+  const code = fs.readFileSync(process.cwd() + '/lexicon.js', 'utf8');
+  const sc = w.document.createElement('script');
+  sc.textContent = code;
+  w.document.head.appendChild(sc);
+  w.eval('if (typeof TUTOR_LEX !== "undefined") TUTOR_LEX.reload();');
   const questions = JSON.parse(process.argv[1]);
   const out = {};
   for (const step of questions) {
@@ -52,6 +57,20 @@ setTimeout(() => {
   process.stdout.write(JSON.stringify(out));
   process.exit(0);
 }, 600);
+"""
+
+LEXICON_STUB = r"""
+const fs = require('fs');
+const path = require('path');
+// Словарь помощника теперь отдельный файл (lexicon.js). В браузере его
+// подгружает loadLexicon, а в jsdom внешние скрипты не выполняются —
+// подкладываем тем же способом, что и сеть.
+function injectLexicon(w) {
+  const code = fs.readFileSync(path.join(process.cwd(), 'lexicon.js'), 'utf8');
+  const s = w.document.createElement('script');
+  s.textContent = code;
+  w.document.head.appendChild(s);
+}
 """
 
 NO_IDEA = "не уверен, что понял"
