@@ -160,7 +160,7 @@ const PREFS = {
     }
     // Цвет адресной строки на телефоне подстраивается под тему.
     const meta = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#f7efe4');
+    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#f6efe3');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
   set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
@@ -4062,7 +4062,7 @@ function renderAccount(root) {
   const pr = el('div', 'btn-row');
   const bSpd = el('button', 'btn btn-ghost', PREFS.slow ? '🐢 Озвучка: медленно (0.7×)' : '🐇 Озвучка: обычно (1.0×)');
   bSpd.onclick = () => { PREFS.slow = !PREFS.slow; paintAccountFoot(); route(); };
-  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '🌙 Тема: белая' : '☀️ Тема: тёмная');
+  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '🌙 Тема: светлая' : '☀️ Тема: тёмная');
   bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
   const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
   bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
