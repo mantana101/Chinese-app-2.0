@@ -160,7 +160,7 @@ const PREFS = {
     }
     // Цвет адресной строки на телефоне подстраивается под тему.
     const meta = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#f6efe3');
+    if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#ffffff');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
   set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
@@ -193,6 +193,68 @@ function speak(text, rate) {
     speechSynthesis.speak(u);
   } catch (e) { toast('Ошибка озвучки'); }
 }
+/* ---------- Голосовой учитель-панда ----------
+   Озвучка объяснений на русском: отдельная дорожка (ru-RU), потому что
+   speak() всегда говорит по-китайски. Пока Мэймэй говорит, у панды
+   анимируется рот (класс .talking на панели учителя). */
+function speakRu(text, rate) {
+  if (!('speechSynthesis' in window)) { toast('Браузер не поддерживает озвучку'); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ru-RU';
+    u.rate = rate !== undefined ? rate : 0.95;
+    const v = speechSynthesis.getVoices().find(x => /\bru\b|Russian|русск/i.test(x.lang + ' ' + x.name));
+    if (v) u.voice = v;
+    const av = document.querySelector('.panda-teacher');
+    if (av) av.classList.add('talking');
+    const stop = () => { if (av) av.classList.remove('talking'); };
+    u.onend = stop;
+    u.onerror = stop;
+    speechSynthesis.speak(u);
+  } catch (e) { toast('Ошибка озвучки'); }
+}
+
+/* Панда Мэймэй: уши, пятки вокруг глаз, нос. Рот — два элемента:
+   закрытая дуга (idle) и открытый овал (анимация во время речи). */
+function pandaSVG() {
+  return `<svg class="pa-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+    <circle cx="30" cy="30" r="16" class="pa-dark"/>
+    <circle cx="90" cy="30" r="16" class="pa-dark"/>
+    <ellipse cx="60" cy="64" rx="44" ry="40" class="pa-face"/>
+    <ellipse cx="41" cy="55" rx="13" ry="15" class="pa-dark" transform="rotate(-14 41 55)"/>
+    <ellipse cx="79" cy="55" rx="13" ry="15" class="pa-dark" transform="rotate(14 79 55)"/>
+    <g class="pa-eye"><circle cx="41" cy="56" r="5.2" fill="#fff"/><circle cx="41.8" cy="56.6" r="2.7" class="pa-dark"/></g>
+    <g class="pa-eye"><circle cx="79" cy="56" r="5.2" fill="#fff"/><circle cx="78.2" cy="56.6" r="2.7" class="pa-dark"/></g>
+    <ellipse cx="28" cy="74" rx="7" ry="4.5" class="pa-blush"/>
+    <ellipse cx="92" cy="74" rx="7" ry="4.5" class="pa-blush"/>
+    <ellipse cx="60" cy="76" rx="6.5" ry="4.5" class="pa-dark"/>
+    <path class="pa-mouth-closed" d="M52 84 Q60 90 68 84" fill="none"/>
+    <ellipse class="pa-mouth-open" cx="60" cy="87" rx="7" ry="5"/>
+  </svg>`;
+}
+
+/* Панель учителя: панда слева, объяснение урока текстом (ребёнок читает
+   вместе с голосом) и кнопки «объяснить» / «медленнее». */
+function renderTeacher(l) {
+  const pan = el('div', 'panel panda-teacher');
+  pan.innerHTML = `
+    <button class="pa-wrap" type="button" title="Объяснить урок голосом" aria-label="Панда-учитель Мэймэй: объяснить урок голосом">${pandaSVG()}</button>
+    <div class="pa-body">
+      <div class="pa-name">Мэймэй · панда-учитель <span class="pa-hint">нажми на панду — она объяснит</span></div>
+      <div class="pa-text">${esc(l.teacher)}</div>
+      <div class="pa-actions">
+        <button class="btn btn-primary btn-sm pa-say" aria-label="Объяснить урок голосом">🔊 Объяснить урок</button>
+        <button class="speak sm pa-slow" title="Медленное объяснение" aria-label="Объяснить медленнее">🐢</button>
+      </div>
+    </div>`;
+  const say = (rate) => speakRu(l.teacher, rate);
+  pan.querySelector('.pa-say').onclick = () => say();
+  pan.querySelector('.pa-slow').onclick = (e) => { e.preventDefault(); e.stopPropagation(); say(0.72); };
+  pan.querySelector('.pa-wrap').onclick = () => say();
+  return pan;
+}
+
 function toneBtn(text, cls = 'speak') {
   return `<button class="${cls}" data-speak="${esc(text)}" title="Прослушать" aria-label="Прослушать: ${esc(text)}">🔊</button>`;
 }
@@ -333,7 +395,13 @@ function renderAuthGate() {
 window.__showAuth = () => { window.__guest = false; renderAuthGate(); };
 window.__afterAuth = () => { window.__guest = false; paintAccountFoot(); updateNavRoles(); if (typeof refreshHomeworkBadge === 'function') refreshHomeworkBadge(); route(); };
 window.__guestMode = () => { window.__guest = true; route(); };
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => {
+  /* Ушли с урока — Мэймэй замолкает и перестаёт «говорить ртом». */
+  if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
+  const av = document.querySelector('.panda-teacher');
+  if (av) av.classList.remove('talking');
+  route();
+});
 
 /* Словарь догружаем после того, как страница отрисована: ученик уже
    видит урок, а словарь доезжает фоном. В офлайне он берётся из кэша. */
@@ -631,6 +699,9 @@ function renderLesson(root, args) {
     <div class="lh-badge">${esc(mod.level)} · ${esc(mod.title.split('—')[0].trim())}</div>
     <h1>${esc(l.title)}</h1>
     <p class="lh-sub">${esc(l.subtitle)}</p>`));
+
+  /* --- Учитель-панда: голосовое объяснение материала урока --- */
+  if (l.teacher) root.appendChild(renderTeacher(l));
 
   const goals = el('div', 'panel goals');
   goals.appendChild(el('h3', '', '🎯 Цели урока'));

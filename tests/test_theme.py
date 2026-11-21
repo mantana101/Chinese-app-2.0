@@ -31,9 +31,9 @@ class BasePalette(unittest.TestCase):
         src = css()
         root = src[src.index(":root {"):]
         root = root[: root.index("}")]
-        self.assertIn("--bg: #f6efe3", root, "фон по умолчанию — тёплая «рисовая бумага»")
+        self.assertIn("--bg: #ffffff", root, "главный экран белый — так решил пользователь")
         self.assertIn("--txt: #231f2c", root, "текст по умолчанию — тёмный, «чернильный»")
-        self.assertIn("--panel: #fdf8ee", root, "карточки не должны быть чисто белыми")
+        self.assertIn("--panel: #ffffff", root, "карточки на белом экране тоже белые")
 
     def test_dark_palette_is_opt_in(self):
         src = css()
@@ -57,7 +57,7 @@ class BasePalette(unittest.TestCase):
                      for c in parts]
             return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
 
-        bg, txt = "#f6efe3", "#231f2c"
+        bg, txt = "#ffffff", "#231f2c"
         a, b = lum(bg), lum(txt)
         ratio = (max(a, b) + 0.05) / (min(a, b) + 0.05)
         self.assertGreater(ratio, 7.0, f"контраст {ratio:.1f}:1 слишком низкий")
@@ -65,28 +65,43 @@ class BasePalette(unittest.TestCase):
     def test_page_header_matches_light_theme(self):
         with open(INDEX, encoding="utf-8") as f:
             html = f.read()
-        self.assertIn('content="#f6efe3"', html, "адресная строка телефона должна быть светлой")
+        self.assertIn('content="#ffffff"', html, "адресная строка телефона должна быть белой")
 
 
-class NoHarshWhite(unittest.TestCase):
-    """Чистый белый на большой площади бьёт по глазам — его в палитре нет."""
+class MainAreaIsWhite(unittest.TestCase):
+    """Правый экран с уроками — белый и однотонный (просьба пользователя).
 
-    def test_panels_are_cream_not_white(self):
+    Раньше фон был «бумагой» с цветными пятнами туши; теперь главное
+    поле белое, зерно бумаги осталось, цветные подложки убраны.
+    Тёмная тема и левое меню не менялись."""
+
+    def test_bg_and_panel_are_white(self):
         src = css()
         root = src[src.index(":root {"):]
         root = root[: root.index("}")]
-        for name in ("--bg", "--bg2", "--panel", "--panel2"):
+        for name in ("--bg", "--panel", "--panel2"):
             line = [l for l in root.splitlines() if l.strip().startswith(name + ":")][0]
             value = line.split(":")[1].strip().rstrip(";").lower()
-            self.assertNotIn(value, ("#fff", "#ffffff"), f"{name} не должен быть чисто белым")
+            self.assertEqual(value, "#ffffff", f"{name} должен быть чисто белым")
 
-    def test_background_has_colour(self):
-        """Фон должен быть не «просто песочным», а с цветными пятнами."""
+    def test_background_is_flat_white_with_grain(self):
+        """Зерно бумаги остаётся, цветных пятен туши больше нет."""
         src = css()
         body = src[src.index("\nbody {"):]
         body = body[: body.index("}")]
-        self.assertGreaterEqual(body.count("radial-gradient"), 3,
-                                "фону нужны цветные пятна, иначе он выглядит плоским")
+        self.assertIn("repeating-linear-gradient", body,
+                      "фактура бумаги должна остаться — без неё слишком стерильно")
+        self.assertNotIn("radial-gradient", body,
+                         "цветные пятна на главном экране больше не нужны")
+        self.assertIn("var(--bg)", body, "фон берётся из палитры, не захардкожен")
+
+    def test_hero_has_no_color_washes(self):
+        """Герой-панель в светлой теме — плоская белая карточка."""
+        src = css()
+        start = src.index(':root:not([data-theme="dark"]) .hero {')
+        block = src[start:src.index("}", start)]
+        self.assertNotIn("radial-gradient", block, "у героя не должно быть цветных пятен")
+        self.assertIn("var(--panel)", block, "герой — белая панель из палитры")
 
 
 class InBrowser(unittest.TestCase):
@@ -133,11 +148,11 @@ setTimeout(() => {
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(res.returncode, 0, res.stderr[-500:])
         out = __import__("json").loads(res.stdout)
-        self.assertEqual(out["defaultBg"], "#f6efe3")
+        self.assertEqual(out["defaultBg"], "#ffffff")
         self.assertIsNone(out["defaultAttr"], "по умолчанию атрибута темы быть не должно")
         self.assertEqual(out["darkBg"], "#171327")
         self.assertEqual(out["darkAttr"], "dark")
-        self.assertEqual(out["backBg"], "#f6efe3")
+        self.assertEqual(out["backBg"], "#ffffff")
         self.assertIsNone(out["backAttr"], "светлая тема не должна вешать пустой атрибут")
         self.assertEqual(out["saved"], "light")
 
