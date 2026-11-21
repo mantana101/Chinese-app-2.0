@@ -1793,7 +1793,27 @@ function tutorAllVocab() {
     { h: '老师', p: 'lǎoshī', r: 'учитель' },
     { h: '同学', p: 'tóngxué', r: 'одноклассник; ученик' }
   ].forEach(w => push(w, 'Базовый словарь'));
+
+  /* Карманный словарь HSK: 4000+ слов, которых нет в 15 уроках.
+     Раньше на «а как будет «билет»?» помощник честно отвечал «нет в курсе»
+     — теперь он знает слово и подсказывает уровень HSK. */
+  (typeof LEXICON_ROWS !== 'undefined' ? LEXICON_ROWS : []).forEach(row => {
+    const [h, pnum, py, ru, level] = row;
+    /* Берём только переводы на русском или из курса: английский перевод
+       ученику не помогает и путает («apartment» вместо «квартира»). */
+    if (!h || !ru || !/[а-яА-ЯёЁ]/.test(ru)) return;
+    if (list.some(x => x.h === h)) return;         // курс точнее — он важнее
+    seen.add(h + '|' + ru);
+    list.push({ h, p: py || pnum || '', r: ru, lesson: level ? `HSK ${level}` : 'Словарь HSK', hsk: level, num: pnum });
+  });
   return list;
+}
+
+/* Сколько слов знает помощник и откуда они: видно в интерфейсе */
+function tutorVocabStats() {
+  const rows = typeof LEXICON_ROWS !== 'undefined' ? LEXICON_ROWS : [];
+  const course = Object.values(LESSONS).reduce((n, l) => n + l.vocab.length, 0);
+  return { total: tutorAllVocab().length, course, hsk: rows.length };
 }
 
 /* ---------- Русские названия грамматических явлений ----------
@@ -1946,6 +1966,28 @@ function ruStem(word) {
     if (w.length - end.length >= 3 && w.endsWith(end)) { w = w.slice(0, -end.length); break; }
   }
   return w;
+}
+
+/* Грубый корень: снимаем приставку и окончание. Нужен, чтобы «болезнь»
+   и «заболеть» считались одним понятием, а «боль» и «больница» — нет
+   (у последней корень короче порога). */
+const RU_PREFIXES = ['пере', 'недо', 'при', 'про', 'пред', 'за', 'на', 'по',
+  'вы', 'от', 'под', 'над', 'раз', 'рас', 'у', 'с', 'о', 'об'];
+
+function ruRoot(word) {
+  let w = ruStem(word);
+  for (const pre of RU_PREFIXES) {
+    if (w.length - pre.length >= 4 && w.startsWith(pre)) { w = w.slice(pre.length); break; }
+  }
+  return w;
+}
+
+/* Общий корень: начало в 4 буквы совпадает и слова не разъехались по длине.
+   Это ловит разные части речи, но не склеивает «чай» и «часть». */
+function shareRoot(a, b) {
+  if (!a || !b || a.length < 4 || b.length < 4) return false;
+  if (Math.abs(a.length - b.length) > 5) return false;
+  return a.slice(0, 4) === b.slice(0, 4);
 }
 
 /* Расстояние Левенштейна: нужно, чтобы «спосибо» и «спасибо» считались
@@ -2192,19 +2234,48 @@ function tutorFindWords(text, limit = 6) {
       if (!out.length) lex.filter(w => w.p && squash(bare(w.p)).includes(want)).forEach(push);
     }
   }
-  // 4. Русский: точное, затем по основе слова
+  // 4. Русский: сначала целое слово из словаря, потом — по основе
   const ruWords = q.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/).filter(w => w.length > 1);
+  const senseParts = w => w.r.replace(/ё/g, 'е').split(/[;,/()]+/).map(s => s.trim()).filter(Boolean);
+
+  /* 4a. Точное совпадение целого значения — самый надёжный случай.
+     Сравниваем без «основы»: «счёт» и «счётное слово» — разные слова,
+     и раньше грубая основа склеивала их в одно (朵 вместо «счёт»). */
   ruWords.forEach(word => {
-    const stem = ruStem(word);
-    if (stem.length < 3) return;
-    lex.filter(w => {
-      const ru = w.r.replace(/ё/g, 'е');
-      const parts = ru.split(/[;,/()]+/).map(s => s.trim()).filter(Boolean);
-      return parts.some(p => ruStem(p) === stem || ruStem(p).replace(/[^a-zа-я]/g, '') === stem);
-    }).forEach(push);
-    if (out.length) return;
-    lex.filter(w => ruStem(w.r).includes(stem) && stem.length >= 4).forEach(push);
+    lex.filter(w => senseParts(w).some(p => p.toLowerCase() === word)).forEach(push);
   });
+
+  /* 4b. Только если точного нет — ищем по основе. Порог в 5 букв:
+     короткие «счёт», «дом», «чай» иначе цепляются к любому похожему. */
+  if (!out.length) ruWords.forEach(word => {
+    const stem = ruStem(word);
+    if (stem.length < 5) return;
+    let hit = false;
+    lex.filter(w => senseParts(w).some(p => ruStem(p) === stem)).forEach(w => { hit = true; push(w); });
+    if (hit) return;
+    lex.filter(w => senseParts(w).some(p => {
+      const s = ruStem(p);
+      return s.startsWith(stem) && s.length - stem.length <= 3;
+    })).forEach(push);
+  });
+  /* 4b2. Другая часть речи / приставка у того же корня:
+     «болезнь» ↔ 生病 «заболеть», «учить» ↔ 学习 «учёба».
+     Сравниваем корни: отсекаем приставки, требуем общий корень в 4 буквы. */
+  if (!out.length) ruWords.forEach(word => {
+    const root = ruRoot(word);
+    if (root.length < 4) return;
+    lex.filter(w => senseParts(w).some(p => shareRoot(ruRoot(p), root))).forEach(push);
+  });
+
+  // 4c. Слово внутри длинного значения: «командировка» → 出差
+  // («отправляться в командировку»). Берём начало слова: оно у русских
+  // слов почти не меняется, в отличие от окончания.
+  if (!out.length) ruWords.forEach(word => {
+    if (word.length < 6) return;
+    const core = word.slice(0, Math.min(7, word.length));
+    lex.filter(w => senseParts(w).some(p => p.toLowerCase().includes(core))).forEach(push);
+  });
+
   // 5. Опечатки: ищем ближайшее слово словаря целиком
   if (!out.length && ruWords.length) {
     const phrase = ruWords.join(' ');
@@ -2355,12 +2426,15 @@ function tutorAnswerCore(raw) {
     const topic = tutorTopicReply(phrase);
     if (topic) return topic;
 
-    // 4d. Честно говорим, что нет, и предлагаем близкое
+    // 4d. Честно говорим, что нет, и ведём туда, где ответ есть
     const near = tutorFindWords(phrase.split(/\s+/).slice(-2).join(' '), 3);
+    const links = tutorDictLinks(phrase);
     return {
-      html: `Точного перевода «${esc(phrase)}» в словаре курса нет.` +
-        (near.length ? `<br>Близкие слова:<br>${near.map(tutorCardHtml).join('')}` : '') +
-        `<div class="tw-note">Подскажите тему иначе — например «еда», «дорога», «покупки» — и я подберу фразы. Или найдите слово в <a href="#/dict">Словаре</a>.</div>`
+      html: `В словаре курса «${esc(phrase)}» нет — но это не тупик.` +
+        (near.length ? `<br>Похожие слова из курса:<br>${near.map(tutorCardHtml).join('')}` : '') +
+        `<div class="tw-links">Проверить в словарях: ` +
+        links.slice(0, 3).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a>`).join(' · ') +
+        `</div><div class="tw-note">Так вы найдёте и слово, и примеры — и сможете добавить его в <a href="#/cards">карточки</a>.</div>`
     };
   }
 
@@ -2465,7 +2539,12 @@ function tutorAnswerCore(raw) {
     html: 'Не уверен, что понял — уточните, пожалуйста. Я лучше всего отвечаю на такие вопросы:<br>' +
       '• <b>как сказать «спасибо»</b><br>• <b>что значит 车站</b><br>• <b>объясни разницу 不 и 没</b><br>' +
       '• <b>как спросить дорогу</b><br>• <b>что мне повторить</b>' +
-      (guess.length ? `<div class="tw-note">Возможно, вы про это: ${guess.map(w => `<b>${esc(w.h)}</b> (${esc(w.p)} — ${esc(w.r)})`).join(', ')}</div>` : '')
+      (guess.length ? `<div class="tw-note">Возможно, вы про это: ${guess.map(w => `<b>${esc(w.h)}</b> (${esc(w.p)} — ${esc(w.r)})`).join(', ')}</div>` : '') +
+      (tutorDictLinks(q.split(/[^\u3400-\u9fff]+/)[0] || q).length
+        ? `<div class="tw-links">Или посмотрите сами: ` +
+          tutorDictLinks(q.split(/[^\u3400-\u9fff]+/)[0] || q).slice(0, 2)
+            .map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a>`).join(' · ') +
+          `</div>` : '')
   };
 }
 
@@ -3130,6 +3209,76 @@ function tutorReplyLocal(raw) {
   return tutorSelfCheck(reply, plan);
 }
 
+/* ============================================================
+   ОТВЕТ ИЗ ВНЕШНИХ ИСТОЧНИКОВ
+   Сервер умеет искать слово в CC-CEDICT, Викисловаре и Tatoeba.
+   Здесь мы превращаем это в ответ с честными пометками: что найдено,
+   где именно и куда пойти почитать. Если сеть закрыта — остаётся
+   локальный словарь курса, и это не выглядит как ошибка.
+   ============================================================ */
+function tutorSourceLinks(sources) {
+  const links = ((sources && sources.links) || []).filter(l => l && l.url);
+  if (!links.length) return '';
+  const uniq = [];
+  links.forEach(l => { if (!uniq.some(x => x.url === l.url)) uniq.push(l); });
+  return `<div class="t-links">Источники: ` +
+    uniq.slice(0, 3).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a>`).join(' · ') +
+    `</div>`;
+}
+
+/* Ссылки «где проверить» можно дать даже офлайн: они ведут на известные
+   словари, а не требуют запроса с нашего сервера. Это и есть «пойти
+   почитать в книге»: ученик видит, куда смотреть. */
+const TUTOR_DICT_LINKS = [
+  { id: 'mdbg', title: 'CC-CEDICT / MDBG', zh: 'https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqb=',
+    ru: null, why: 'самый полный свободный словарь: значение, чтение, примеры' },
+  { id: 'wkzh', title: 'Викисловарь (кит.)', zh: 'https://zh.wiktionary.org/wiki/',
+    ru: null, why: 'состав иероглифа, радикалы, этимология' },
+  { id: 'wkru', title: 'Викисловарь (рус.)', zh: 'https://ru.wiktionary.org/wiki/',
+    ru: null, why: 'толкование по-русски и примеры употребления' },
+  { id: 'tatoeba', title: 'Tatoeba', zh: 'https://tatoeba.org/en/sentences/search?query=',
+    ru: null, why: 'живые предложения с переводом на русский' },
+  { id: 'pinyin', title: 'Пиньинь и тоны', zh: null, ru: 'https://www.zdic.net/hans/',
+    why: 'чтение и порядок черт в словаре 汉典' }
+];
+
+function tutorDictLinks(word) {
+  const w = String(word || '').trim();
+  if (!w) return [];
+  return TUTOR_DICT_LINKS.filter(d => d.zh || d.ru).map(d => ({
+    title: d.title,
+    url: (d.zh || d.ru) + (d.zh ? encodeURIComponent(w) : ''),
+    why: d.why
+  }));
+}
+
+function tutorSourcesReply(payload, question) {
+  const S = (payload && payload.sources) || {};
+  const notes = (S.notes || []).filter(n => n && n.text);
+  const links = (S.links || []).filter(l => l && l.url);
+  if (!notes.length) return null;
+
+  const used = (S.used || []).filter(Boolean);
+  let html = `<div class="t-src-badge">🌐 ${esc(used.length ? used.join(' · ') : 'словари')}</div>`;
+  html += `<div class="tw-py" style="margin:0 0 8px">По запросу «${esc(question)}»:</div>`;
+  notes.slice(0, 4).forEach(n => {
+    const src = n.source ? `<span class="tw-src">${esc(n.source)}</span>` : '';
+    html += `<div class="tw-card tw-src-card"><div class="tw-ru">${esc(n.text)}</div>${src}</div>`;
+  });
+  if (links.length) {
+    const uniq = [];
+    links.forEach(l => { if (!uniq.some(x => x.url === l.url)) uniq.push(l); });
+    html += `<div class="t-links">Где почитать: ` +
+      uniq.slice(0, 4).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a>`).join(' · ') +
+      `</div>`;
+  }
+  html += `<div class="tw-note">Это данные словарей, а не курс: в уроках другое чтение или другой оттенок — уточните у учителя.</div>`;
+
+  /* Озвучить можно первое найденное китайское слово */
+  const han = (notes.map(n => (n.text.match(/[\u3400-\u9fff]{1,8}/) || [''])[0]).find(Boolean)) || '';
+  return { html, speak: han, fromSources: true };
+}
+
 /* Что серверный ИИ должен знать про ученика, чтобы отвечать по делу */
 function tutorServerContext() {
   const L = tutorLearner();
@@ -3163,7 +3312,8 @@ function renderTutor(root) {
     ['💬 Диалог', 'давай поговорим'],
     ['🎯 Что повторить', 'что мне повторить сейчас'],
     ['🎲 Проверь меня', 'проверь меня тестом'],
-    ['🧠 Проверь мой ответ', 'проверь мой ответ']
+    ['🧠 Проверь мой ответ', 'проверь мой ответ'],
+    ['🌐 Поиск в словарях', 'найди в словарях 身份证']
   ].forEach(([label, query]) => {
     const b = el('button', 'btn btn-sm btn-ghost', label);
     b.onclick = () => sendMsg(query);
@@ -3248,13 +3398,23 @@ function renderTutor(root) {
           body: JSON.stringify({
             message: q,
             history: tutorHistory.slice(-8).map(x => ({ role: x.role, content: x.content || '' })),
-            context: tutorServerContext()
+            context: tutorServerContext(),
+            /* Слово для поиска в словарях: иероглифы из вопроса сервер
+               поймёт сам, но так он ищет точнее и не тратит сеть зря. */
+            word: (q.match(/[\u3400-\u9fff]{1,8}/) || [''])[0]
           })
         });
         const d = await res.json();
         if (d && d.mode === 'ai' && d.reply) {
           const text = esc(d.reply).replace(/\n/g, '<br>');
-          replyObj = { html: text.replace(/([\u3400-\u9fff]+)/g, (m) => ruby(m)), speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0] };
+          replyObj = {
+            html: text.replace(/([\u3400-\u9fff]+)/g, (m) => ruby(m)) + tutorSourceLinks(d.sources),
+            speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0]
+          };
+        } else if (d && d.mode === 'sources') {
+          /* Ключа ИИ нет, но словари ответили — показываем их, а не
+             «извините, я не знаю». */
+          replyObj = tutorSourcesReply(d, q);
         }
       } catch (e) { }
     }

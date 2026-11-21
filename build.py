@@ -16,10 +16,11 @@ import time
 base = pathlib.Path(__file__).parent
 src = base / "src"
 
-SOURCE_FILES = ("styles.css", "data.js", "pinyin.js", "homework.js", "auth.js", "app.js", "index.template.html")
+SOURCE_FILES = ("styles.css", "data.js", "lexicon.js", "pinyin.js", "homework.js", "auth.js", "app.js", "index.template.html")
 
 styles = (src / "styles.css").read_text(encoding="utf-8")
 data = (src / "data.js").read_text(encoding="utf-8")
+lexicon = (src / "lexicon.js").read_text(encoding="utf-8")
 pinyin_src = (src / "pinyin.js").read_text(encoding="utf-8")
 hw = (src / "homework.js").read_text(encoding="utf-8")
 auth = (src / "auth.js").read_text(encoding="utf-8")
@@ -58,6 +59,7 @@ out = (
     tpl.replace("{{BUILD_ID}}", BUILD_ID)
     .replace("{{STYLES}}", styles)
     .replace("{{DATA}}", safe(data))
+    .replace("{{LEXICON}}", safe(lexicon))
     .replace("{{PINYIN}}", safe(pinyin_src))
     .replace("{{HOMEWORK}}", safe(hw))
     .replace("{{AUTH}}", safe(auth))
@@ -66,7 +68,7 @@ out = (
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{LEXICON}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
@@ -93,7 +95,7 @@ _tpl_close = tpl.count("</script>")
 if _tpl_open != _tpl_close:
     sys.exit(f"ОШИБКА: дисбаланс тегов script в шаблоне ({_tpl_open} против {_tpl_close})")
 if out.count("</script>") != _tpl_close + sum(
-    f.count("</script>") for f in (styles, data, pinyin_src, hw, auth, app)
+    f.count("</script>") for f in (styles, data, lexicon, pinyin_src, hw, auth, app)
 ):
     sys.exit("ОШИБКА: в собранной странице потерян закрывающий тег script")
 

@@ -10,6 +10,8 @@ WORKDIR /app
 
 COPY build.py server.py docker-entrypoint.py ./
 COPY src ./src
+# Словарь помощника (11 470 слов, сжатый): по нему он ищет офлайн.
+COPY data/cedict.txt.gz ./data/cedict.txt.gz
 
 # Собираем index.html на этапе образа и готовим каталог для базы.
 RUN python3 build.py \
