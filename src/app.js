@@ -221,7 +221,7 @@ function launchConfetti() {
   try {
     const box = document.createElement('div');
     box.className = 'confetti-box';
-    const colors = ['#e0b354', '#d0453a', '#5aa88f', '#6a9fd4', '#ffd9d3'];
+    const colors = ['#ffd27a', '#f37a5c', '#4fd1a5', '#74a9ef', '#a98bf0', '#f28db4'];
     for (let i = 0; i < 34; i++) {
       const p = document.createElement('i');
       p.style.left = (Math.random() * 100) + '%';
@@ -2585,7 +2585,7 @@ function renderAccount(root) {
   const pr = el('div', 'btn-row');
   const bSpd = el('button', 'btn btn-ghost', PREFS.slow ? '🐢 Озвучка: медленно (0.7×)' : '🐇 Озвучка: обычно (1.0×)');
   bSpd.onclick = () => { PREFS.slow = !PREFS.slow; paintAccountFoot(); route(); };
-  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '☀️ Тема: светлая (бумага)' : '🌙 Тема: тёмная');
+  const bThm = el('button', 'btn btn-ghost', PREFS.theme === 'light' ? '☀️ Тема: светлая' : '🌇 Тема: закат');
   bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
   const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
   bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
