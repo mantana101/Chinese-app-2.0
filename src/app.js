@@ -197,6 +197,8 @@ function toneBtn(text, cls = 'speak') {
   return `<button class="${cls}" data-speak="${esc(text)}" title="Прослушать" aria-label="Прослушать: ${esc(text)}">🔊</button>`;
 }
 document.addEventListener('click', e => {
+  const slow = e.target.closest('[data-speak-slow]');
+  if (slow) { e.preventDefault(); e.stopPropagation(); speak(slow.dataset.speakSlow, 0.5); return; }
   const b = e.target.closest('[data-speak]');
   if (b) { e.preventDefault(); e.stopPropagation(); speak(b.dataset.speak); }
 });
@@ -491,6 +493,121 @@ function renderPlan(root) {
    УРОК
    ============================================================ */
 let quizState = null;
+
+/* ---------- Детский первый урок ----------
+   Ученики читают только с пиньинем, поэтому в детском уроке пиньинь —
+   главный текст: крупный, первый, с разбором по слогам и тонами.
+   Иероглиф идёт вторым, как картинка-подсказка. */
+
+/* Номер тона по значку над гласной: ā=1, á=2, ǎ=3, à=4, без значка=0. */
+function toneNumber(syl) {
+  const s = String(syl || '');
+  if (/[āēīōūǖ]/.test(s)) return 1;
+  if (/[áéíóúǘ]/.test(s)) return 2;
+  if (/[ǎěǐǒǔǚ]/.test(s)) return 3;
+  if (/[àèìòùǜ]/.test(s)) return 4;
+  return 0;
+}
+const TONE_NAMES = { 0: 'нейтральный', 1: '1-й · ровный', 2: '2-й · вверх', 3: '3-й · качели', 4: '4-й · вниз' };
+
+/* Линия голоса для тона: та же геометрия, что и в видео-уроках. */
+function toneCurveSVG(n) {
+  const paths = {
+    0: 'M 10 30 L 110 30',
+    1: 'M 10 18 L 110 18',
+    2: 'M 10 46 Q 60 36 110 14',
+    3: 'M 10 34 Q 55 56 110 22',
+    4: 'M 10 12 Q 60 28 110 50'
+  };
+  return `<svg viewBox="0 0 120 60" class="tone-curve" aria-hidden="true" focusable="false">
+    <line x1="8" y1="30" x2="112" y2="30" stroke="rgba(120,100,60,.25)" stroke-dasharray="3 3"/>
+    <path d="${paths[n] || paths[0]}" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
+  </svg>`;
+}
+
+/* Панель «как читать пиньинь + тоны»: стоит первой, до словаря. */
+function renderKidIntro(l) {
+  const pan = el('div', 'panel kid-intro');
+  pan.appendChild(el('h3', '', '🔤 Сначала — как читать пиньинь'));
+  pan.appendChild(el('p', 'kid-lead', 'Китайские звуки записаны латинскими буквами — это пиньинь. Читаем по слогам: <b>nǐ hǎo</b> — «ни-хао». Послушайте каждое слово кнопкой 🔊, а потом повторите медленно кнопкой 🐢.'));
+  const grid = el('div', 'pg-grid');
+  (l.pinyinGuide || []).forEach(g => {
+    const c = el('div', 'pg-cell', `<div class="pg-g">${esc(g.g)}</div><div class="pg-ru">${esc(g.ru)}</div><div class="pg-note">${esc(g.note)}</div>`);
+    grid.appendChild(c);
+  });
+  pan.appendChild(grid);
+
+  pan.appendChild(el('h3', 'kid-tones-h', '🎵 Тоны: голос — как рука'));
+  pan.appendChild(el('p', 'kid-lead', 'Тон — это значок над буквой. Он решает, какое слово вы сказали. Нажмите ▶ — услышите контур голоса, 🔊 — настоящее слово. Повторите рукой в воздухе.'));
+  const tgrid = el('div', 'tone-cards');
+  (l.tones || []).forEach(tn => {
+    const c = el('div', 'tone-card');
+    c.innerHTML = `
+      <div class="tc-top"><span class="tc-mark">${esc(tn.mark)}</span><span class="tc-name">${esc(TONE_NAMES[tn.n] || tn.name)}</span></div>
+      ${toneCurveSVG(tn.n)}
+      <div class="tc-voice">${esc(tn.voice)}</div>
+      <div class="tc-ex"><b class="tc-ex-p">${esc(tn.p)}</b> <span class="tc-ex-h">${esc(tn.h)}</span> · ${esc(tn.ru)} — ${esc(tn.r)}</div>
+      <div class="tc-btns">
+        <button class="btn btn-sm" data-tone="${tn.n}">▶ Контур</button>
+        <button class="speak sm" data-speak="${esc(tn.h)}" aria-label="Прослушать: ${esc(tn.h)}">🔊</button>
+        <button class="speak sm" data-speak-slow="${esc(tn.h)}" aria-label="Медленно: ${esc(tn.h)}">🐢</button>
+      </div>`;
+    const contourBtn = c.querySelector('[data-tone]');
+    contourBtn.onclick = () => playTone(tn.n || 1);
+    tgrid.appendChild(c);
+  });
+  pan.appendChild(tgrid);
+  pan.appendChild(el('div', 'note', 'Один слог «ma» с разными значками — разные слова: <b>māma</b> мама · <b>mǎ</b> лошадь. Поэтому тон нельзя «примерно» — его слышно.'));
+  return pan;
+}
+
+/* Карточка слова в детском уроке: пиньинь крупно и первым. */
+function kidVocabCard(w) {
+  const syls = (w.syl && w.syl.length ? w.syl : String(w.p).split(' ')).map(s => {
+    const n = toneNumber(s);
+    return `<span class="syl"><b>${esc(s)}</b><i>${n ? n + ' тон' : 'без тона'}</i></span>`;
+  }).join('<span class="syl-sep">·</span>');
+  const tones = (w.tone || []).map(n => `<span class="tone-badge t${n}">${n ? n : '0'}</span>`).join('');
+  return el('div', 'vcard kid-card', `
+    <div class="kid-p">${esc(w.p)}</div>
+    <div class="kid-syls">${syls}</div>
+    <div class="kid-h">${esc(w.h)}</div>
+    <div class="kid-ru">читай: <b>${esc(w.ru || '')}</b></div>
+    <div class="kid-r">${esc(w.r)}</div>
+    ${w.note ? `<div class="kid-note">${esc(w.note)}</div>` : ''}
+    <div class="kid-tools">
+      <span class="tone-badges">${tones}</span>
+      <button class="speak sm" data-speak="${esc(w.h)}" aria-label="Прослушать: ${esc(w.h)}">🔊</button>
+      <button class="speak sm" data-speak-slow="${esc(w.h)}" aria-label="Медленно: ${esc(w.h)}">🐢</button>
+      <button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки" aria-label="Добавить ${esc(w.h)} в карточки">＋</button>
+    </div>`);
+}
+
+/* Диалог по ролям: каждая реплика — с озвучкой и медленным повтором. */
+function renderDialogue(l) {
+  const pan = el('div', 'panel dialogue');
+  pan.appendChild(el('h3', '', '💬 Диалог: прочитайте по ролям'));
+  pan.appendChild(el('p', 'kid-lead', 'Сначала послушайте каждую реплику, потом прочитайте вслух. Роль А — вы, роль Б — друг.'));
+  const list = el('div', 'dlg-list');
+  l.dialogue.forEach(line => {
+    const row = el('div', 'dlg-row');
+    row.innerHTML = `
+      <div class="dlg-who">${esc(line.who)}</div>
+      <div class="dlg-body">
+        <div class="dlg-p">${esc(line.p)}</div>
+        <div class="dlg-h">${esc(line.h)} <span class="dlg-r">${esc(line.r)}</span></div>
+        <div class="dlg-ru">читай: ${esc(line.ru)}</div>
+      </div>
+      <div class="dlg-btns">
+        <button class="speak sm" data-speak="${esc(line.h)}" aria-label="Прослушать реплику">🔊</button>
+        <button class="speak sm" data-speak-slow="${esc(line.h)}" aria-label="Медленно: реплика">🐢</button>
+      </div>`;
+    list.appendChild(row);
+  });
+  pan.appendChild(list);
+  return pan;
+}
+
 function renderLesson(root, args) {
   const id = args[0];
   const l = LESSONS[id];
@@ -520,6 +637,9 @@ function renderLesson(root, args) {
   l.goals.forEach(g => goals.appendChild(el('div', 'goal', `• ${esc(g)}`)));
   root.appendChild(goals);
 
+  /* --- Детский старт: сначала учимся читать пиньинь и тоны --- */
+  if (l.kid) root.appendChild(renderKidIntro(l));
+
   /* --- Словарь --- */
   const v = el('div', 'panel');
   v.appendChild(el('div', 'panel-head', `<h3>📖 Новые слова (${l.vocab.length})</h3>
@@ -527,14 +647,13 @@ function renderLesson(root, args) {
       <button class="btn btn-sm" id="toggleRuby">${state.hideRuby ? 'Показать пиньинь' : 'Скрыть пиньинь'}</button>
       <button class="btn btn-sm" id="playAll">🔊 Прослушать все</button>
     </div>`));
-  const tbl = el('div', 'vocab');
+  const tbl = el('div', 'vocab' + (l.kid ? ' kid-vocab' : ''));
   l.vocab.forEach(w => {
-    const card = el('div', 'vcard', `
+    tbl.appendChild(l.kid ? kidVocabCard(w) : el('div', 'vcard', `
       <div class="vc-h">${ruby(w.h)}</div>
       <div class="vc-p">${esc(w.p)}</div>
       <div class="vc-r">${esc(w.r)}</div>
-      <div class="vc-tools">${toneBtn(w.h, 'speak sm')}<button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки" aria-label="Добавить ${esc(w.h)} в карточки">＋</button></div>`);
-    tbl.appendChild(card);
+      <div class="vc-tools">${toneBtn(w.h, 'speak sm')}<button class="speak sm add-card" data-w="${esc(w.h)}|${esc(w.p)}|${esc(w.r)}" title="В карточки" aria-label="Добавить ${esc(w.h)} в карточки">＋</button></div>`));
   });
   v.appendChild(tbl);
   root.appendChild(v);
@@ -558,6 +677,9 @@ function renderLesson(root, args) {
     g.appendChild(b);
   });
   root.appendChild(g);
+
+  /* --- Диалог: читаем по ролям, пиньинь крупно --- */
+  if (l.dialogue && l.dialogue.length) root.appendChild(renderDialogue(l));
 
   /* --- Практика --- */
   quizState = { lesson: id, idx: 0, correct: 0, answers: [], done: false };
