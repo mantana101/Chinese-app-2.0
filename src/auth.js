@@ -108,6 +108,16 @@ const Auth = (() => {
   function checkBuildFreshness() {
     const mine = pageBuild();
     if (!mine || !serverBuild || mine === serverBuild) return;
+    /* Дети не читают баннеры: если увидели устаревшую копию — перезагружаемся
+       сами, один раз за сессию (иначе гонка, если сервер отдаёт старое). */
+    try {
+      const key = 'zh_reloaded_' + serverBuild;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        hardReload();
+        return;
+      }
+    } catch (e) { /* приватный режим — остаётся баннер */ }
     if (document.getElementById('buildOutdated')) return;
     const bar = document.createElement('div');
     bar.id = 'buildOutdated';
