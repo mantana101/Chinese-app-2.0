@@ -310,6 +310,113 @@ class StepAudioWired(unittest.TestCase):
         self.assertIn(".pa-voice-badge", css, "бейдж источника голоса должен быть стилизован")
 
 
+class TutorUnified(unittest.TestCase):
+    """Мэймэй и ИИ-помощник — один персонаж.
+
+    Раньше у приложения было два «учителя»: панда Мэймэй на уроках и
+    ИИ-агент «Сяо Мин» в чате. Ученик видел двух разных персонажей.
+    Теперь чат ведёт та же Мэймэй: то же имя, аватар панды у ответов,
+    та же русская озвучка (голос с уроков), вход из панели учителя."""
+
+    def test_no_siaomin_persona_left(self):
+        app = read("src", "app.js")
+        self.assertNotIn("Сяо Мин", app, "в приложении не должно остаться второго учителя")
+        self.assertNotIn("小明", app, "и его китайского имени тоже")
+        self.assertIn("Мэймэй — твой ИИ-помощник", app)
+        self.assertIn("Мэймэй думает", app)
+        self.assertIn("🐼", app, "кнопка-таблетка чата — панда, не робот")
+
+    def test_server_prompt_is_meimei(self):
+        srv = read("server.py")
+        self.assertNotIn("Сяо Мин", srv)
+        self.assertIn("панда Мэймэй (美美)", srv, "системный промпт ИИ — от лица Мэймэй")
+
+    def test_chat_has_panda_avatars_and_russian_voice(self):
+        app = read("src", "app.js")
+        self.assertIn("pa-mini", app, "у ответов в чате нужен аватар панды")
+        self.assertIn("sayRuOf", app, "текст ответа готовится для русской озвучки")
+        self.assertIn("t-voice-ru", app, "кнопка озвучки ответа голосом Мэймэй")
+        self.assertIn("speakRu(m.sayRu", app, "ответ читается тем же голосом, что и уроки")
+        self.assertIn("pa-ask", app, "в панели учителя есть кнопка перехода в чат")
+        css = read("src", "styles.css")
+        self.assertIn(".pa-mini", css)
+        self.assertIn(".t-voice-ru", css)
+
+    def test_entry_points_lead_to_tutor(self):
+        app = read("src", "app.js")
+        self.assertIn("location.hash = '#/tutor'", app.split("renderTeacher(l, id)")[1].split("function toneBtn")[0] if "renderTeacher(l, id)" in app else app,
+                      "кнопка «Спросить Мэймэй» открывает чат")
+        self.assertIn("href=\"#/tutor\"", app.replace('"', '\"') if False else 'href="#/tutor"',
+                      "ссылка из 404 ведёт в чат Мэймэй")
+
+
+class TutorInBrowser(unittest.TestCase):
+    """Чат Мэймэй в настоящем DOM: аватар, приветствие, озвучка ответа."""
+
+    SCRIPT = r"""
+const fs = require('fs');
+const {JSDOM} = require(process.argv[2] + '/jsdom/lib/api.js');
+const spoken = [];
+const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
+  runScripts: 'dangerously', url: 'http://127.0.0.1/', pretendToBeVisual: true,
+  beforeParse(w) {
+    w.matchMedia = () => ({matches: false, addEventListener(){}, removeEventListener(){}});
+    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    w.speechSynthesis = { speak(u){ spoken.push({lang: u.lang, text: u.text}); },
+      cancel(){}, getVoices: () => [] };
+    w.SpeechSynthesisUtterance = class {
+      constructor(text) { this.text = text; this.lang = ''; this.onend = null; this.onerror = null; }
+    };
+    w.scrollTo = () => {};
+    w.fetch = () => Promise.reject(new Error('offline'));
+  }
+});
+const w = dom.window;
+setTimeout(() => {
+  w.eval("window.__t = document.createElement('div'); window.__t.id='tut'; document.body.appendChild(window.__t); renderTutor(window.__t)");
+  const t = w.document.getElementById('tut');
+  const out = {};
+  out.title = t.querySelector('.page-title').textContent;
+  out.greeting = t.querySelector('.t-bubble').textContent;
+  out.avatars = t.querySelectorAll('.pa-mini .pa-svg').length;
+  out.voiceBtns = t.querySelectorAll('.t-voice-ru').length;
+  const btn = t.querySelector('.t-voice-ru');
+  if (btn) btn.click();
+  out.spoken = spoken;
+  process.stdout.write(JSON.stringify(out));
+  process.exit(0);
+}, 900);
+"""
+
+    @classmethod
+    def setUpClass(cls):
+        node = shutil.which("node")
+        if not node:
+            raise unittest.SkipTest("нет node — нечего проверять в браузере")
+        if not os.path.isdir(os.path.join(ROOT, "node_modules", "jsdom")):
+            raise unittest.SkipTest("нет jsdom — браузерные проверки пропущены")
+        if not os.path.exists(INDEX):
+            raise unittest.SkipTest("нет index.html — сначала сборка")
+        res = subprocess.run([node, "-e", cls.SCRIPT, INDEX,
+                              os.path.join(ROOT, "node_modules")],
+                             capture_output=True, text=True, timeout=180)
+        if res.returncode != 0:
+            raise AssertionError("jsdom упал: " + res.stderr[-800:])
+        cls.out = json.loads(res.stdout)
+
+    def test_chat_is_meimei(self):
+        self.assertIn("Мэймэй", self.out["title"], "заголовок чата — Мэймэй")
+        self.assertIn("Мэймэй", self.out["greeting"], "приветствие от Мэймэй")
+        self.assertGreaterEqual(self.out["avatars"], 1,
+                                "у ответов чата стоит аватар панды")
+
+    def test_answer_speaks_russian_with_meimei(self):
+        langs = [s["lang"] for s in self.out["spoken"]]
+        self.assertIn("ru-RU", langs, "ответ озвучивается русским голосом")
+        ru = " ".join(s["text"] for s in self.out["spoken"] if s["lang"] == "ru-RU")
+        self.assertIn("Мэймэй", ru, "в озвучке она представляется Мэймэй")
+
+
 class StalePageAutoReload(unittest.TestCase):
     """Устаревшая копия страницы сама перезагружается один раз.
 

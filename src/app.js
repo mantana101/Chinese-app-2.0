@@ -392,6 +392,7 @@ function renderTeacher(l, id) {
       <div class="pa-actions">
         <button class="btn btn-primary btn-sm pa-say" aria-label="Объяснить урок голосом">🔊 Объяснить урок</button>
         <button class="speak sm pa-slow" title="Медленное объяснение" aria-label="Объяснить медленнее">🐢</button>
+        <button class="btn btn-sm btn-ghost pa-ask" aria-label="Открыть чат с Мэймэй">💬 Спросить Мэймэй</button>
       </div>
       ${l.example ? `<div class="pa-example">
         <div class="pex-t">✨ Пример от Мэймэй</div>
@@ -411,6 +412,7 @@ function renderTeacher(l, id) {
   pan.querySelector('.pa-say').onclick = () => say();
   pan.querySelector('.pa-slow').onclick = (e) => { e.preventDefault(); e.stopPropagation(); say(0.72); };
   pan.querySelector('.pa-wrap').onclick = () => say();
+  pan.querySelector('.pa-ask').onclick = () => { location.hash = '#/tutor'; };
 
   return pan;
 }
@@ -718,7 +720,7 @@ function renderHome(root) {
         <a class="btn btn-primary" href="#/lesson/${id}">Продолжить урок →</a>
         <a class="btn btn-ghost" href="#/cards">Карточки${due ? ` <span class="pill">${due}</span>` : ''}</a>
         <a class="btn btn-ghost" href="#/videos">🎬 Видео</a>
-        <a class="btn btn-ghost" href="#/tutor">🤖 ИИ-агент</a>
+        <a class="btn btn-ghost" href="#/tutor">🐼 Спросить Мэймэй</a>
       </div>
       <div class="hero-stats">
         <div><b>${done}/${total}</b><span>уроков</span></div>
@@ -748,7 +750,7 @@ function renderHome(root) {
     { r: 'diag', ic: '🎯', t: 'Определить уровень', s: 'Тест из 50 вопросов' },
     { r: 'cards', ic: '🗂️', t: 'Карточки', s: due ? `${due} к повторению` : 'Все повторены — красавчик!' },
     { r: 'videos', ic: '🎬', t: 'Видео-уроки', s: 'Анимация со звуком' },
-    { r: 'tutor', ic: '🤖', t: 'ИИ-репетитор', s: 'Спросить Сяо Мина' },
+    { r: 'tutor', ic: '🐼', t: 'Мэймэй-помощник', s: 'Спроси панду' },
     { r: 'tones', ic: '🎵', t: 'Тоны', s: 'Тренажёр 4-го тона' },
     { r: 'write', ic: '✍️', t: 'Пропись', s: 'Иероглифы кистью' },
     { r: 'read', ic: '📄', t: 'Чтение', s: '3 текста с пиньинь' },
@@ -2385,8 +2387,22 @@ function ruby(hanzi, cls = '') {
 }
 
 /* ============================================================
-   ВНУТРЕННИЙ ИИ-АГЕНТ (Сяо Мин · 小明)
+   ВНУТРЕННИЙ ИИ-АГЕНТ (панда Мэймэй · 美美)
    ============================================================ */
+/* Текст ответа для русской озвучки: выбрасываем пиньинь из <rt>
+   (его не читаем — китайское слово уже в иероглифах) и всю разметку. */
+function sayRuOf(html) {
+  const s = String(html || '')
+    .replace(/<rt>[\s\S]*?<\/rt>/gi, '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ').trim();
+  return s.length > 12 ? s : '';
+}
+
 let tutorHistory = [];
 let tutorHistoryRestored = (() => {
   try {
@@ -3335,7 +3351,7 @@ function tutorTalkReply(low, q) {
   /* «расскажи про себя / кто ты» — коротко и по делу */
   if (/кто ты|расскажи (о себе|про себя)|ты робот|ты человек|что ты такое/.test(low)) {
     return {
-      html: 'Я Сяо Мин (小明) — встроенный помощник этого курса.<br>' +
+      html: 'Я панда Мэймэй (美美) — встроенный помощник этого курса.<br>' +
         'Я не человек: отвечаю по правилам курса, словарю HSK и найденным источникам, а где не уверен — говорю об этом прямо.<br>' +
         '<div class="tw-note">Можете спросить: «как сказать спасибо», «объясни 了», «как заказать столик».</div>'
     };
@@ -4226,8 +4242,8 @@ function tutorServerContext() {
 
 function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
-  wrap.appendChild(el('h1', 'page-title', '🤖 ИИ-репетитор Сяо Мин (小明)'));
-  wrap.appendChild(el('p', 'page-sub', 'Понимает вопрос своими словами, помнит, о чём вы говорили, и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё это он понимает.'));
+  wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
+  wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках.'));
 
   const chips = el('div', 't-chips');
   [
@@ -4263,8 +4279,8 @@ function renderTutor(root) {
   if (!tutorHistory.length) {
     tutorHistory.push({
       role: 'assistant',
-      html: ruby('你好') + '! Я <b>Сяо Мин (小明)</b> — ваш помощник по китайскому. Спросите перевод, грамматику или нажмите подсказку выше.',
-      speak: '你好！我是小明。'
+      html: ruby('你好') + '! Я панда <b>Мэймэй (美美)</b> — твой ИИ-помощник. Спрашивай перевод, грамматику или тоны — и я объясню, как на уроках.',
+      speak: '你好！我是美美。'
     });
   }
 
@@ -4272,10 +4288,23 @@ function renderTutor(root) {
     feed.innerHTML = '';
     tutorHistory.forEach(m => {
       const row = el('div', 't-msg ' + (m.role === 'user' ? 't-user' : 't-bot'));
+      if (m.role === 'assistant') row.appendChild(el('span', 'pa-mini', pandaSVG()));
       const bubble = el('div', 't-bubble', m.html || esc(m.content || ''));
       if (m.speak) {
         const sp = el('div', 't-sp', `${toneBtn(m.speak, 'speak sm')} <span>прослушать</span>`);
         bubble.appendChild(sp);
+      }
+      /* Русская озвучка ответа тем же голосом, что и на уроках. */
+      if (m.role === 'assistant') {
+        if (!m.sayRu) m.sayRu = sayRuOf(m.html || '');
+        if (m.sayRu) {
+          const vr = el('button', 'speak sm t-voice-ru', '🎧');
+          vr.type = 'button';
+          vr.title = 'Озвучить ответ голосом Мэймэй';
+          vr.setAttribute('aria-label', 'Озвучить ответ голосом Мэймэй');
+          vr.onclick = (e) => { e.preventDefault(); e.stopPropagation(); speakRu(m.sayRu, 0.95); };
+          bubble.appendChild(vr);
+        }
       }
       if (m.quiz) {
         const qz = el('div', 't-quiz');
@@ -4320,7 +4349,7 @@ function renderTutor(root) {
     /* Пока ждём ответ, показываем, что помощник работает:
        иначе на медленном соединении чат выглядит «мёртвым». */
     const thinking = el('div', 't-msg t-bot');
-    thinking.appendChild(el('div', 't-bubble t-thinking', 'Сяо Мин думает<span class="t-dots"><i></i><i></i><i></i></span>'));
+    thinking.appendChild(el('div', 't-bubble t-thinking', 'Мэймэй думает<span class="t-dots"><i></i><i></i><i></i></span>'));
     feed.appendChild(thinking);
     feed.scrollTop = feed.scrollHeight;
 
@@ -4405,7 +4434,7 @@ function initNav() {
     ['diag', '🎯', 'Уровень'],
     ['cards', '🗂️', 'Карточки'],
     ['videos', '🎬', 'Видео'],
-    ['tutor', '🤖', 'ИИ-агент'],
+    ['tutor', '🐼', 'Мэймэй'],
     ['tones', '🎵', 'Тоны'],
     ['write', '✍️', 'Пропись'],
     ['read', '📄', 'Чтение'],
@@ -4450,10 +4479,10 @@ function initNav() {
   refreshHomeworkBadge();
 
   if (!$('#tutorFab')) {
-    const fab = el('a', 'tutor-fab', '🤖');
+    const fab = el('a', 'tutor-fab', '🐼');
     fab.id = 'tutorFab';
     fab.href = '#/tutor';
-    fab.title = 'ИИ-репетитор Сяо Мин';
+    fab.title = 'Мэймэй · ИИ-помощник';
     document.body.appendChild(fab);
   }
 }
