@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Голосовой учитель-панда в каждом уроке.
+
+Мэймэй — панда-учитель: в каждом уроке есть панель с её объяснением
+материала. Кнопка «Объяснить урок» (или клик по панде) читает текст
+русским голосом (ru-RU, отдельная дорожка — speak() всегда говорит
+по-китайски). Во время речи у панды анимируется рот.
+
+Ученики читают только с пиньинем, поэтому объяснение показывается
+текстом рядом с аватаром: ребёнок слушает и следит глазами.
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(ROOT, "src", "data.js")
+INDEX = os.path.join(ROOT, "index.html")
+
+READ_SCRIPT = r"""
+const fs = require('fs');
+const { LESSONS } =
+  new Function(fs.readFileSync(process.argv[1], 'utf8') + '\nreturn { LESSONS };')();
+process.stdout.write(JSON.stringify(Object.entries(LESSONS).map(([id, l]) => ({
+  id, title: l.title, teacher: l.teacher || ''
+}))));
+"""
+
+DOM_SCRIPT = r"""
+const fs = require('fs');
+const {JSDOM} = require(process.argv[2] + '/jsdom/lib/api.js');
+const spoken = [];
+const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
+  runScripts: 'dangerously', url: 'http://127.0.0.1/', pretendToBeVisual: true,
+  beforeParse(w) {
+    w.matchMedia = () => ({matches: false, addEventListener(){}, removeEventListener(){}});
+    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    w.speechSynthesis = {
+      speak(u){ spoken.push({lang: u.lang, text: u.text}); },
+      cancel(){}, getVoices: () => []
+    };
+    // В настоящем браузере этот класс есть; jsdom его не знает.
+    w.SpeechSynthesisUtterance = class {
+      constructor(text) { this.text = text; this.lang = ''; this.onend = null; this.onerror = null; }
+    };
+    w.scrollTo = () => {};
+    w.fetch = () => Promise.reject(new Error('offline'));
+  }
+});
+const w = dom.window;
+setTimeout(() => {
+  w.eval("window.__r = document.createElement('div'); window.__r.id='r'; document.body.appendChild(window.__r); renderLesson(window.__r, ['l1'])");
+  const r = w.document.getElementById('r');
+  const pan = r.querySelector('.panda-teacher');
+  const out = { spoken };
+  out.teacherPanel = !!pan;
+  out.pandaSvg = !!r.querySelector('.pa-svg');
+  out.mouthOpen = !!r.querySelector('.pa-mouth-open');
+  out.mouthClosed = !!r.querySelector('.pa-mouth-closed');
+  out.eyes = r.querySelectorAll('.pa-eye').length;
+  out.aria = pan ? (pan.querySelector('.pa-wrap').getAttribute('aria-label') || '') : '';
+  out.sayBtn = pan ? !!pan.querySelector('.pa-say') : false;
+  out.slowBtn = pan ? !!pan.querySelector('.pa-slow') : false;
+  out.name = pan ? (pan.querySelector('.pa-name').textContent.includes('Мэймэй')) : false;
+  out.shown = pan ? pan.querySelector('.pa-text').textContent.length : 0;
+  // Модульные проверки речевых помощников (чистые функции).
+  out.segs = w.eval("JSON.stringify(segmentsForSpeech('你好， «ни-хао», и учимся'))");
+  out.toneStrip = w.eval("stripToneMarks('nǐ hǎo má')");
+  out.voicePick = w.eval("VOICES = [{lang:'ru-RU', name:'Elena', localService:true}, {lang:'ru-RU', name:'Google Milena', localService:false}, {lang:'zh-CN', name:'Microsoft Xiaoxiao', localService:false}]; pickVoice('ru').name + '|' + pickVoice('zh').name");
+  if (pan) {
+    pan.querySelector('.pa-say').click();
+  }
+  out.spokenAfterFirst = spoken.length;
+  out.spokenLang = spoken.length ? spoken[0].lang : '';
+  out.firstText = spoken.length ? spoken[0].text : '';
+  out.zhTexts = JSON.stringify(spoken.filter(s => s.lang === 'zh-CN').map(s => s.text));
+  out.ruWithHanzi = spoken.filter(s => s.lang === 'ru-RU' && /[一-鿿]/.test(s.text)).length;
+  out.talking = pan ? pan.classList.contains('talking') : false;
+  // Клик по самой панде тоже запускает объяснение.
+  pan.querySelector('.pa-wrap').click();
+  out.spokenAfterAvatarClick = spoken.length;
+  process.stdout.write(JSON.stringify(out));
+  process.exit(0);
+}, 900);
+"""
+
+
+def read(*parts) -> str:
+    with open(os.path.join(ROOT, *parts), encoding="utf-8") as f:
+        return f.read()
+
+
+def load_teachers():
+    node = shutil.which("node")
+    if not node:
+        raise unittest.SkipTest("нет node — нечем разобрать data.js")
+    res = subprocess.run([node, "-e", READ_SCRIPT, DATA],
+                         capture_output=True, text=True, timeout=120)
+    if res.returncode != 0:
+        raise AssertionError("data.js не разбирается: " + res.stderr[-500:])
+    return json.loads(res.stdout)
+
+
+class TeacherScripts(unittest.TestCase):
+    """У каждого урока есть живое объяснение от Мэймэй."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.lessons = load_teachers()
+
+    def test_every_lesson_has_teacher(self):
+        self.assertEqual(len(self.lessons), 15, "в курсе 15 уроков")
+        for l in self.lessons:
+            self.assertGreaterEqual(len(l["teacher"]), 120,
+                                    f"{l['id']}: объяснение слишком короткое")
+
+    def test_scripts_talk_to_the_child(self):
+        """Объяснения — на «ты», с примерами слов урока."""
+        for l in self.lessons:
+            t = l["teacher"]
+            self.assertRegex(t.lower(),
+                             r"(ты|теб|тво|слушай|посчитай|нарисуй|подумай|расскажи"
+                             r"|тренируйся|попробуй|скажи|опиши|представь|спроси|болей|нажми|закажи)",
+                             f"{l['id']}: обращение к ребёнку («ты» или просьба-императив)")
+            self.assertRegex(t, r"[一-鿿]", f"{l['id']}: в объяснении есть китайские слова урока")
+            self.assertIn("!", t, f"{l['id']}: объяснение живое, не сухая справка")
+
+    def test_first_lesson_explains_tones_and_pinyin(self):
+        t1 = next(l for l in self.lessons if l["id"] == "l1")["teacher"]
+        self.assertIn("тон", t1.lower(), "в l1 Мэймэй объясняет тоны")
+        self.assertIn("пиньин", t1.lower(), "в l1 Мэймэй объясняет пиньинь")
+        self.assertIn("ни-хао", t1, "и показывает русское чтение")
+
+
+class TeacherWiring(unittest.TestCase):
+    """Рендер, озвучка и анимация рта подключены."""
+
+    def test_app_has_teacher_helpers(self):
+        app = read("src", "app.js")
+        for name in ("speakRu", "pandaSVG", "renderTeacher", "ru-RU",
+                     "panda-teacher", "talking", "pa-mouth-open"):
+            self.assertIn(name, app, f"в app.js нет {name}")
+
+    def test_russian_voice_is_separate_from_chinese(self):
+        app = read("src", "app.js")
+        self.assertIn("u.lang = 'ru-RU'", app,
+                      "объяснение учителя должно идти русским голосом")
+        self.assertIn("u.lang = 'zh-CN'", app,
+                      "китайские слова озвучиваются отдельной дорожкой")
+        for name in ("segmentsForSpeech", "stripToneMarks", "pickVoice", "VOICE_PREF"):
+            self.assertIn(name, app, f"в app.js нет {name}")
+        self.assertIn("natural|neural|google", app,
+                      "предпочтение живым голосам (Google/нейро), не «роботам»")
+        self.assertIn("xiaoxiao|yunxi|yunyang|tingting", app,
+                      "для китайского — известные живые голоса")
+        self.assertIn("u.pitch = 1.06", app, "русский голос чуть выше — так дружелюбнее")
+
+    def test_speech_stops_on_navigation(self):
+        app = read("src", "app.js")
+        self.assertIn("speechSynthesis.cancel()", app.split("hashchange")[1],
+                      "уходя со страницы, Мэймэй должна замолчать")
+
+    def test_css_animates_mouth_and_respects_reduced_motion(self):
+        css = read("src", "styles.css")
+        for cls in (".panda-teacher", ".pa-svg", ".pa-mouth-open", "@keyframes paTalk"):
+            self.assertIn(cls, css, f"в styles.css нет {cls}")
+        self.assertIn("@keyframes paBlink", css, "панда должна моргать в покое")
+        self.assertIn("prefers-reduced-motion", css,
+                      "анимации отключаются для тех, кому движение мешает")
+
+    def test_lesson_places_teacher_panel(self):
+        app = read("src", "app.js")
+        m = app[app.index("function renderLesson"):]
+        head = m.index("lesson-head")
+        teacher = m.index("renderTeacher(l)")
+        goals = m.index("Цели урока")
+        self.assertTrue(head < teacher < goals,
+                        "учитель должен стоять после заголовка и до целей")
+
+
+class TeacherInBrowser(unittest.TestCase):
+    """Панда рисуется и говорит по-русски — проверяем настоящий DOM."""
+
+    @classmethod
+    def setUpClass(cls):
+        node = shutil.which("node")
+        if not node:
+            raise unittest.SkipTest("нет node — нечего проверять в браузере")
+        if not os.path.isdir(os.path.join(ROOT, "node_modules", "jsdom")):
+            raise unittest.SkipTest("нет jsdom — браузерные проверки пропущены")
+        if not os.path.exists(INDEX):
+            raise unittest.SkipTest("нет index.html — сначала сборка")
+        res = subprocess.run([node, "-e", DOM_SCRIPT, INDEX,
+                              os.path.join(ROOT, "node_modules")],
+                             capture_output=True, text=True, timeout=180)
+        if res.returncode != 0:
+            raise AssertionError("jsdom упал: " + res.stderr[-800:])
+        cls.out = json.loads(res.stdout)
+
+    def test_panel_renders_with_panda(self):
+        self.assertTrue(self.out["teacherPanel"], "панели учителя нет в уроке")
+        self.assertTrue(self.out["pandaSvg"], "SVG-панды нет")
+        self.assertTrue(self.out["mouthOpen"] and self.out["mouthClosed"],
+                        "нужны оба состояния рта: закрытый и открытый")
+        self.assertEqual(self.out["eyes"], 2, "у панды два глаза")
+
+    def test_avatar_is_labelled(self):
+        self.assertIn("Мэймэй", self.out["aria"], "аватар подписан для скринридера")
+        self.assertTrue(self.out["name"], "имя учителя показано в панели")
+
+    def test_buttons_and_text(self):
+        self.assertTrue(self.out["sayBtn"], "нет кнопки «Объяснить урок»")
+        self.assertTrue(self.out["slowBtn"], "нет медленного объяснения")
+        self.assertGreater(self.out["shown"], 120,
+                           "текст объяснения должен быть показан ребёнку целиком")
+
+    def test_click_speaks_russian_teacher_text(self):
+        self.assertEqual(self.out["spokenLang"], "ru-RU",
+                         "объяснение начинается русским голосом")
+        self.assertIn("Мэймэй", self.out["firstText"],
+                      "первая фраза — представление учителя")
+        self.assertTrue(self.out["talking"], "во время речи панда получает .talking")
+        self.assertGreater(self.out["spokenAfterAvatarClick"],
+                           self.out["spokenAfterFirst"],
+                           "клик по самой панде тоже запускает объяснение")
+
+    def test_chinese_words_go_to_chinese_voice(self):
+        """Китайские слова из объяснения читает zh-CN голос, а не русский."""
+        zh = json.loads(self.out["zhTexts"])
+        self.assertTrue(zh, "в речи Мэймэй должны быть китайские фразы")
+        self.assertTrue(all("/[一-鿿]/" and any("\u4e00" <= c <= "\u9fff" for c in s) for s in zh),
+                        f"китайские реплики состоят из иероглифов: {zh}")
+        self.assertIn("你好", "".join(zh), "в l1 Мэймэй произносит 你 по-настоящему")
+        self.assertEqual(self.out["ruWithHanzi"], 0,
+                         "русский голос не должен читать иероглифы")
+
+    def test_speech_helpers(self):
+        """Сегментация, снятие тоновых значков и выбор голоса."""
+        segs = json.loads(self.out["segs"])
+        self.assertEqual(segs, [
+            {"lang": "zh", "text": "你好，"},
+            {"lang": "ru", "text": "«ни-хао», и учимся"}
+        ], f"текст режется на языковые фразы, получено: {segs}")
+        self.assertEqual(self.out["toneStrip"], "ni hao ma",
+                         "значки тонов снимаются: русский голос читает буквы")
+        self.assertEqual(self.out["voicePick"], "Google Milena|Microsoft Xiaoxiao",
+                         "из списка берутся предпочтительные живые голоса")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class StudioAudio(unittest.TestCase):
+    """Студийная озвучка объяснений: файл на урок, сервер отдаёт.
+
+    Записанный голос звучит живее браузерного синтеза, поэтому объяснения
+    Мэймэй хранятся файлами audio/lN.mp3. Сценарии — в audio/narration.json,
+    они обязаны покрывать все уроки (без пропусков) и совпадать по смыслу:
+    каждый сценарий объясняет материал своего урока на «ты»."""
+
+    def test_every_lesson_has_audio_file(self):
+        import re
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("нет node — нечем разобрать data.js")
+        res = subprocess.run([node, "-e", READ_SCRIPT, DATA],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(res.returncode, 0, res.stderr[-300:])
+        ids = json.loads(res.stdout) and [l["id"] for l in json.loads(res.stdout)]
+        self.assertTrue(ids)
+        for lid in ids:
+            f = os.path.join(ROOT, "audio", lid + ".mp3")
+            self.assertTrue(os.path.exists(f), f"нет студийной озвучки {f}")
+            size = os.path.getsize(f)
+            self.assertGreater(size, 50_000, f"{lid}: файл слишком короткий ({size} Б)")
+            with open(f, "rb") as fh:
+                head = fh.read(3)
+            self.assertTrue(head == b"ID3" or head[:2] == b"\xff\xfb",
+                            f"{lid}: это не MP3")
+
+    def test_narration_scripts_cover_all_lessons(self):
+        import re
+        with open(os.path.join(ROOT, "audio", "narration.json"), encoding="utf-8") as f:
+            scripts = json.load(f)
+        for key in ("_comment", "_voice"):
+            scripts.pop(key, None)
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("нет node — нечем разобрать data.js")
+        res = subprocess.run([node, "-e", READ_SCRIPT, DATA],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(res.returncode, 0, res.stderr[-300:])
+        ids = [l["id"] for l in json.loads(res.stdout)]
+        self.assertEqual(sorted(scripts), sorted(ids),
+                         "сценарии озвучки должны покрывать все уроки и только их")
+        for lid, text in scripts.items():
+            self.assertGreaterEqual(len(text), 120, f"{lid}: сценарий слишком короткий")
+            self.assertRegex(text.lower(),
+                             r"(ты|теб|тво|посчитай|нарисуй|подумай|расскажи|тренируйся"
+                             r"|попробуй|скажи|опиши|представь|спроси|болей|нажми|закажи"
+                             r"|открой|уверяю|готов|верю|проверю)",
+                             f"{lid}: сценарий обращается к ребёнку")
+

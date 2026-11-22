@@ -3,8 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#12100e">
+<meta name="theme-color" content="#ffffff">
+<meta name="app-build" content="{{BUILD_ID}}">
 <meta name="author" content="Шамсиддин">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="汉语学习">
+<meta name="color-scheme" content="dark light">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <title>汉语学习 — Учим китайский язык</title>
 <meta name="description" content="Программа для изучения китайского языка: уроки, карточки, тоны, пропись иероглифов, чтение, статистика и панель учителя.">
 <style>
@@ -12,6 +21,25 @@
 </style>
 </head>
 <body>
+<!-- «Ручные» фильтры. Неровности в SVG рисуются смещением шума: линия
+     перестаёт быть математически ровной и выглядит нарисованной от руки.
+     scale можно менять из CSS через --rough-* переменные. -->
+<svg class="rough-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="rough-line" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough-ink" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.05" numOctaves="4" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="paper-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>
 <div class="app">
   <nav id="nav">
     <div class="brand">
@@ -33,10 +61,27 @@
 {{DATA}}
 </script>
 <script>
+{{PINYIN}}
+</script>
+<script>
 {{AUTH}}
 </script>
 <script>
 {{APP}}
+</script>
+<script>
+{{HOMEWORK}}
+</script>
+<script>
+/* Устанавливаем приложение на телефон и открываем его без сети.
+   Всё нужное уже внутри страницы, поэтому офлайн работает честно. */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => {
+    if (window.__swDone) return;
+    window.__swDone = true;
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

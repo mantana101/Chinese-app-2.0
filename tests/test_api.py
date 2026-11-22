@@ -388,6 +388,10 @@ class TestTutor(ApiTestCase):
         self.assertEqual(status, 401, data)
 
     def test_tutor_works_without_api_key(self):
+        # Без сети: в CI интернет есть, и иначе ответ мог прийти «из источников».
+        old = server.SOURCES_ONLINE
+        server.SOURCES_ONLINE = False
+        self.addCleanup(setattr, server, "SOURCES_ONLINE", old)
         owner_token, _ = self.register_owner()
         status, data, _ = self.json(
             "POST", "/api/tutor/chat", {"message": "привет"}, owner_token
@@ -613,3 +617,30 @@ class TestProgressConflict(ApiTestCase):
         self.assertEqual(status, 200)
         self.assertGreater(data["updated_at"], 0)
         self.assertIn("a", data["payload"])
+
+
+class BuildVersionTestCase(ApiTestCase):
+    """Версия сборки должна быть видна клиенту — иначе он не отличит
+    старую страницу из кэша от новой."""
+
+    def test_status_reports_build(self):
+        status, data, _ = self.json("GET", "/api/auth/status")
+        self.assertEqual(status, 200)
+        self.assertIn("build", data)
+
+    def test_index_cache_is_revalidated(self):
+        """Минута кэша экономит трафик, но версия всегда сверяется по ETag.
+
+        Раньше страница уходила с «no-store» и каждый возврат на главную
+        заново тянул 160 КБ. Кэш без проверки был бы опасен: ученик увидел
+        бы старую сборку, поэтому must-revalidate и ETag обязательны.
+        """
+        import urllib.request
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}/")
+        with urllib.request.urlopen(req) as res:
+            self.assertEqual(res.status, 200)
+            cache = res.headers.get("Cache-Control", "")
+            self.assertIn("must-revalidate", cache, "кэш обязан сверяться с сервером")
+            self.assertIn("max-age=60", cache)
+            self.assertNotIn("no-store", cache)
+            self.assertTrue(res.headers.get("ETag"), "нужен ETag для проверки версии")
