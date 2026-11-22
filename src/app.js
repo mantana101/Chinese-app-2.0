@@ -303,14 +303,33 @@ function speakRu(text, rate) {
    Записанный голос звучит красивее синтеза в браузере, поэтому сначала
    пробуем audio/lN.mp3; если файла нет (или сеть отдала ошибку) —
    незаметно говорим синтезом. Ответ запоминаем, чтобы не дёргать сеть. */
+/* Метка голоса в имени файла: при смене тембра меняется и имя —
+   ни браузерный HTTP-кэш, ни service worker не могут отдать старую
+   запись, потому что такого файла в кэше просто нет. */
+const VOICE_TAG = 'v3';
 const studioProbe = {};
+/* Если студийная запись недоступна — говорим синтезом, но ВИДНО:
+   в панели Мэймэй появляется пометка. Молчаливый фолбэк — источник
+   «вечного одного голоса»: его больше не делаем. */
+function studioMissingNote() {
+  let note = document.getElementById('paSynthNote');
+  if (!note) {
+    const pan = document.querySelector('.panda-teacher');
+    if (!pan) return;
+    note = el('div', 'pa-synth-note',
+      '⚠️ Студийная запись не загрузилась — Мэймэй говорит голосом браузера. Сообщи об этом учителю.');
+    note.id = 'paSynthNote';
+    pan.appendChild(note);
+  }
+  note.style.display = 'block';
+}
 /* Версия аудио от сборки: URL с ?v= ломает «вечный» HTTP-кэш и кэш
    service worker'а — после обновления записей браузер играет новое. */
 const audioUrl = (path) => path + (window.AUDIO_VER ? '?v=' + window.AUDIO_VER : '');
 function probeStudio(id) {
   if (studioProbe[id] || !window.fetch) return;
   studioProbe[id] = 'checking';
-  fetch(audioUrl('audio/' + id + '.mp3'), { method: 'HEAD' })
+  fetch(audioUrl('audio/' + id + '-' + VOICE_TAG + '.mp3'), { method: 'HEAD' })
     .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
     .catch(() => { studioProbe[id] = 'no'; });
 }
@@ -318,7 +337,7 @@ function playStudio(id, rate) {
   if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
   if (studioProbe[id] === 'yes') {
     if (!studioProbe[id + ':el']) {
-      const a = new Audio(audioUrl('audio/' + id + '.mp3'));
+      const a = new Audio(audioUrl('audio/' + id + '-' + VOICE_TAG + '.mp3'));
       a.preload = 'auto';
       const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
       a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
@@ -330,7 +349,11 @@ function playStudio(id, rate) {
     try { a.currentTime = 0; } catch (e) { /* только что создан */ }
     const started = a.play();
     if (started && started.catch) {
-      started.catch(() => { studioProbe[id] = 'no'; speakRu(LESSONS[id] && LESSONS[id].teacher, rate); });
+      started.catch(() => {
+      studioProbe[id] = 'no';
+      studioMissingNote();
+      speakRu(LESSONS[id] && LESSONS[id].teacher, rate);
+    });
     }
     return true;
   }
@@ -365,7 +388,7 @@ function renderTeacher(l) {
   pan.innerHTML = `
     <button class="pa-wrap" type="button" title="Объяснить урок голосом" aria-label="Панда-учитель Мэймэй: объяснить урок голосом">${pandaSVG()}</button>
     <div class="pa-body">
-      <div class="pa-name">Мэймэй · панда-учитель <span class="pa-hint">нажми на панду — она объяснит</span></div>
+      <div class="pa-name">Мэймэй · панда-учитель <span class="pa-voice-badge">🎙 запись ${esc(VOICE_TAG)}</span> <span class="pa-hint">нажми на панду — она объяснит</span></div>
       <div class="pa-text">${esc(l.teacher)}</div>
       <div class="pa-actions">
         <button class="btn btn-primary btn-sm pa-say" aria-label="Объяснить урок голосом">🔊 Объяснить урок</button>
@@ -394,15 +417,15 @@ function renderTeacher(l) {
 
 /* ---------- Ступеньки урока ----------
    Мэймэй ведёт ученика по уроку: показывает путь, подсказывает у каждого
-   раздела и озвучивает шаги студийной записью (audio/step-*.mp3). */
+   раздела и озвучивает шаги студийной записью (audio/step-*-v3.mp3). */
 const PANDA_STEPS = [
-  { id: 'teacher', icon: '🐼', title: 'Учитель', text: 'Эй, ученик! Начни с меня — нажми «Объяснить урок», и я расскажу, о чём этот урок!' },
-  { id: 'pinyin', icon: '🔤', title: 'Читай пиньинь', text: 'Сначала — чтение! Смотри на пиньинь: китайские звуки нашими буквами. Слушай и повторяй смело!' },
-  { id: 'vocab', icon: '📖', title: 'Слова', text: 'Новые слова! Жми на карточке кнопку со звуком и повторяй вслух. Черепашка скажет медленно — не спеши!' },
-  { id: 'grammar', icon: '📐', title: 'Грамматика', text: 'Грамматика — как приёмы кунг-фу! Разбирай по порядку и к каждому примеру составляй свой!' },
-  { id: 'dialogue', icon: '💬', title: 'Диалог', text: 'Пора говорить! Слушай диалог и повторяй по ролям вслух — громко и смело!' },
-  { id: 'quiz', icon: '✏️', title: 'Практика', text: 'Тренировка-проверка! Если сомневаешься — жми «Подсказка», я рядом и помогу!' },
-  { id: 'hw', icon: '🏠', title: 'Домашка', text: 'Урок пройден — ай да, молодец! Домашка закрепит мастерство. Делай по одному заданию, не спеша!' }
+  { id: 'teacher', icon: '🐼', title: 'Учитель', text: 'Эй, ученик! Начни с меня — нажми «Объяснить урок», и я расскажу, о чём этот урок!', audio: 'audio/step-teacher-v3.mp3' },
+  { id: 'pinyin', icon: '🔤', title: 'Читай пиньинь', text: 'Сначала — чтение! Смотри на пиньинь: китайские звуки нашими буквами. Слушай и повторяй смело!', audio: 'audio/step-pinyin-v3.mp3' },
+  { id: 'vocab', icon: '📖', title: 'Слова', text: 'Новые слова! Жми на карточке кнопку со звуком и повторяй вслух. Черепашка скажет медленно — не спеши!', audio: 'audio/step-vocab-v3.mp3' },
+  { id: 'grammar', icon: '📐', title: 'Грамматика', text: 'Грамматика — как приёмы кунг-фу! Разбирай по порядку и к каждому примеру составляй свой!', audio: 'audio/step-grammar-v3.mp3' },
+  { id: 'dialogue', icon: '💬', title: 'Диалог', text: 'Пора говорить! Слушай диалог и повторяй по ролям вслух — громко и смело!', audio: 'audio/step-dialogue-v3.mp3' },
+  { id: 'quiz', icon: '✏️', title: 'Практика', text: 'Тренировка-проверка! Если сомневаешься — жми «Подсказка», я рядом и помогу!', audio: 'audio/step-quiz-v3.mp3' },
+  { id: 'hw', icon: '🏠', title: 'Домашка', text: 'Урок пройден — ай да, молодец! Домашка закрепит мастерство. Делай по одному заданию, не спеша!', audio: 'audio/step-hw-v3.mp3' }
 ];
 window.PANDA_STEPS = PANDA_STEPS;
 
@@ -424,7 +447,9 @@ function playStepAudio(step, fallbackText) {
   const started = a.play();
   if (started && started.catch) {
     started.catch(() => {
-      /* Записи нет (или браузер запретил автоплей) — живой синтез. */
+      /* Записи нет (или браузер запретил автоплей) — живой синтез,
+         но с видимой пометкой: молчаливый фолбэк нас уже подводил. */
+      studioMissingNote();
       speakRu(fallbackText);
     });
   }
