@@ -499,8 +499,8 @@ class TeacherInBrowser(unittest.TestCase):
         self.assertGreaterEqual(self.out["tips"], 4,
                                 "подсказки Мэймэй должны стоять у словаря, грамматики, диалога и практики")
         self.assertEqual(self.out["exampleCard"], 1, "карточка «Пример от Мэймэй» — одна")
-        self.assertEqual(self.out["exampleP"], "wǒ jiào Xiǎo Míng.",
-                         "в l1 пример — «Меня зовут Сяо Мин»")
+        self.assertEqual(self.out["exampleP"], "wǒ jiào Měi Měi.",
+                         "в l1 пример — «Меня зовут Мэймэй»")
         self.assertGreaterEqual(self.out["hintBtns"], 1,
                                 "в практике должна быть кнопка «Подсказка»")
 
@@ -615,7 +615,7 @@ class LearningPath(unittest.TestCase):
         for l in self.lessons:
             pass  # примеры проверяются через READ_SCRIPT_EXT ниже
         src = read("src", "data.js")
-        for lid, ex in (("l1", "我叫小明"), ("l2", "多少钱"), ("l8", "喝茶吗"),
+        for lid, ex in (("l1", "我叫美美"), ("l2", "多少钱"), ("l8", "喝茶吗"),
                         ("l10", "把书放进"), ("l15", "明年我想去中国")):
             self.assertIn(ex, src, f"в {lid} нет примера «{ex}»")
         # У каждого урока есть строка example со всеми тремя полями.
