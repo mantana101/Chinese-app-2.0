@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="858d9ae1259d">
+<meta name="app-build" content="764bb41ddc12">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2344,6 +2344,56 @@ button { font-family: inherit; cursor: pointer; }
 .pa-mini .pa-svg { width: 32px; height: 32px; display: block; }
 .t-voice-ru { margin-left: 6px; }
 
+/* ---------- Азбука пиньинь ---------- */
+.pabc-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px; margin-top: 12px;
+}
+.pabc-card {
+  background: rgba(var(--tint),.05);
+  border: 1px solid var(--line);
+  border-radius: 12px 9px 11px 8px;
+  padding: 10px 12px;
+  position: relative;
+}
+.pabc-final .pabc-k { color: var(--jade); }
+.pabc-k { font-size: 26px; font-weight: 700; letter-spacing: .5px; color: var(--gold); line-height: 1.1; }
+.pabc-ru { font-size: 14px; color: var(--txt); margin: 2px 0 6px; }
+.pabc-ex { font-size: 13px; line-height: 1.4; }
+.pabc-syl { color: var(--red); font-size: 15px; }
+.pabc-h { font-family: "Noto Serif SC", serif; margin-left: 4px; }
+.pabc-r { color: var(--txt3); font-size: 12px; margin-left: 4px; }
+.pabc-note { font-size: 12px; color: var(--txt2); line-height: 1.4; margin-top: 6px; }
+.pabc-tools { position: absolute; top: 8px; right: 8px; }
+.pabc-tricky {
+  font-size: 13.5px; color: var(--txt2); line-height: 1.55;
+  background: rgba(var(--tint),.05);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px 9px 4px 9px;
+  padding: 9px 12px; margin: 8px 0;
+}
+.pabc-tricky b { color: var(--txt); }
+.pabc-about .kid-lead { margin: 6px 0; }
+.pabc-demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 12px; padding: 12px;
+  background: rgba(var(--tint),.05);
+  border: 1px dashed var(--line);
+  border-radius: 12px 9px 11px 8px;
+}
+.pd-part {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: var(--panel); border: 1.5px solid var(--line);
+  border-radius: 10px 8px 9px 7px; padding: 6px 12px;
+}
+.pd-part b { font-size: 22px; }
+.pd-syl { border-color: var(--gold); }
+.pd-syl b { color: var(--red); font-family: "Noto Serif SC", serif; }
+.pd-label { font-size: 10px; color: var(--txt3); text-transform: uppercase; letter-spacing: .5px; }
+.pd-plus, .pd-eq, .pd-mid { font-size: 20px; color: var(--txt3); font-weight: 700; }
+.pabc-next .btn-row { margin-top: 8px; }
+.pg-abc { margin-top: 12px; }
+
 </style>
 </head>
 <body>
@@ -4326,6 +4376,75 @@ const HOMEWORK = {
    Проверка доступа живёт в src/homework.js (lessonDone), здесь — только
    данные: задание не зависит от того, открыто оно или нет. */
 
+/* ---------- Азбука пиньинь ----------
+   Полное объяснение для ребёнка: что такое пиньинь и каждая буква.
+   k — буква(и) пиньиня, ru — как звучит по-русски, ex — пример-слово:
+   h иероглифы (их озвучивает кнопка), syl пиньинь слова, r перевод. */
+const PINYIN_ABC = {
+  about: [
+    'Пиньинь — это алфавит китайских звуков, записанный латинскими буквами. <b>Иероглиф</b> показывает, ЧТО написано, а <b>пиньинь</b> — КАК это прочитать вслух. Иероглифов тысячи, а букв пиньиня — меньше тридцати!',
+    'Каждый китайский слог — как кубик из двух половинок: <b>начало</b> + <b>конец</b>. Берёшь начало «m», добавляешь конец «a» — получается слог «ma». А значок сверху (ā á ǎ à) — тон, он говорит, каким голосом произнести.',
+    'Пиньинь придумали в Китае, чтобы каждый ребёнок мог научиться читать. Ты будешь читать только с пиньиня — это настоящий китайский, просто записанный буквами.'
+  ],
+  initials: [
+    { k: 'b', ru: 'б (мягко)', ex: { h: '爸', syl: 'bà', r: 'папа' }, note: 'Мягкий «б», почти без выдоха.' },
+    { k: 'p', ru: 'п (с выдохом)', ex: { h: '跑', syl: 'pǎo', r: 'бежать' }, note: 'Как «п», только с сильным выдохом — держи листочек перед губами!' },
+    { k: 'm', ru: 'м', ex: { h: '妈', syl: 'mā', r: 'мама' }, note: 'Обычное «м»: 妈 — мама.' },
+    { k: 'f', ru: 'ф', ex: { h: '飞', syl: 'fēi', r: 'лететь' }, note: 'Обычное «ф».' },
+    { k: 'd', ru: 'д (мягко)', ex: { h: '大', syl: 'dà', r: 'большой' }, note: 'Мягкое «д», без сильного выдоха.' },
+    { k: 't', ru: 'т (с выдохом)', ex: { h: '兔', syl: 'tù', r: 'кролик' }, note: '«Т» с сильным выдохом.' },
+    { k: 'n', ru: 'н', ex: { h: '你', syl: 'nǐ', r: 'ты' }, note: 'Обычное «н».' },
+    { k: 'l', ru: 'л', ex: { h: '来', syl: 'lái', r: 'приходить' }, note: 'Обычное «л».' },
+    { k: 'g', ru: 'г (мягко)', ex: { h: '高', syl: 'gāo', r: 'высокий' }, note: 'Мягкое «г», как в «ага».' },
+    { k: 'k', ru: 'к (с выдохом)', ex: { h: '哭', syl: 'kū', r: 'плакать' }, note: '«К» с сильным выдохом.' },
+    { k: 'h', ru: 'х (лёгкое)', ex: { h: '好', syl: 'hǎo', r: 'хорошо' }, note: 'Лёгкое «х», как выдох на холодное стекло.' },
+    { k: 'j', ru: 'цзь (мягко)', ex: { h: '家', syl: 'jiā', r: 'дом' }, note: 'Мягкое «цзь»: язык, как для «и». 家 — «цзья».' },
+    { k: 'q', ru: 'ць (с выдохом)', ex: { h: '七', syl: 'qī', r: 'семь' }, note: 'Мягкое «ць» с выдохом.' },
+    { k: 'x', ru: 'сь (мягко)', ex: { h: '小', syl: 'xiǎo', r: 'маленький' }, note: 'Мягкое «сь»: 小 — «сьяо».' },
+    { k: 'zh', ru: 'дж (твёрдо)', ex: { h: '中', syl: 'zhōng', r: 'середина' }, note: 'Твёрдое «дж», язык как для «ш»: 中国 — «джун-го».' },
+    { k: 'ch', ru: 'ч (твёрдо)', ex: { h: '吃', syl: 'chī', r: 'есть' }, note: 'Твёрдое «ч», язык как для «ш»: 吃 — «чи».' },
+    { k: 'sh', ru: 'ш', ex: { h: '是', syl: 'shì', r: 'есть; являться' }, note: 'Обычное «ш».' },
+    { k: 'r', ru: 'ж/р (мягко)', ex: { h: '日', syl: 'rì', r: 'солнце; день' }, note: 'Между «ж» и «р», язык как для «ш».' },
+    { k: 'z', ru: 'дз', ex: { h: '字', syl: 'zì', r: 'буква; иероглиф' }, note: '«Дз», зубы почти вместе.' },
+    { k: 'c', ru: 'ц (с выдохом)', ex: { h: '菜', syl: 'cài', r: 'овощи; еда' }, note: '«Ц» с сильным выдохом.' },
+    { k: 's', ru: 'с', ex: { h: '三', syl: 'sān', r: 'три' }, note: 'Обычное «с».' },
+    { k: 'y', ru: 'й / и', ex: { h: '一', syl: 'yī', r: 'один' }, note: 'В начале слога — как «й» или просто «и»: 一 — «и».' },
+    { k: 'w', ru: 'у / в', ex: { h: '我', syl: 'wǒ', r: 'я' }, note: 'В начале слога — как «у»: 我 — «во».' }
+  ],
+  finals: [
+    { k: 'a', ru: 'а', ex: { h: '大', syl: 'dà', r: 'большой' }, note: 'Широкое «а».' },
+    { k: 'o', ru: 'о', ex: { h: '我', syl: 'wǒ', r: 'я' }, note: 'Круглыми губами «о».' },
+    { k: 'e', ru: 'э', ex: { h: '饿', syl: 'è', r: 'голодный' }, note: 'Среднее между «э» и «о».' },
+    { k: 'i', ru: 'и', ex: { h: '米', syl: 'mǐ', r: 'рис' }, note: 'Обычное «и».' },
+    { k: 'u', ru: 'у', ex: { h: '五', syl: 'wǔ', r: 'пять' }, note: 'Обычное «у».' },
+    { k: 'ü', ru: 'ю', ex: { h: '鱼', syl: 'yú', r: 'рыба' }, note: 'Губы трубочкой, как для «у», а звук — «и»!' },
+    { k: 'ai', ru: 'ай', ex: { h: '爱', syl: 'ài', r: 'любить' }, note: 'Слоги сливаются: а + и = ай.' },
+    { k: 'ei', ru: 'эй', ex: { h: '黑', syl: 'hēi', r: 'чёрный' }, note: 'э + и = эй.' },
+    { k: 'ui', ru: 'уй', ex: { h: '水', syl: 'shuǐ', r: 'вода' }, note: 'у + эй = уй: 水 — «шуй».' },
+    { k: 'ao', ru: 'ао', ex: { h: '猫', syl: 'māo', r: 'кот' }, note: 'а + о = ао: 猫 — «мао».' },
+    { k: 'ou', ru: 'оу', ex: { h: '狗', syl: 'gǒu', r: 'собака' }, note: 'о + у = оу: 狗 — «гоу».' },
+    { k: 'iu', ru: 'йоу', ex: { h: '牛', syl: 'niú', r: 'корова' }, note: 'и + оу = йоу.' },
+    { k: 'ie', ru: 'е (йэ)', ex: { h: '姐', syl: 'jiě', r: 'старшая сестра' }, note: 'Как «йэ»: 姐 — «цзе».' },
+    { k: 'üe', ru: 'юэ', ex: { h: '月', syl: 'yuè', r: 'луна; месяц' }, note: 'ю + э = юэ: 月 — «юэ».' },
+    { k: 'er', ru: 'эр', ex: { h: '耳朵', syl: 'ěr duo', r: 'ухо' }, note: 'Особая: «р» в конце слога, язык заворачивается.' },
+    { k: 'an', ru: 'ань', ex: { h: '山', syl: 'shān', r: 'гора' }, note: 'а + носовое н: 山 — «шань».' },
+    { k: 'en', ru: 'эн', ex: { h: '门', syl: 'mén', r: 'дверь' }, note: 'э + носовое н.' },
+    { k: 'in', ru: 'инь', ex: { h: '金', syl: 'jīn', r: 'золото' }, note: 'и + носовое н.' },
+    { k: 'un', ru: 'унь', ex: { h: '问', syl: 'wèn', r: 'спрашивать' }, note: 'у + носовое н (в слоге звучит как «уэн»).' },
+    { k: 'ün', ru: 'юнь', ex: { h: '云', syl: 'yún', r: 'облако' }, note: 'ю + носовое н: 云 — «юнь».' },
+    { k: 'ang', ru: 'ан (в нос)', ex: { h: '羊', syl: 'yáng', r: 'овца' }, note: '«а» с носовым окончанием: 羊 — «ян».' },
+    { k: 'eng', ru: 'эн (в нос)', ex: { h: '灯', syl: 'dēng', r: 'лампа' }, note: '«э» с носовым окончанием.' },
+    { k: 'ing', ru: 'ин (в нос)', ex: { h: '星', syl: 'xīng', r: 'звезда' }, note: '«и» с носовым окончанием.' },
+    { k: 'ong', ru: 'ун (в нос)', ex: { h: '红', syl: 'hóng', r: 'красный' }, note: 'Между «о» и «у», с носом: 红 — «хун».' }
+  ],
+  tricky: [
+    '<b>ü после j, q, x и y</b> пишется просто «u», но читается как «ю»: ju — «цзюй», xu — «сюй». Точки потерялись — но звук остался!',
+    '<b>После zh, ch, sh, r, z, c, s</b> буква «i» — не «и», а лёгкий глухой призвук: shì — «ши», rì — «жи».',
+    '<b>Значок тона</b> ставится над главной гласной конца слога: в «hǎo» — над «a», в «shuǐ» — над «i» (там главная — «i» в «ui»).',
+    '<b>Слог не бывает без конца</b>: если хочется только начало «m» — к нему всё равно добавится конец: 妈 mā, 妹 mèi, 木 mù.'
+  ]
+};
+
 /* Запасная домашка для диагностики и на случай нового урока в данных:
    текст заданий берём из списка hw самого урока, поэтому структура
    домашки не зависит от собранных выше списков. */
@@ -4339,7 +4458,7 @@ function homeworkFor(id) {
 </script>
 <script>
 /* Чтение иероглифов курса. Сгенерировано tools/make-pinyin.py — не править вручную. */
-const PY_CHAR = {"一":"yī","七":"qī","三":"sān","上":"shàng","下":"xià","不":"bù","东":"dōng","两":"liǎng","严":"yán","个":"gè","中":"zhōng","为":"wèi","久":"jiǔ","么":"me","乐":"lè","九":"jiǔ","也":"yě","习":"xí","书":"shū","买":"mǎi","了":"le","事":"shì","二":"èr","五":"wǔ","交":"jiāo","京":"jīng","亮":"liàng","人":"rén","什":"shén","今":"jīn","从":"cóng","他":"tā","以":"yǐ","们":"men","件":"jiàn","任":"rèn","份":"fèn","休":"xiū","众":"zhòng","会":"huì","伟":"wěi","但":"dàn","低":"dī","住":"zhù","体":"tǐ","作":"zuò","你":"nǐ","便":"pián","俄":"é","候":"hòu","假":"jiǎ","做":"zuò","傅":"fù","儿":"ér","元":"yuán","先":"xiān","克":"kè","入":"rù","八":"bā","公":"gōng","六":"liù","共":"gòng","关":"guān","兴":"xīng","再":"zài","冒":"mào","写":"xiě","冬":"dōng","冷":"lěng","准":"zhǔn","凉":"liáng","几":"jǐ","出":"chū","分":"fēn","划":"huà","刚":"gāng","利":"lì","别":"bié","刮":"guā","到":"dào","刷":"shuā","前":"qián","力":"lì","加":"jiā","务":"wù","动":"dòng","助":"zhù","努":"nǔ","包":"bāo","化":"huà","北":"běi","医":"yī","十":"shí","午":"wǔ","半":"bàn","单":"dān","卖":"mài","卡":"kǎ","去":"qù","友":"yǒu","发":"fā","口":"kǒu","古":"gǔ","叫":"jiào","可":"kě","右":"yòu","号":"hào","司":"sī","吃":"chī","吉":"jí","同":"tóng","名":"míng","后":"hòu","吗":"ma","吧":"ba","听":"tīng","告":"gào","员":"yuán","呢":"ne","和":"hé","咖":"kā","咳":"ké","哥":"gē","哪":"nǎ","售":"shòu","啊":"a","啡":"fēi","喜":"xǐ","喝":"hē","嗨":"hāi","嗽":"sòu","四":"sì","回":"huí","因":"yīn","国":"guó","在":"zài","地":"de","场":"chǎng","坐":"zuò","块":"kuài","坚":"jiān","坦":"tǎn","城":"chéng","塔":"tǎ","墙":"qiáng","声":"shēng","备":"bèi","夏":"xià","多":"duō","大":"dà","天":"tiān","太":"tài","头":"tóu","女":"nǚ","她":"tā","好":"hǎo","妈":"mā","妹":"mèi","始":"shǐ","姐":"jiě","姑":"gū","姓":"xìng","娘":"niáng","子":"zi","字":"zì","季":"jì","学":"xué","孩":"hái","安":"ān","完":"wán","宜":"yí","实":"shí","客":"kè","家":"jiā","寄":"jì","密":"mì","察":"chá","对":"duì","将":"jiāng","小":"xiǎo","少":"shǎo","尚":"shàng","就":"jiù","尺":"chǐ","屋":"wū","山":"shān","岁":"suì","工":"gōng","左":"zuǒ","已":"yǐ","师":"shī","希":"xī","带":"dài","帮":"bāng","常":"cháng","年":"nián","幸":"xìng","床":"chuáng","应":"yīng","店":"diàn","开":"kāi","弟":"dì","张":"zhāng","弹":"dàn","形":"xíng","影":"yǐng","往":"wǎng","很":"hěn","得":"de","心":"xīn","必":"bì","忙":"máng","快":"kuài","怎":"zěn","思":"sī","急":"jí","性":"xìng","息":"xī","您":"nín","惯":"guàn","想":"xiǎng","意":"yì","感":"gǎn","愿":"yuàn","慢":"màn","懂":"dǒng","成":"chéng","我":"wǒ","或":"huò","房":"fáng","手":"shǒu","打":"dǎ","把":"bǎ","护":"hù","报":"bào","抱":"bào","担":"dān","拔":"bá","拿":"ná","持":"chí","挂":"guà","放":"fàng","敏":"mǐn","教":"jiào","敬":"jìng","数":"shù","文":"wén","斯":"sī","方":"fāng","旅":"lǚ","日":"rì","早":"zǎo","时":"shí","明":"míng","星":"xīng","春":"chūn","昨":"zuó","是":"shì","晚":"wǎn","晶":"jīng","暑":"shǔ","暖":"nuǎn","更":"gèng","最":"zuì","月":"yuè","有":"yǒu","朋":"péng","服":"fú","望":"wàng","期":"qī","木":"mù","本":"běn","机":"jī","李":"lǐ","杜":"dù","来":"lái","杯":"bēi","板":"bǎn","林":"lín","果":"guǒ","查":"chá","树":"shù","校":"xiào","样":"yàng","格":"gé","桌":"zhuō","检":"jiǎn","森":"sēn","楼":"lóu","概":"gài","次":"cì","欢":"huān","歉":"qiàn","此":"cǐ","母":"mǔ","每":"měi","比":"bǐ","气":"qì","水":"shuǐ","汁":"zhī","汉":"hàn","池":"chí","没":"méi","油":"yóu","洗":"xǐ","温":"wēn","漂":"piāo","火":"huǒ","点":"diǎn","烦":"fán","烧":"shāo","热":"rè","然":"rán","照":"zhào","熟":"shú","爱":"ài","父":"fù","爷":"yé","爸":"bà","爽":"shuǎng","牙":"yá","牛":"niú","猫":"māo","王":"wáng","现":"xiàn","班":"bān","琴":"qín","生":"shēng","用":"yòng","田":"tián","电":"diàn","疼":"téng","病":"bìng","痛":"tòng","白":"bái","百":"bǎi","的":"de","目":"mù","直":"zhí","看":"kàn","真":"zhēn","着":"zhe","睡":"shuì","知":"zhī","石":"shí","码":"mǎ","碗":"wǎn","示":"shì","礼":"lǐ","票":"piào","秋":"qiū","租":"zū","程":"chéng","稍":"shāo","空":"kōng","穿":"chuān","站":"zhàn","第":"dì","等":"děng","算":"suàn","系":"xì","累":"lèi","红":"hóng","经":"jīng","给":"gěi","继":"jì","续":"xù","绿":"lǜ","罗":"luó","美":"měi","翻":"fān","老":"lǎo","者":"zhě","肉":"ròu","肚":"dù","背":"bèi","能":"néng","自":"zì","致":"zhì","舒":"shū","舞":"wǔ","节":"jié","花":"huā","苹":"píng","茶":"chá","药":"yào","菜":"cài","葱":"cōng","虽":"suī","行":"xíng","袋":"dài","西":"xī","要":"yào","见":"jiàn","计":"jì","订":"dìng","认":"rèn","议":"yì","设":"shè","识":"shí","译":"yì","话":"huà","该":"gāi","语":"yǔ","说":"shuō","请":"qǐng","读":"dú","课":"kè","谁":"shuí","调":"diào","谢":"xiè","负":"fù","责":"zé","贵":"guì","走":"zǒu","起":"qǐ","跑":"pǎo","路":"lù","身":"shēn","车":"chē","转":"zhuǎn","较":"jiào","输":"shū","辣":"là","边":"biān","过":"guò","迎":"yíng","近":"jìn","还":"hái","这":"zhè","进":"jìn","迟":"chí","迷":"mí","送":"sòng","道":"dào","那":"nà","邮":"yóu","都":"dōu","酒":"jiǔ","里":"lǐ","重":"zhòng","针":"zhēn","钟":"zhōng","钢":"gāng","钱":"qián","铁":"tiě","银":"yín","销":"xiāo","错":"cuò","门":"mén","问":"wèn","间":"jiān","阳":"yáng","阿":"ā","附":"fù","院":"yuàn","雨":"yǔ","雪":"xuě","零":"líng","面":"miàn","音":"yīn","项":"xiàng","顺":"shùn","须":"xū","题":"tí","风":"fēng","飞":"fēi","饭":"fàn","饱":"bǎo","饿":"è","马":"mǎ","骂":"mà","骑":"qí","高":"gāo","鱼":"yú","鸡":"jī","麻":"má","龄":"líng"};
+const PY_CHAR = {"一":"yī","七":"qī","三":"sān","上":"shàng","下":"xià","不":"bù","东":"dōng","两":"liǎng","严":"yán","个":"gè","中":"zhōng","为":"wèi","久":"jiǔ","么":"me","乐":"lè","九":"jiǔ","也":"yě","习":"xí","书":"shū","买":"mǎi","了":"le","事":"shì","二":"èr","云":"yún","五":"wǔ","交":"jiāo","京":"jīng","亮":"liàng","人":"rén","什":"shén","今":"jīn","从":"cóng","他":"tā","以":"yǐ","们":"men","件":"jiàn","任":"rèn","份":"fèn","休":"xiū","众":"zhòng","会":"huì","伟":"wěi","但":"dàn","低":"dī","住":"zhù","体":"tǐ","作":"zuò","你":"nǐ","便":"pián","俄":"é","候":"hòu","假":"jiǎ","做":"zuò","傅":"fù","儿":"ér","元":"yuán","先":"xiān","克":"kè","兔":"tù","入":"rù","八":"bā","公":"gōng","六":"liù","共":"gòng","关":"guān","兴":"xīng","再":"zài","冒":"mào","写":"xiě","冬":"dōng","冷":"lěng","准":"zhǔn","凉":"liáng","几":"jǐ","出":"chū","分":"fēn","划":"huà","刚":"gāng","利":"lì","别":"bié","刮":"guā","到":"dào","刷":"shuā","前":"qián","力":"lì","加":"jiā","务":"wù","动":"dòng","助":"zhù","努":"nǔ","包":"bāo","化":"huà","北":"běi","医":"yī","十":"shí","午":"wǔ","半":"bàn","单":"dān","卖":"mài","卡":"kǎ","去":"qù","友":"yǒu","发":"fā","口":"kǒu","古":"gǔ","叫":"jiào","可":"kě","右":"yòu","号":"hào","司":"sī","吃":"chī","吉":"jí","同":"tóng","名":"míng","后":"hòu","吗":"ma","吧":"ba","听":"tīng","告":"gào","员":"yuán","呢":"ne","和":"hé","咖":"kā","咳":"ké","哥":"gē","哪":"nǎ","哭":"kū","售":"shòu","啊":"a","啡":"fēi","喜":"xǐ","喝":"hē","嗨":"hāi","嗽":"sòu","四":"sì","回":"huí","因":"yīn","国":"guó","在":"zài","地":"de","场":"chǎng","坐":"zuò","块":"kuài","坚":"jiān","坦":"tǎn","城":"chéng","塔":"tǎ","墙":"qiáng","声":"shēng","备":"bèi","夏":"xià","多":"duō","大":"dà","天":"tiān","太":"tài","头":"tóu","女":"nǚ","她":"tā","好":"hǎo","妈":"mā","妹":"mèi","始":"shǐ","姐":"jiě","姑":"gū","姓":"xìng","娘":"niáng","子":"zi","字":"zì","季":"jì","学":"xué","孩":"hái","安":"ān","完":"wán","宜":"yí","实":"shí","客":"kè","家":"jiā","寄":"jì","密":"mì","察":"chá","对":"duì","将":"jiāng","小":"xiǎo","少":"shǎo","尚":"shàng","就":"jiù","尺":"chǐ","屋":"wū","山":"shān","岁":"suì","工":"gōng","左":"zuǒ","已":"yǐ","师":"shī","希":"xī","带":"dài","帮":"bāng","常":"cháng","年":"nián","幸":"xìng","床":"chuáng","应":"yīng","店":"diàn","开":"kāi","弟":"dì","张":"zhāng","弹":"dàn","形":"xíng","影":"yǐng","往":"wǎng","很":"hěn","得":"de","心":"xīn","必":"bì","忙":"máng","快":"kuài","怎":"zěn","思":"sī","急":"jí","性":"xìng","息":"xī","您":"nín","惯":"guàn","想":"xiǎng","意":"yì","感":"gǎn","愿":"yuàn","慢":"màn","懂":"dǒng","成":"chéng","我":"wǒ","或":"huò","房":"fáng","手":"shǒu","打":"dǎ","把":"bǎ","护":"hù","报":"bào","抱":"bào","担":"dān","拔":"bá","拿":"ná","持":"chí","挂":"guà","放":"fàng","敏":"mǐn","教":"jiào","敬":"jìng","数":"shù","文":"wén","斯":"sī","方":"fāng","旅":"lǚ","日":"rì","早":"zǎo","时":"shí","明":"míng","星":"xīng","春":"chūn","昨":"zuó","是":"shì","晚":"wǎn","晶":"jīng","暑":"shǔ","暖":"nuǎn","更":"gèng","最":"zuì","月":"yuè","有":"yǒu","朋":"péng","服":"fú","望":"wàng","期":"qī","木":"mù","本":"běn","朵":"duǒ","机":"jī","李":"lǐ","杜":"dù","来":"lái","杯":"bēi","板":"bǎn","林":"lín","果":"guǒ","查":"chá","树":"shù","校":"xiào","样":"yàng","格":"gé","桌":"zhuō","检":"jiǎn","森":"sēn","楼":"lóu","概":"gài","次":"cì","欢":"huān","歉":"qiàn","此":"cǐ","母":"mǔ","每":"měi","比":"bǐ","气":"qì","水":"shuǐ","汁":"zhī","汉":"hàn","池":"chí","没":"méi","油":"yóu","洗":"xǐ","温":"wēn","漂":"piāo","火":"huǒ","灯":"dēng","点":"diǎn","烦":"fán","烧":"shāo","热":"rè","然":"rán","照":"zhào","熟":"shú","爱":"ài","父":"fù","爷":"yé","爸":"bà","爽":"shuǎng","牙":"yá","牛":"niú","狗":"gǒu","猫":"māo","王":"wáng","现":"xiàn","班":"bān","琴":"qín","生":"shēng","用":"yòng","田":"tián","电":"diàn","疼":"téng","病":"bìng","痛":"tòng","白":"bái","百":"bǎi","的":"de","目":"mù","直":"zhí","看":"kàn","真":"zhēn","着":"zhe","睡":"shuì","知":"zhī","石":"shí","码":"mǎ","碗":"wǎn","示":"shì","礼":"lǐ","票":"piào","秋":"qiū","租":"zū","程":"chéng","稍":"shāo","空":"kōng","穿":"chuān","站":"zhàn","第":"dì","等":"děng","算":"suàn","米":"mǐ","系":"xì","累":"lèi","红":"hóng","经":"jīng","给":"gěi","继":"jì","续":"xù","绿":"lǜ","罗":"luó","羊":"yáng","美":"měi","翻":"fān","老":"lǎo","者":"zhě","耳":"ěr","肉":"ròu","肚":"dù","背":"bèi","能":"néng","自":"zì","致":"zhì","舒":"shū","舞":"wǔ","节":"jié","花":"huā","苹":"píng","茶":"chá","药":"yào","菜":"cài","葱":"cōng","虽":"suī","行":"xíng","袋":"dài","西":"xī","要":"yào","见":"jiàn","计":"jì","订":"dìng","认":"rèn","议":"yì","设":"shè","识":"shí","译":"yì","话":"huà","该":"gāi","语":"yǔ","说":"shuō","请":"qǐng","读":"dú","课":"kè","谁":"shuí","调":"diào","谢":"xiè","负":"fù","责":"zé","贵":"guì","走":"zǒu","起":"qǐ","跑":"pǎo","路":"lù","身":"shēn","车":"chē","转":"zhuǎn","较":"jiào","输":"shū","辣":"là","边":"biān","过":"guò","迎":"yíng","近":"jìn","还":"hái","这":"zhè","进":"jìn","迟":"chí","迷":"mí","送":"sòng","道":"dào","那":"nà","邮":"yóu","都":"dōu","酒":"jiǔ","里":"lǐ","重":"zhòng","金":"jīn","针":"zhēn","钟":"zhōng","钢":"gāng","钱":"qián","铁":"tiě","银":"yín","销":"xiāo","错":"cuò","门":"mén","问":"wèn","间":"jiān","阳":"yáng","阿":"ā","附":"fù","院":"yuàn","雨":"yǔ","雪":"xuě","零":"líng","面":"miàn","音":"yīn","项":"xiàng","顺":"shùn","须":"xū","题":"tí","风":"fēng","飞":"fēi","饭":"fàn","饱":"bǎo","饿":"è","马":"mǎ","骂":"mà","骑":"qí","高":"gāo","鱼":"yú","鸡":"jī","麻":"má","黑":"hēi","龄":"líng"};
 
 </script>
 <script>
@@ -5969,6 +6088,7 @@ function toast(msg) {
    ============================================================ */
 const ROUTES = {
   home: renderHome,
+  pinyin: renderPinyin,
   plan: renderPlan,
   lesson: renderLesson,
   diag: renderDiagnostic,
@@ -6224,6 +6344,11 @@ function renderKidIntro(l) {
   pan.id = 'sec-pinyin';
   pan.appendChild(el('h3', '', '🔤 Сначала — как читать пиньинь'));
   pan.appendChild(el('p', 'kid-lead', 'Китайские звуки записаны латинскими буквами — это пиньинь. Читаем по слогам: <b>nǐ hǎo</b> — «ни-хао». Послушайте каждое слово кнопкой 🔊, а потом повторите медленно кнопкой 🐢.'));
+  const abcRow = el('div', 'btn-row pg-abc');
+  const abcBtn = el('a', 'btn btn-primary btn-sm', '📚 Вся азбука пиньинь');
+  abcBtn.href = '#/pinyin';
+  abcRow.appendChild(abcBtn);
+  pan.appendChild(abcRow);
   const grid = el('div', 'pg-grid');
   (l.pinyinGuide || []).forEach(g => {
     const c = el('div', 'pg-cell', `<div class="pg-g">${esc(g.g)}</div><div class="pg-ru">${esc(g.ru)}</div><div class="pg-note">${esc(g.note)}</div>`);
@@ -9616,6 +9741,92 @@ function tutorServerContext() {
   return parts.join('; ').slice(0, 400);
 }
 
+/* ---------- Азбука пиньинь ----------
+   Полное объяснение: что такое пиньинь, все 23 начала слога и все 24
+   конца, хитрые буквы. Каждая карточка — с русской подсказкой и
+   примером, который озвучивает китайский голос (как на уроках). */
+function pinyinCard(entry, kind) {
+  const card = el('div', 'pabc-card' + (kind === 'final' ? ' pabc-final' : ''));
+  card.innerHTML = `
+    <div class="pabc-k">${esc(entry.k)}</div>
+    <div class="pabc-ru">${esc(entry.ru)}</div>
+    <div class="pabc-ex">
+      <b class="pabc-syl">${esc(entry.ex.syl)}</b>
+      <span class="pabc-h">${esc(entry.ex.h)}</span>
+      <span class="pabc-r">${esc(entry.ex.r)}</span>
+    </div>
+    <div class="pabc-note">${esc(entry.note)}</div>
+    <div class="pabc-tools">${toneBtn(entry.ex.h, 'speak sm')}</div>`;
+  return card;
+}
+
+function renderPinyin(root) {
+  const A = PINYIN_ABC;
+  const wrap = el('div', 'pinyin-wrap');
+  wrap.appendChild(el('div', 'lesson-head', `
+    <div class="lh-badge">🔤 Справочник</div>
+    <h1>Азбука пиньинь</h1>
+    <p class="lh-sub">Все буквы китайских звуков — начало и конец слога, с подсказками и озвучкой</p>`));
+
+  /* Что такое пиньинь */
+  const what = el('div', 'panel pabc-about');
+  what.appendChild(el('h3', '', '🧩 Что такое пиньинь?'));
+  A.about.forEach(par => what.appendChild(el('p', 'kid-lead', par)));
+  const demo = el('div', 'pabc-demo');
+  demo.innerHTML = `
+    <div class="pd-part"><span class="pd-label">начало</span><b>m</b></div>
+    <span class="pd-plus">+</span>
+    <div class="pd-part"><span class="pd-label">конец</span><b>a</b></div>
+    <span class="pd-eq">=</span>
+    <div class="pd-part pd-syl"><span class="pd-label">слог</span><b>妈 mā</b> ${toneBtn('妈', 'speak sm')}</div>
+    <span class="pd-mid">·</span>
+    <div class="pd-part"><span class="pd-label">начало</span><b>h</b></div>
+    <span class="pd-plus">+</span>
+    <div class="pd-part"><span class="pd-label">конец</span><b>ao</b></div>
+    <span class="pd-eq">=</span>
+    <div class="pd-part pd-syl"><span class="pd-label">слог</span><b>猫 māo</b> ${toneBtn('猫', 'speak sm')}</div>`;
+  what.appendChild(demo);
+  wrap.appendChild(what);
+
+  /* Начало слога */
+  const ini = el('div', 'panel');
+  ini.appendChild(el('h3', '', `🚀 Начало слога — ${A.initials.length} букв и сочетаний`));
+  ini.appendChild(el('p', 'kid-lead', 'Стоит в самом начале слога. Жми 🔊 — услышишь слово с этой буквой.'));
+  const g1 = el('div', 'pabc-grid');
+  A.initials.forEach(e => g1.appendChild(pinyinCard(e, 'initial')));
+  ini.appendChild(g1);
+  wrap.appendChild(ini);
+
+  /* Конец слога */
+  const fin = el('div', 'panel');
+  fin.appendChild(el('h3', '', `🏁 Конец слога — ${A.finals.length} гласных и сочетаний`));
+  fin.appendChild(el('p', 'kid-lead', 'Гласная или её сочетание — «сердце» слога. Без него слога не бывает!'));
+  const g2 = el('div', 'pabc-grid');
+  A.finals.forEach(e => g2.appendChild(pinyinCard(e, 'final')));
+  fin.appendChild(g2);
+  wrap.appendChild(fin);
+
+  /* Хитрые буквы */
+  const tr = el('div', 'panel');
+  tr.appendChild(el('h3', '', '🧠 Хитрые буквы — запомни'));
+  A.tricky.forEach(par => tr.appendChild(el('div', 'pabc-tricky', par)));
+  wrap.appendChild(tr);
+
+  /* Куда дальше */
+  const next = el('div', 'panel pabc-next');
+  next.appendChild(el('h3', '', '🎓 Теперь потренируйся'));
+  const row = el('div', 'btn-row');
+  const b1 = el('a', 'btn btn-primary', '🎵 Тоны: голос — как рука');
+  b1.href = '#/tones';
+  const b2 = el('a', 'btn btn-ghost', '📖 Урок 1: прочитай слова с пиньиня');
+  b2.href = '#/lesson/l1';
+  row.appendChild(b1); row.appendChild(b2);
+  next.appendChild(row);
+  wrap.appendChild(next);
+
+  root.appendChild(wrap);
+}
+
 function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
   wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
@@ -9807,6 +10018,7 @@ function initNav() {
   const items = [
     ['home', '🏠', 'Главная'],
     ['plan', '📚', 'Уроки'],
+    ['pinyin', '🔤', 'Азбука'],
     ['diag', '🎯', 'Уровень'],
     ['cards', '🗂️', 'Карточки'],
     ['videos', '🎬', 'Видео'],
