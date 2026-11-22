@@ -4665,14 +4665,26 @@ function renderTutor(root) {
      никаких внешних сервисов и ключей. Если браузер не умеет —
      честно показываем подсказку, чат остаётся рабочим. */
   let recog = null;
+  let micAborted = false; /* остановка вручную: недосказанное не уходит в чат */
   const mic = el('button', 'btn btn-sm btn-ghost t-mic', '🎙');
   mic.type = 'button';
   mic.title = 'Сказать Мэймэй голосом';
   mic.setAttribute('aria-label', 'Сказать Мэймэй голосом');
   const micNote = el('div', 't-mic-note');
   micNote.hidden = true;
+  /* Браузеры запрещают микрофон внутри встроенного окна (iframe) без
+     явного разрешения: в окне предпросмотра кнопка молча не работала —
+     теперь честно объясняем и даём открыть приложение отдельно. */
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  function micSay(html) { micNote.innerHTML = html; micNote.hidden = false; }
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (inFrame) {
+      micSay('🎙 Браузеры запрещают микрофон внутри встроенного окна. ' +
+        '<a href="' + esc(location.href) + '" target="_blank" rel="noopener noreferrer">Открой приложение в отдельной вкладке</a>' +
+        ' — там 🎙 работает.');
+      return;
+    }
     if (!SR) {
       micNote.hidden = false;
       micNote.textContent = '🎙 Микрофон работает в Chrome, Яндекс.Браузере, Edge и Safari. Открой приложение там — и говори с Мэймэй голосом.';
@@ -4692,12 +4704,24 @@ function renderTutor(root) {
       };
       recog.onend = () => {
         mic.classList.remove('t-mic-live');
+        if (micAborted) { micAborted = false; return; } /* стоп — не отправляем */
         const said = (inp.value || '').trim();
         if (said) sendMsg(said);
+        else micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
       };
-      recog.onerror = () => { mic.classList.remove('t-mic-live'); };
+      recog.onerror = (e) => {
+        mic.classList.remove('t-mic-live');
+        const err = (e && e.error) || '';
+        if (err === 'not-allowed' || err === 'service-not-allowed') {
+          micSay('🎙 Микрофон запрещён. Разреши доступ: значок <b>🔒</b> в адресной строке → «Микрофон» → «Разрешить» — и попробуй снова.');
+        } else if (err === 'no-speech') {
+          micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
+        } else if (err) {
+          micSay('🎙 Микрофон не сработал (' + esc(err) + '). Напиши вопрос текстом — Мэймэй ответит так же.');
+        }
+      };
     }
-    if (mic.classList.contains('t-mic-live')) { recog.stop(); return; }
+    if (mic.classList.contains('t-mic-live')) { micAborted = true; recog.stop(); return; }
     try {
       micNote.hidden = true;
       inp.value = '';

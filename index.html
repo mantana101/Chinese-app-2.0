@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="803a95697829">
+<meta name="app-build" content="296d7f792b98">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10190,14 +10190,26 @@ function renderTutor(root) {
      никаких внешних сервисов и ключей. Если браузер не умеет —
      честно показываем подсказку, чат остаётся рабочим. */
   let recog = null;
+  let micAborted = false; /* остановка вручную: недосказанное не уходит в чат */
   const mic = el('button', 'btn btn-sm btn-ghost t-mic', '🎙');
   mic.type = 'button';
   mic.title = 'Сказать Мэймэй голосом';
   mic.setAttribute('aria-label', 'Сказать Мэймэй голосом');
   const micNote = el('div', 't-mic-note');
   micNote.hidden = true;
+  /* Браузеры запрещают микрофон внутри встроенного окна (iframe) без
+     явного разрешения: в окне предпросмотра кнопка молча не работала —
+     теперь честно объясняем и даём открыть приложение отдельно. */
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  function micSay(html) { micNote.innerHTML = html; micNote.hidden = false; }
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (inFrame) {
+      micSay('🎙 Браузеры запрещают микрофон внутри встроенного окна. ' +
+        '<a href="' + esc(location.href) + '" target="_blank" rel="noopener noreferrer">Открой приложение в отдельной вкладке</a>' +
+        ' — там 🎙 работает.');
+      return;
+    }
     if (!SR) {
       micNote.hidden = false;
       micNote.textContent = '🎙 Микрофон работает в Chrome, Яндекс.Браузере, Edge и Safari. Открой приложение там — и говори с Мэймэй голосом.';
@@ -10217,12 +10229,24 @@ function renderTutor(root) {
       };
       recog.onend = () => {
         mic.classList.remove('t-mic-live');
+        if (micAborted) { micAborted = false; return; } /* стоп — не отправляем */
         const said = (inp.value || '').trim();
         if (said) sendMsg(said);
+        else micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
       };
-      recog.onerror = () => { mic.classList.remove('t-mic-live'); };
+      recog.onerror = (e) => {
+        mic.classList.remove('t-mic-live');
+        const err = (e && e.error) || '';
+        if (err === 'not-allowed' || err === 'service-not-allowed') {
+          micSay('🎙 Микрофон запрещён. Разреши доступ: значок <b>🔒</b> в адресной строке → «Микрофон» → «Разрешить» — и попробуй снова.');
+        } else if (err === 'no-speech') {
+          micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
+        } else if (err) {
+          micSay('🎙 Микрофон не сработал (' + esc(err) + '). Напиши вопрос текстом — Мэймэй ответит так же.');
+        }
+      };
     }
-    if (mic.classList.contains('t-mic-live')) { recog.stop(); return; }
+    if (mic.classList.contains('t-mic-live')) { micAborted = true; recog.stop(); return; }
     try {
       micNote.hidden = true;
       inp.value = '';
