@@ -217,7 +217,7 @@
       const hwTip = window.pandaTip({
         id: 'hw', icon: '🏠', title: 'Домашка',
         text: 'Ай да, урок пройден! Теперь домашка — она закрепит мастерство. Делай задания по одному, не спеша, а я проверю!',
-        audio: 'audio/step-hw.mp3'
+        audio: 'audio/step-hw-v3.mp3'
       });
       panel.appendChild(hwTip);
     }

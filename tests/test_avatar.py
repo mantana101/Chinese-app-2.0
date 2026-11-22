@@ -239,6 +239,44 @@ class CacheBustingAndMentor(unittest.TestCase):
         self.assertIn("flex-wrap: wrap", css, "панель должна переносить ступеньки на новую строку")
 
 
+class StepAudioWired(unittest.TestCase):
+    """Ступеньки обязаны играть записи, а не молча падать в синтез.
+
+    Раньше у объектов PANDA_STEPS пропал audio: — правка текстов затёрла
+    поле, и ступеньки во всех уроках молча говорили голосом браузера.
+    Пользователь слышал «тот же голос», хотя записи обновлялись."""
+
+    def test_every_step_has_audio_and_file(self):
+        import re as _re
+        app = read("src", "app.js")
+        block = app[app.index("const PANDA_STEPS = ["):app.index("];", app.index("const PANDA_STEPS = ["))]
+        paths = _re.findall(r"audio: '([^']+)'", block)
+        self.assertEqual(len(paths), 7,
+                         f"у каждой из 7 ступенек должна быть запись, найдено {len(paths)}")
+        for path in paths:
+            self.assertTrue(os.path.exists(os.path.join(ROOT, path)),
+                            f"нет файла записи: {path}")
+
+    def test_homework_tip_uses_recording(self):
+        hw = read("src", "homework.js")
+        self.assertIn("audio: 'audio/step-hw-v3.mp3'", hw)
+
+    def test_voice_tag_on_filenames(self):
+        app = read("src", "app.js")
+        self.assertIn("VOICE_TAG", app)
+        self.assertIn("VOICE_TAG = 'v3'", app, "метка голоса — v3")
+        self.assertIn("+ '-' + VOICE_TAG + '.mp3'", app,
+                      "объяснение урока строит имя с меткой голоса")
+
+    def test_synth_fallback_is_visible(self):
+        app = read("src", "app.js")
+        self.assertIn("studioMissingNote", app,
+                      "фолбэк на синтез обязан быть виден пользователю")
+        css = read("src", "styles.css")
+        self.assertIn(".pa-synth-note", css)
+        self.assertIn(".pa-voice-badge", css, "бейдж источника голоса должен быть стилизован")
+
+
 class DockerShipsAudio(unittest.TestCase):
     """Записи голоса обязаны доехать до production.
 
@@ -373,7 +411,7 @@ class StudioAudio(unittest.TestCase):
         ids = json.loads(res.stdout) and [l["id"] for l in json.loads(res.stdout)]
         self.assertTrue(ids)
         for lid in ids:
-            f = os.path.join(ROOT, "audio", lid + ".mp3")
+            f = os.path.join(ROOT, "audio", lid + "-v3.mp3")
             self.assertTrue(os.path.exists(f), f"нет студийной озвучки {f}")
             size = os.path.getsize(f)
             self.assertGreater(size, 50_000, f"{lid}: файл слишком короткий ({size} Б)")
@@ -441,7 +479,7 @@ class LearningPath(unittest.TestCase):
         self.assertEqual(len(steps), 7, "в сценарии должны быть все 7 подсказок-ступенек")
         for key, text in steps.items():
             self.assertGreater(len(text), 30, f"step {key}: текст слишком короткий")
-            f = os.path.join(ROOT, "audio", f"step-{key}.mp3")
+            f = os.path.join(ROOT, "audio", f"step-{key}-v3.mp3")
             self.assertTrue(os.path.exists(f), f"нет записи {f}")
             with open(f, "rb") as fh:
                 head = fh.read(3)
