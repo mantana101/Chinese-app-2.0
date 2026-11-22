@@ -4537,7 +4537,7 @@ function renderPinyin(root) {
 function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
   wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
-  wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках. Жми 🎙 — говори голосом, как с Джарвисом: она услышит и ответит вслух.'));
+  wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках. Жми 🎙 — появится Мэймэй с аватаром: говори голосом, как с Джарвисом, — она услышит, ответит вслух и сама продолжит разговор.'));
   wrap.appendChild(el('p', 't-brain', 'Мозг Мэймэй: <span id="t-brain-state">…задайте вопрос — и здесь появится, кто ответил</span>'));
 
   const chips = el('div', 't-chips');
@@ -4664,135 +4664,232 @@ function renderTutor(root) {
      Распознавание речи — встроенное в браузер (SpeechRecognition),
      никаких внешних сервисов и ключей. Если браузер не умеет —
      честно показываем подсказку, чат остаётся рабочим. */
-  let recog = null;
   let micAborted = false; /* остановка вручную: недосказанное не уходит в чат */
+  let recog = null; /* создаётся заново для каждой комнаты: старые
+                       обработчики ссылались на закрытую комнату */
   const mic = el('button', 'btn btn-sm btn-ghost t-mic', '🎙');
   mic.type = 'button';
-  mic.title = 'Сказать Мэймэй голосом';
-  mic.setAttribute('aria-label', 'Сказать Мэймэй голосом');
-  const micNote = el('div', 't-mic-note');
-  micNote.hidden = true;
+  mic.title = 'Поговорить с Мэймэй голосом';
+  mic.setAttribute('aria-label', 'Поговорить с Мэймэй голосом');
+
   /* Браузеры запрещают микрофон внутри встроенного окна (iframe) без
-     явного разрешения: в окне предпросмотра кнопка молча не работала —
-     теперь честно объясняем и даём открыть приложение отдельно. */
+     явного разрешения: честно объясняем и даём открыть отдельно. */
   const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
-  function micSay(html) { micNote.innerHTML = html; micNote.hidden = false; }
-  /* Предварительный запрос микрофона: на телефоне показывает настоящий
-     диалог разрешения и даёт точную причину отказа. Без него браузер
-     мог молча отказать (как на скриншоте пользователя) — даже без
-     показа диалога. */
-  function micAskPermission(then) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      micSay('🎙 Микрофон работает только на защищённом сайте (адрес начинается с https://) и в современных браузерах. Пиши вопросы текстом — Мэймэй ответит так же.');
-      mic.classList.remove('t-mic-live');
-      return;
-    }
-    /* Состояние микрофона узнаём заранее: если сайт уже был запрещён,
-       браузер НЕ показывает диалог вовсе (молчаливый отказ) — честно
-       объясняем это и даём путь включения, а не ждём диалога зря. */
-    let perms = null;
-    try {
-      perms = navigator.permissions && navigator.permissions.query;
-    } catch (e) { perms = null; }
-    if (perms) {
-      navigator.permissions.query({ name: 'microphone' }).then((st) => {
-        if (st && st.state === 'denied') {
-          mic.classList.remove('t-mic-live');
-          micSay('🎙 Диалога разрешения нет, потому что этому сайту микрофон уже запрещён — браузер молчит вместо запроса. Вернуть можно за 15 секунд:<br>' +
-            '1) нажми <b>🔒 или ⓘ</b> слева от адреса сайта;<br>' +
-            '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
-            '3) обнови страницу (⟳) и снова нажми 🎙.<br>' +
-            'Второй путь: меню браузера (⋮) → Настройки → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом.');
-          return;
-        }
-        if (st && st.state === 'granted') { then(); return; }
-        micSay('🎙 Сейчас появится запрос браузера — нажми <b>«Разрешить»</b>.');
-        requestMic(then);
-      }).catch(() => requestMic(then));
-      return;
-    }
-    requestMic(then);
+
+  function micDeniedHtml() {
+    return '🎙 Микрофон запрещён для этого сайта. Верни его так:<br>' +
+      '1) нажми <b>🔒 или ⓘ</b> рядом с адресом сайта;<br>' +
+      '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
+      '3) обнови страницу и снова нажми 🎙.<br>' +
+      'Второй путь: настройки браузера → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом — Мэймэй ответит так же.';
   }
 
-  function requestMic(then) {
+  function micNoDialogHtml() {
+    return '🎙 Диалога разрешения нет, потому что этому сайту микрофон уже запрещён — браузер молчит вместо запроса. Вернуть можно за 15 секунд:<br>' +
+      '1) нажми <b>🔒 или ⓘ</b> слева от адреса сайта;<br>' +
+      '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
+      '3) обнови страницу (⟳) и снова нажми 🎙.<br>' +
+      'Второй путь: меню браузера (⋮) → Настройки → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом.';
+  }
+
+  /* Состояние микрофона узнаём заранее: если сайт уже был запрещён,
+     браузер НЕ показывает диалог вовсе (молчаливый отказ). */
+  function micState() {
+    return new Promise((resolve) => {
+      let qp = null;
+      try { qp = navigator.permissions && navigator.permissions.query; } catch (e) { qp = null; }
+      if (!qp) return resolve('prompt');
+      navigator.permissions.query({ name: 'microphone' })
+        .then((st) => resolve((st && st.state) || 'prompt'))
+        .catch(() => resolve('prompt'));
+    });
+  }
+
+  function requestMic(onOk, onFail) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return onFail('no-https');
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       (stream.getTracks() || []).forEach((tr) => { try { tr.stop(); } catch (e) { } });
-      then();
-    }).catch((err) => {
-      mic.classList.remove('t-mic-live');
-      const name = (err && err.name) || '';
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        micSay('🎙 Микрофон запрещён для этого сайта. Верни его так:<br>' +
-          '1) нажми <b>🔒 или ⓘ</b> рядом с адресом сайта;<br>' +
-          '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
-          '3) обнови страницу и снова нажми 🎙.<br>' +
-          'Другой путь: настройки браузера → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом — Мэймэй ответит так же.');
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
-        micSay('🎙 Микрофон не найден на этом устройстве. Пиши вопросы текстом — Мэймэй ответит так же.');
-      } else {
-        micSay('🎙 Микрофон не сработал (' + esc(name || 'ошибка') + '). Пиши вопросы текстом — Мэймэй ответит так же.');
-      }
+      onOk();
+    }).catch((err) => onFail((err && err.name) || 'no-https'));
+  }
+
+  /* Предварительный запрос микрофона: узнаём состояние, и только потом
+     показываем диалог разрешения. onFail получает точную причину:
+     'already-denied' | 'prompt' | 'no-https' | NotAllowedError | … */
+  function micAskPermission(onOk, onFail) {
+    micState().then((state) => {
+      if (state === 'denied') return onFail('already-denied');
+      if (state === 'granted') return onOk();
+      onFail('prompt');
     });
   }
-  function startVoice() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (inFrame) {
-      micSay('🎙 Браузеры запрещают микрофон внутри встроенного окна. ' +
-        '<a href="' + esc(location.href) + '" target="_blank" rel="noopener noreferrer">Открой приложение в отдельной вкладке</a>' +
-        ' — там 🎙 работает.');
-      return;
-    }
-    if (!SR) {
-      micNote.hidden = false;
-      micNote.textContent = '🎙 Микрофон работает в Chrome, Яндекс.Браузере, Edge и Safari. Открой приложение там — и говори с Мэймэй голосом.';
-      return;
-    }
-    if (!recog) {
-      recog = new SR();
-      recog.lang = 'ru-RU';
-      recog.interimResults = true;
-      recog.maxAlternatives = 1;
-      recog.onresult = (e) => {
-        let text = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          text += e.results[i][0].transcript;
-        }
-        inp.value = text.trim();
-      };
-      recog.onend = () => {
-        mic.classList.remove('t-mic-live');
-        if (micAborted) { micAborted = false; return; } /* стоп — не отправляем */
-        const said = (inp.value || '').trim();
-        if (said) sendMsg(said);
-        else micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
-      };
-      recog.onerror = (e) => {
-        mic.classList.remove('t-mic-live');
-        const err = (e && e.error) || '';
-        if (err === 'not-allowed' || err === 'service-not-allowed') {
-          micSay('🎙 Микрофон запрещён. Разреши доступ: значок <b>🔒</b> в адресной строке → «Микрофон» → «Разрешить» — и попробуй снова.');
-        } else if (err === 'no-speech') {
-          micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
-        } else if (err === 'service-not-allowed') {
-          micSay('🎙 На устройстве нет сервиса распознавания речи (так бывает на телефонах без сервисов Google). Пиши вопросы текстом — Мэймэй ответит так же.');
-        } else if (err) {
-          micSay('🎙 Микрофон не сработал (' + esc(err) + '). Напиши вопрос текстом — Мэймэй ответит так же.');
-        }
-      };
-    }
-    if (mic.classList.contains('t-mic-live')) {
+
+  /* ---------- Комната голосового разговора ----------
+     Нажатие 🎙 открывает Мэймэй с аватаром: она слушает голос,
+     отвечает вслух и сама продолжает разговор — как Джарвис.
+     Комната появляется всегда, даже если микрофон запрещён: тогда
+     в ней честное объяснение, а чат текстом работает как раньше. */
+  function openVoiceRoom() {
+    if (document.getElementById('t-room')) return;
+    if (recog) { try { recog.onend = null; recog.onerror = null; recog.onresult = null; recog.stop(); } catch (e) { } }
+    recog = null;
+    const ov = el('div', 't-room'); ov.id = 't-room';
+    const card = el('div', 't-room-card');
+    const x = el('button', 't-room-x', '✕');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Закрыть разговор');
+    const av = el('div', 't-room-avatar', pandaSVG());
+    const st = el('div', 't-room-status', 'Знакомлюсь с микрофоном…');
+    const heard = el('div', 't-room-heard');
+    heard.hidden = true;
+    const feed = el('div', 't-room-feed');
+    const micBig = el('button', 'btn btn-primary t-room-mic', '🎙 Говорить');
+    micBig.type = 'button';
+    const room = { open: true, listening: false, ttsDone: false };
+    let roomHeard = '';
+
+    card.appendChild(x); card.appendChild(av); card.appendChild(st);
+    card.appendChild(heard); card.appendChild(feed); card.appendChild(micBig);
+    ov.appendChild(card);
+    document.body.appendChild(ov);
+    const say = (html) => { st.innerHTML = html; st.hidden = false; };
+
+    const closeRoom = () => {
+      room.open = false;
       micAborted = true;
-      try { recog.stop(); } catch (e) { }
-      return;
-    }
-    micNote.hidden = true;
-    mic.classList.add('t-mic-live');
-    micAskPermission(() => {
-      inp.value = '';
-      try { recog.start(); } catch (e) { mic.classList.remove('t-mic-live'); }
-    });
+      try { if (recog && room.listening) recog.stop(); } catch (e) { }
+      try { speechSynthesis.cancel(); } catch (e) { }
+      try { speechSynthesis.speak = room.origSpeak || speechSynthesis.speak; } catch (e) { }
+      ov.remove();
+    };
+    x.onclick = closeRoom;
+    ov.addEventListener('click', (e) => { if (e.target === ov) closeRoom(); });
+
+    const begin = () => {
+      if (!room.open) return;
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        say('🎙 Распознавание речи работает в Chrome, Яндекс.Браузере, Edge и Safari. Я здесь и отвечу — спроси текстом в чате.');
+        return;
+      }
+      if (!recog) {
+        recog = new SR();
+        recog.lang = 'ru-RU';
+        recog.interimResults = true;
+        recog.maxAlternatives = 1;
+        recog.onresult = (e) => {
+          let text = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            text += e.results[i][0].transcript;
+          }
+          roomHeard = text.trim();
+          heard.hidden = false;
+          heard.textContent = 'Ты сказала: «' + roomHeard + '»';
+        };
+        recog.onend = () => {
+          room.listening = false;
+          micBig.textContent = '🎙 Говорить';
+          av.classList.remove('listening');
+          if (!room.open) return;
+          if (micAborted) { micAborted = false; return; } /* стоп — не отправляем */
+          const said = roomHeard;
+          roomHeard = '';
+          heard.hidden = true;
+          if (said) ask(said);
+          else say('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
+        };
+        recog.onerror = (e) => {
+          room.listening = false;
+          const err = (e && e.error) || '';
+          if ((e && e.error) === 'no-speech') return; /* тишина — решит onend */
+          if (!room.open) return;
+          if (err === 'not-allowed') { micAborted = false; say(micDeniedHtml()); }
+          else if (err === 'service-not-allowed') {
+            micAborted = false;
+            say('🎙 На устройстве нет сервиса распознавания речи (так бывает на телефонах без сервисов Google). Пиши вопросы текстом — Мэймэй ответит так же.');
+          } else if (err) {
+            micAborted = false;
+            say('🎙 Микрофон не сработал (' + esc(err) + '). Напиши вопрос текстом — Мэймэй ответит так же.');
+          }
+        };
+      }
+      if (room.listening) { micAborted = true; try { recog.stop(); } catch (e) { } return; }
+      micAborted = false;
+      heard.hidden = true;
+      roomHeard = '';
+      room.listening = true;
+      micBig.textContent = '⏹ Хватит';
+      av.classList.add('listening');
+      say('🎙 Слушаю… говори!');
+      try { recog.start(); } catch (e) { room.listening = false; }
+    };
+
+    const failMic = (name) => {
+      if (!room.open) return;
+      if (name === 'already-denied') return say(micNoDialogHtml());
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return say(micDeniedHtml());
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError')
+        return say('🎙 Микрофон не найден на этом устройстве. Пиши вопросы текстом — Мэймэй ответит так же.');
+      if (name === 'no-https')
+        return say('🎙 Микрофон работает только на защищённом сайте (адрес начинается с https://) и в современных браузерах. Пиши вопросы текстом — Мэймэй ответит так же.');
+      say('🎙 Микрофон не сработал (' + esc(name || 'ошибка') + '). Пиши вопросы текстом — Мэймэй ответит так же.');
+    };
+
+    const listen = () => {
+      if (!room.open) return;
+      micAskPermission(begin, (reason) => {
+        if (!room.open) return;
+        if (reason === 'prompt') {
+          say('🎙 Сейчас появится запрос браузера — нажми <b>«Разрешить»</b>.');
+          requestMic(begin, failMic);
+        } else failMic(reason);
+      });
+    };
+
+    /* Вопрос → ответ в чате → голосом → снова слушаем. */
+    const ask = async (text) => {
+      say('🤔 Думаю…');
+      feed.appendChild(el('div', 'tr-q', esc(text)));
+      feed.scrollTop = feed.scrollHeight;
+      try { await sendMsg(text); } catch (e) { }
+      if (!room.open) return;
+      const last = tutorHistory[tutorHistory.length - 1];
+      const html = (last && (last.html || '')) || '';
+      if (html) {
+        feed.appendChild(el('div', 'tr-a', html));
+        feed.scrollTop = feed.scrollHeight;
+      }
+      const ru = (last && (last.sayRu || sayRuOf(html))) || '';
+      if (!ru) return setTimeout(() => { if (room.open) listen(); }, 500);
+      room.ttsDone = false;
+      const markTts = () => {
+        if (room.ttsDone) return;
+        room.ttsDone = true;
+        av.classList.remove('talking');
+        say('🎙 Слушаю… говори!');
+        if (room.open) listen();
+      };
+      try {
+        room.origSpeak = speechSynthesis.speak;
+        speechSynthesis.speak = (u) => {
+          const oe = u && u.onend;
+          if (u) u.onend = () => { if (oe) oe(); markTts(); };
+          return room.origSpeak(u);
+        };
+      } catch (e) { }
+      av.classList.add('talking');
+      say('🔊 Отвечаю…');
+      speakRu(ru, 0.95);
+      setTimeout(markTts, Math.min(20000, 1500 + ru.length * 90)); /* страховка */
+    };
+
+    micBig.onclick = () => {
+      if (room.listening) { micAborted = true; try { recog.stop(); } catch (e) { } }
+      else listen();
+    };
+    listen(); /* аватар появился — сразу начинаем разговор */
   }
-  mic.onclick = startVoice;
+  mic.onclick = openVoiceRoom;
 
   /* Автоозвучка: Мэймэй сама читает ответы голосом (как Джарвис).
      Выбор запоминается в localStorage между визитами. */
@@ -4811,7 +4908,6 @@ function renderTutor(root) {
   form.appendChild(mic); form.appendChild(inp);
   form.appendChild(voiceBtn); form.appendChild(send);
   box.appendChild(form);
-  box.appendChild(micNote);
   wrap.appendChild(box);
   root.appendChild(wrap);
 
