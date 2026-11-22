@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="472e1bbfa2f3">
+<meta name="app-build" content="fd2fb92695cd">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10209,8 +10209,37 @@ function renderTutor(root) {
   function micAskPermission(then) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       micSay('🎙 Микрофон работает только на защищённом сайте (адрес начинается с https://) и в современных браузерах. Пиши вопросы текстом — Мэймэй ответит так же.');
+      mic.classList.remove('t-mic-live');
       return;
     }
+    /* Состояние микрофона узнаём заранее: если сайт уже был запрещён,
+       браузер НЕ показывает диалог вовсе (молчаливый отказ) — честно
+       объясняем это и даём путь включения, а не ждём диалога зря. */
+    let perms = null;
+    try {
+      perms = navigator.permissions && navigator.permissions.query;
+    } catch (e) { perms = null; }
+    if (perms) {
+      navigator.permissions.query({ name: 'microphone' }).then((st) => {
+        if (st && st.state === 'denied') {
+          mic.classList.remove('t-mic-live');
+          micSay('🎙 Диалога разрешения нет, потому что этому сайту микрофон уже запрещён — браузер молчит вместо запроса. Вернуть можно за 15 секунд:<br>' +
+            '1) нажми <b>🔒 или ⓘ</b> слева от адреса сайта;<br>' +
+            '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
+            '3) обнови страницу (⟳) и снова нажми 🎙.<br>' +
+            'Второй путь: меню браузера (⋮) → Настройки → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом.');
+          return;
+        }
+        if (st && st.state === 'granted') { then(); return; }
+        micSay('🎙 Сейчас появится запрос браузера — нажми <b>«Разрешить»</b>.');
+        requestMic(then);
+      }).catch(() => requestMic(then));
+      return;
+    }
+    requestMic(then);
+  }
+
+  function requestMic(then) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       (stream.getTracks() || []).forEach((tr) => { try { tr.stop(); } catch (e) { } });
       then();
