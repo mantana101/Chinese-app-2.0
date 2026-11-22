@@ -2132,3 +2132,17 @@ button { font-family: inherit; cursor: pointer; }
 .pd-plus, .pd-eq, .pd-mid { font-size: 20px; color: var(--txt3); font-weight: 700; }
 .pabc-next .btn-row { margin-top: 8px; }
 .pg-abc { margin-top: 12px; }
+
+/* ---------- Мозг Мэймэй: честный статус и бейджи ---------- */
+.t-brain { font-size: 12.5px; color: var(--txt3); margin: 6px 0 0; }
+.t-brain-state.on { color: var(--jade); font-weight: 600; }
+.t-brain-state.dim { color: var(--txt3); }
+.t-mode {
+  display: inline-block; font-size: 10.5px; line-height: 1.6;
+  padding: 0 8px; border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(var(--tint), .06);
+  color: var(--txt2); margin-bottom: 6px;
+}
+.t-mode-ai { color: var(--jade); border-color: var(--jade); }
+.t-mode-sources { color: var(--gold); border-color: var(--gold); }

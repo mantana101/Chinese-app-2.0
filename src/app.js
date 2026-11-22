@@ -2410,6 +2410,7 @@ function sayRuOf(html) {
 }
 
 let tutorHistory = [];
+let tutorBrain = ''; /* какой «мозг» ответил последним: ai | sources | local */
 let tutorHistoryRestored = (() => {
   try {
     const raw = localStorage.getItem('tutorChat');
@@ -4336,6 +4337,7 @@ function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
   wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
   wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках.'));
+  wrap.appendChild(el('p', 't-brain', 'Мозг Мэймэй: <span id="t-brain-state">…задайте вопрос — и здесь появится, кто ответил</span>'));
 
   const chips = el('div', 't-chips');
   [
@@ -4376,12 +4378,39 @@ function renderTutor(root) {
     });
   }
 
+  /* Честный ответ: какой «мозг» работает. ai — облачная модель (ключ
+     настроен), sources — только словари приложения, local — встроенные
+     правила (ключ не настроен или офлайн). Состояние живёт за сессию. */
+  function setBrain(mode) {
+    if (mode) {
+      tutorBrain = mode;
+      try { sessionStorage.setItem('zh_tutor_brain', tutorBrain); } catch (e) { }
+    }
+    const st = document.getElementById('t-brain-state');
+    if (!st) return;
+    if (tutorBrain === 'ai') {
+      st.textContent = '🧠 умный ИИ включён — отвечает облачная модель';
+      st.className = 't-brain-state on';
+    } else if (tutorBrain === 'sources') {
+      st.textContent = '📖 словари приложения — ключ ИИ не настроен';
+      st.className = 't-brain-state dim';
+    } else if (tutorBrain === 'local') {
+      st.textContent = '📚 встроенные правила — умный ИИ не подключён';
+      st.className = 't-brain-state dim';
+    }
+  }
+  setBrain((() => { try { return sessionStorage.getItem('zh_tutor_brain') || ''; } catch (e) { return ''; } })());
+
   function paintFeed() {
     feed.innerHTML = '';
     tutorHistory.forEach(m => {
       const row = el('div', 't-msg ' + (m.role === 'user' ? 't-user' : 't-bot'));
       if (m.role === 'assistant') row.appendChild(el('span', 'pa-mini', pandaSVG()));
       const bubble = el('div', 't-bubble', m.html || esc(m.content || ''));
+      if (m.role === 'assistant' && m.mode) {
+        bubble.insertBefore(el('span', 't-mode t-mode-' + m.mode,
+          m.mode === 'ai' ? '🧠 умный ИИ' : m.mode === 'sources' ? '📖 словари' : '📚 правила'), bubble.firstChild);
+      }
       if (m.speak) {
         const sp = el('div', 't-sp', `${toneBtn(m.speak, 'speak sm')} <span>прослушать</span>`);
         bubble.appendChild(sp);
@@ -4453,6 +4482,7 @@ function renderTutor(root) {
     const localReply = tutorReplyLocal(q);
     const localSure = !/не уверен, что понял|^\s*$/i.test(
       String(localReply.html || '').replace(/<[^>]+>/g, ' ').trim());
+    let lastMode = 'local';
 
     let replyObj = null;
     if (window.Auth && Auth.online) {
@@ -4470,9 +4500,11 @@ function renderTutor(root) {
           })
         });
         const d = await res.json();
+        lastMode = String(d.mode || 'local');
         if (d && d.mode === 'ai' && d.reply) {
           const text = esc(d.reply).replace(/\n/g, '<br>');
           replyObj = {
+            mode: 'ai',
             html: text.replace(/([\u3400-\u9fff]+)/g, (m) => ruby(m)) + tutorSourceLinks(d.sources),
             speak: (d.reply.match(/[\u3400-\u9fff]{2,}/) || [''])[0]
           };
@@ -4480,21 +4512,22 @@ function renderTutor(root) {
           if (localSure) {
             /* Движок ответил по существу — не заслоняем его словарём,
                но добавляем ссылки: ученик видит, где проверить. */
-            replyObj = { ...localReply, html: localReply.html + tutorSourceLinks(d.sources) };
+            replyObj = { mode: 'sources', ...localReply, html: localReply.html + tutorSourceLinks(d.sources) };
           } else {
             /* Ответить по существу нечем, а словари слово знают —
                показываем их, а не «извините, я не знаю». */
-            replyObj = tutorSourcesReply(d, q);
+            replyObj = Object.assign({ mode: 'sources' }, tutorSourcesReply(d, q));
           }
         }
       } catch (e) { }
     }
-    if (!replyObj) replyObj = localReply;
+    if (!replyObj) replyObj = Object.assign({}, localReply, { mode: lastMode });
     /* В историю для серверного ИИ кладём чистый текст ответа,
        а не HTML и не вопрос ученика (раньше модель видела кашу). */
     const plainReply = String(replyObj.html || replyObj.content || '')
       .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     tutorHistory.push({ role: 'assistant', content: plainReply, ...replyObj });
+    setBrain(lastMode);
     send.disabled = false;
     paintFeed();
     /* Разговор сохраняем: перезагрузка страницы (новая сборка, вход)
