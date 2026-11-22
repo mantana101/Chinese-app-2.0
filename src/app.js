@@ -4537,7 +4537,7 @@ function renderPinyin(root) {
 function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
   wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
-  wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках.'));
+  wrap.appendChild(el('p', 'page-sub', 'Спроси панду Мэймэй что угодно о китайском: перевод, грамматику, тоны. Она помнит разговор и доводит объяснение до конца: «попроще», «а пример?», «я ошибся» — всё понимает. И говорит голосом, как на уроках. Жми 🎙 — говори голосом, как с Джарвисом: она услышит и ответит вслух.'));
   wrap.appendChild(el('p', 't-brain', 'Мозг Мэймэй: <span id="t-brain-state">…задайте вопрос — и здесь появится, кто ответил</span>'));
 
   const chips = el('div', 't-chips');
@@ -4659,8 +4659,72 @@ function renderTutor(root) {
   inp.placeholder = 'Спросите своими словами: «как сказать спасибо», «объясни 了», «разбери 我想喝茶», «попроще»';
   const send = el('button', 'btn btn-primary', 'Отправить →');
   send.type = 'submit';
-  form.appendChild(inp); form.appendChild(send);
+
+  /* ---------- Режим Джарвиса: говори голосом ----------
+     Распознавание речи — встроенное в браузер (SpeechRecognition),
+     никаких внешних сервисов и ключей. Если браузер не умеет —
+     честно показываем подсказку, чат остаётся рабочим. */
+  let recog = null;
+  const mic = el('button', 'btn btn-sm btn-ghost t-mic', '🎙');
+  mic.type = 'button';
+  mic.title = 'Сказать Мэймэй голосом';
+  mic.setAttribute('aria-label', 'Сказать Мэймэй голосом');
+  const micNote = el('div', 't-mic-note');
+  micNote.hidden = true;
+  function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      micNote.hidden = false;
+      micNote.textContent = '🎙 Микрофон работает в Chrome, Яндекс.Браузере, Edge и Safari. Открой приложение там — и говори с Мэймэй голосом.';
+      return;
+    }
+    if (!recog) {
+      recog = new SR();
+      recog.lang = 'ru-RU';
+      recog.interimResults = true;
+      recog.maxAlternatives = 1;
+      recog.onresult = (e) => {
+        let text = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          text += e.results[i][0].transcript;
+        }
+        inp.value = text.trim();
+      };
+      recog.onend = () => {
+        mic.classList.remove('t-mic-live');
+        const said = (inp.value || '').trim();
+        if (said) sendMsg(said);
+      };
+      recog.onerror = () => { mic.classList.remove('t-mic-live'); };
+    }
+    if (mic.classList.contains('t-mic-live')) { recog.stop(); return; }
+    try {
+      micNote.hidden = true;
+      inp.value = '';
+      mic.classList.add('t-mic-live');
+      recog.start();
+    } catch (e) { mic.classList.remove('t-mic-live'); }
+  }
+  mic.onclick = startVoice;
+
+  /* Автоозвучка: Мэймэй сама читает ответы голосом (как Джарвис).
+     Выбор запоминается в localStorage между визитами. */
+  let voiceAuto = false;
+  try { voiceAuto = localStorage.getItem('zh_tutor_voice') === '1'; } catch (e) { }
+  const voiceBtn = el('button', 'btn btn-sm btn-ghost t-autovoice',
+    voiceAuto ? '🔊 Голос: авто' : '🔇 Голос: выкл');
+  voiceBtn.type = 'button';
+  voiceBtn.title = 'Мэймэй отвечает голосом сама';
+  voiceBtn.onclick = () => {
+    voiceAuto = !voiceAuto;
+    try { localStorage.setItem('zh_tutor_voice', voiceAuto ? '1' : '0'); } catch (e) { }
+    voiceBtn.textContent = voiceAuto ? '🔊 Голос: авто' : '🔇 Голос: выкл';
+  };
+
+  form.appendChild(mic); form.appendChild(inp);
+  form.appendChild(voiceBtn); form.appendChild(send);
   box.appendChild(form);
+  box.appendChild(micNote);
   wrap.appendChild(box);
   root.appendChild(wrap);
 
@@ -4731,6 +4795,10 @@ function renderTutor(root) {
     const plainReply = String(replyObj.html || replyObj.content || '')
       .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     tutorHistory.push({ role: 'assistant', content: plainReply, ...replyObj });
+    if (voiceAuto) {
+      if (!replyObj.sayRu) replyObj.sayRu = sayRuOf(replyObj.html || '');
+      if (replyObj.sayRu) speakRu(replyObj.sayRu, 0.95);
+    }
     setBrain(lastMode);
     send.disabled = false;
     paintFeed();
