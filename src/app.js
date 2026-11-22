@@ -4677,6 +4677,34 @@ function renderTutor(root) {
      теперь честно объясняем и даём открыть приложение отдельно. */
   const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
   function micSay(html) { micNote.innerHTML = html; micNote.hidden = false; }
+  /* Предварительный запрос микрофона: на телефоне показывает настоящий
+     диалог разрешения и даёт точную причину отказа. Без него браузер
+     мог молча отказать (как на скриншоте пользователя) — даже без
+     показа диалога. */
+  function micAskPermission(then) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      micSay('🎙 Микрофон работает только на защищённом сайте (адрес начинается с https://) и в современных браузерах. Пиши вопросы текстом — Мэймэй ответит так же.');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      (stream.getTracks() || []).forEach((tr) => { try { tr.stop(); } catch (e) { } });
+      then();
+    }).catch((err) => {
+      mic.classList.remove('t-mic-live');
+      const name = (err && err.name) || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        micSay('🎙 Микрофон запрещён для этого сайта. Верни его так:<br>' +
+          '1) нажми <b>🔒 или ⓘ</b> рядом с адресом сайта;<br>' +
+          '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
+          '3) обнови страницу и снова нажми 🎙.<br>' +
+          'Другой путь: настройки браузера → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом — Мэймэй ответит так же.');
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
+        micSay('🎙 Микрофон не найден на этом устройстве. Пиши вопросы текстом — Мэймэй ответит так же.');
+      } else {
+        micSay('🎙 Микрофон не сработал (' + esc(name || 'ошибка') + '). Пиши вопросы текстом — Мэймэй ответит так же.');
+      }
+    });
+  }
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (inFrame) {
@@ -4716,18 +4744,24 @@ function renderTutor(root) {
           micSay('🎙 Микрофон запрещён. Разреши доступ: значок <b>🔒</b> в адресной строке → «Микрофон» → «Разрешить» — и попробуй снова.');
         } else if (err === 'no-speech') {
           micSay('🎙 Речи не услышала. Нажми 🎙 и говори чуть ближе к микрофону.');
+        } else if (err === 'service-not-allowed') {
+          micSay('🎙 На устройстве нет сервиса распознавания речи (так бывает на телефонах без сервисов Google). Пиши вопросы текстом — Мэймэй ответит так же.');
         } else if (err) {
           micSay('🎙 Микрофон не сработал (' + esc(err) + '). Напиши вопрос текстом — Мэймэй ответит так же.');
         }
       };
     }
-    if (mic.classList.contains('t-mic-live')) { micAborted = true; recog.stop(); return; }
-    try {
-      micNote.hidden = true;
+    if (mic.classList.contains('t-mic-live')) {
+      micAborted = true;
+      try { recog.stop(); } catch (e) { }
+      return;
+    }
+    micNote.hidden = true;
+    mic.classList.add('t-mic-live');
+    micAskPermission(() => {
       inp.value = '';
-      mic.classList.add('t-mic-live');
-      recog.start();
-    } catch (e) { mic.classList.remove('t-mic-live'); }
+      try { recog.start(); } catch (e) { mic.classList.remove('t-mic-live'); }
+    });
   }
   mic.onclick = startVoice;
 

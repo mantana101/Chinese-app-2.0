@@ -84,6 +84,10 @@ class TutorVoiceWiring(unittest.TestCase):
         self.assertIn("Микрофон запрещён", app, "нет честного сообщения при отказе доступа")
         self.assertIn("'no-speech'", app, "нет сообщения, когда речи не услышали")
         self.assertIn("micAborted", app, "ручной стоп должен отменять отправку")
+        self.assertIn("micAskPermission", app, "нет предварительного запроса микрофона")
+        self.assertIn("getUserMedia({ audio: true })", app, "нет запроса разрешения через getUserMedia")
+        self.assertIn("Настройки сайтов", app, "нет мобильного пути настройки")
+        self.assertIn("service-not-allowed", app, "нет подсказки для телефонов без сервисов Google")
         self.assertIn("voiceBtn.type = 'button'", app, "кнопка голоса отправляла форму")
         self.assertIn("if (said) sendMsg(said);", app, "сказанное не уходит в чат")
         self.assertIn("'zh_tutor_voice'", app, "выбор автоозвучки не запоминается")
@@ -127,6 +131,21 @@ const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
       }
       stop() { setTimeout(() => { this.onend && this.onend(); }, 10); }
     };
+    /* Стаб запроса микрофона: поведение задаётся w.__micMode. */
+    Object.defineProperty(w.navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: () => {
+          if (w.__micMode === 'deny') {
+            return Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' }));
+          }
+          if (w.__micMode === 'nodev') {
+            return Promise.reject(Object.assign(new Error('x'), { name: 'NotFoundError' }));
+          }
+          return Promise.resolve({ getTracks: () => [] });
+        }
+      },
+      configurable: true
+    });
   }
 });
 const w = dom.window;
@@ -142,36 +161,44 @@ setTimeout(() => {
   const mic = q('.t-mic');
 
   /* A. Отказ доступа: честная инструкция, а не тишина */
+  w.__micMode = 'deny';
   w.__srMode = 'deny';
   mic.click();
   setTimeout(() => {
-    out.deny = { note: note().slice(0, 90) };
-    /* B. Тишина: подсказка говорить ближе, вопрос не отправляется */
-    w.__srMode = 'silence';
+    out.deny = { note: note().slice(0, 400) };
+    /* B2. Микрофона нет вовсе */
+    w.__micMode = 'nodev';
     mic.click();
     setTimeout(() => {
-      out.silence = { note: note().slice(0, 90), userMsgs: userMsgs() };
-      /* C. Услышанная речь уходит в чат и получает ответ */
-      w.__srMode = 'привет';
+      out.nodev = { note: note().slice(0, 90) };
+      /* B. Тишина: подсказка говорить ближе, вопрос не отправляется */
+      w.__micMode = 'ok';
+      w.__srMode = 'silence';
       mic.click();
       setTimeout(() => {
-        out.spoken = { userMsgs: userMsgs(),
-          userText: q('.t-msg.t-user') ? q('.t-msg.t-user').textContent.slice(0, 40) : '',
-          gotReply: host.querySelectorAll('.t-msg.t-bot').length > 1 };
-        /* D. Ручной стоп: недосказанное не уходит в чат */
-        w.__srMode = 'hold'; /* слушает молча */
+        out.silence = { note: note().slice(0, 90), userMsgs: userMsgs() };
+        /* C. Услышанная речь уходит в чат и получает ответ */
+        w.__srMode = 'привет';
         mic.click();
         setTimeout(() => {
-          const before = userMsgs();
-          mic.click(); /* стоп вручную */
+          out.spoken = { userMsgs: userMsgs(),
+            userText: q('.t-msg.t-user') ? q('.t-msg.t-user').textContent.slice(0, 40) : '',
+            gotReply: host.querySelectorAll('.t-msg.t-bot').length > 1 };
+          /* D. Ручной стоп: недосказанное не уходит в чат */
+          w.__srMode = 'hold'; /* слушает молча */
+          mic.click();
           setTimeout(() => {
-            out.stop = { userMsgs: userMsgs(), unchanged: userMsgs() === before,
-              stoppedNote: note().length === 0 };
-            process.stdout.write(JSON.stringify(out));
-            process.exit(0);
-          }, 120);
-        }, 100);
-      }, 200);
+            const before = userMsgs();
+            mic.click(); /* стоп вручную */
+            setTimeout(() => {
+              out.stop = { userMsgs: userMsgs(), unchanged: userMsgs() === before,
+                stoppedNote: note().length === 0 };
+              process.stdout.write(JSON.stringify(out));
+              process.exit(0);
+            }, 120);
+          }, 100);
+        }, 200);
+      }, 120);
     }, 120);
   }, 120);
 }, 900);
@@ -201,6 +228,14 @@ class TutorVoiceMic(unittest.TestCase):
     def test_denied_mic_gets_instruction(self):
         self.assertIn("Микрофон запрещён", self.out["deny"]["note"],
                       "при отказе доступа была тишина: " + self.out["deny"]["note"])
+        self.assertIn("Разрешения", self.out["deny"]["note"],
+                      "в инструкции нет пути включения через разрешения сайта")
+        self.assertIn("текстом", self.out["deny"]["note"],
+                      "нет запасного пути — писать текстом")
+
+    def test_no_mic_device_explained(self):
+        self.assertIn("не найден", self.out["nodev"]["note"].lower(),
+                      "отсутствие микрофона не объяснено")
 
     def test_silence_gets_hint(self):
         self.assertIn("не услышала", self.out["silence"]["note"].lower(),
