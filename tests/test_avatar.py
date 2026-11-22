@@ -239,6 +239,29 @@ class CacheBustingAndMentor(unittest.TestCase):
         self.assertIn("flex-wrap: wrap", css, "панель должна переносить ступеньки на новую строку")
 
 
+class DockerShipsAudio(unittest.TestCase):
+    """Записи голоса обязаны доехать до production.
+
+    Dockerfile собирает контейнер Render: если папки audio в образе нет,
+    /audio/*.mp3 отвечает 404 и Мэймэй молча падает на браузерный синтез
+    — пользователь слышит «тот же голос», хотя все записи обновлены.
+    Этот тест не даёт повториться самой дорогой ошибке проекта."""
+
+    def test_dockerfile_copies_audio_before_build(self):
+        docker = read("Dockerfile")
+        self.assertIn("COPY audio ./audio", docker,
+                      "аудио должно копироваться в образ")
+        copy_audio = docker.index("COPY audio ./audio")
+        build = docker.index("python3 build.py")
+        self.assertLess(copy_audio, build,
+                        "аудио должно попасть в образ ДО сборки, иначе AUDIO_VER посчитается без файлов")
+
+    def test_dockerignore_keeps_audio(self):
+        di = read(".dockerignore")
+        self.assertNotIn("audio", di.replace("аудио", ""),
+                         ".dockerignore не должен исключать аудио")
+
+
 class TeacherInBrowser(unittest.TestCase):
     """Панда рисуется и говорит по-русски — проверяем настоящий DOM."""
 
