@@ -2076,3 +2076,9 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 10px 8px 10px 8px;
   font-size: 12.5px; color: var(--bad-txt);
 }
+
+/* ---------- Мэймэй в чате: аватар у ответов + кнопка русской озвучки ---------- */
+.t-bot { align-items: flex-start; }
+.pa-mini { flex: 0 0 32px; width: 32px; height: 32px; margin-right: 8px; margin-top: 2px; }
+.pa-mini .pa-svg { width: 32px; height: 32px; display: block; }
+.t-voice-ru { margin-left: 6px; }
