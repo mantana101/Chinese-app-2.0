@@ -2162,3 +2162,55 @@ button { font-family: inherit; cursor: pointer; }
   border: 1px solid var(--line);
   border-radius: 8px; padding: 8px 10px; margin-top: 8px;
 }
+
+/* ---------- Комната голосового разговора (Джарвис) ---------- */
+.t-room {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(var(--tint), .45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.t-room-card {
+  position: relative;
+  width: min(420px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px 14px 16px 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+.t-room-x {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; font-size: 20px;
+  color: var(--txt3); cursor: pointer; padding: 4px 8px;
+}
+.t-room-avatar { margin: 2px auto 8px; width: 120px; }
+.t-room-avatar svg { width: 120px; height: 120px; }
+.t-room-avatar.listening { animation: t-room-pulse 1.4s ease-in-out infinite; }
+.t-room-avatar.talking svg { animation: t-room-bounce .9s ease-in-out infinite; }
+@keyframes t-room-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(var(--tint),0)); }
+  50% { transform: scale(1.06); filter: drop-shadow(0 0 14px rgba(var(--tint),.35)); }
+}
+@keyframes t-room-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.t-room-status { font-size: 14px; color: var(--txt); line-height: 1.5; margin: 4px 0 10px; }
+.t-room-heard { font-size: 15px; color: var(--gold); margin-bottom: 8px; }
+.t-room-feed {
+  max-height: 200px; overflow-y: auto; text-align: left;
+  font-size: 13.5px; line-height: 1.45; margin-bottom: 10px;
+}
+.tr-q {
+  background: rgba(var(--tint),.08);
+  border-radius: 10px 10px 3px 10px;
+  padding: 6px 10px; margin: 6px 0 2px 40px;
+}
+.tr-a {
+  background: rgba(var(--tint),.04);
+  border: 1px solid var(--line);
+  border-radius: 10px 10px 10px 3px;
+  padding: 6px 10px; margin: 2px 40px 6px 0;
+}
