@@ -34,11 +34,17 @@ DOM_SCRIPT = r"""
 const fs = require('fs');
 const {JSDOM} = require(process.argv[2] + '/jsdom/lib/api.js');
 const spoken = [];
+const playedAudio = [];
 const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
   runScripts: 'dangerously', url: 'http://127.0.0.1/', pretendToBeVisual: true,
   beforeParse(w) {
     w.matchMedia = () => ({matches: false, addEventListener(){}, removeEventListener(){}});
-    w.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    // Трекаем попытки воспроизведения записей: jsdom не умеет играть аудио.
+    w.HTMLMediaElement.prototype.play = function () {
+      playedAudio.push((this.currentSrc || this.src || '').split('/').pop());
+      if (this.onplay) this.onplay();
+      return Promise.resolve();
+    };
     w.speechSynthesis = {
       speak(u){ spoken.push({lang: u.lang, text: u.text}); },
       cancel(){}, getVoices: () => []
@@ -56,7 +62,7 @@ setTimeout(() => {
   w.eval("window.__r = document.createElement('div'); window.__r.id='r'; document.body.appendChild(window.__r); renderLesson(window.__r, ['l1'])");
   const r = w.document.getElementById('r');
   const pan = r.querySelector('.panda-teacher');
-  const out = { spoken };
+  const out = { spoken, playedAudio };
   const q = (s) => Array.from(r.querySelectorAll(s));
   out.teacherPanel = !!pan;
   out.pandaSvg = !!r.querySelector('.pa-svg');
@@ -193,7 +199,7 @@ class TeacherWiring(unittest.TestCase):
         app = read("src", "app.js")
         m = app[app.index("function renderLesson"):]
         head = m.index("lesson-head")
-        teacher = m.index("renderTeacher(l)")
+        teacher = m.index("renderTeacher(l, id)")
         goals = m.index("Цели урока")
         self.assertTrue(head < teacher < goals,
                         "учитель должен стоять после заголовка и до целей")
@@ -210,8 +216,8 @@ class CacheBustingAndMentor(unittest.TestCase):
     def test_app_urls_have_version(self):
         app = read("src", "app.js")
         self.assertIn("audioUrl", app, "нет помощника адресов аудио")
-        self.assertEqual(app.count("audioUrl("), 3,
-                         "все три места воспроизведения (проба, объяснение, ступеньки) должны идти через audioUrl")
+        self.assertEqual(app.count("audioUrl("), 2,
+                         "оба места воспроизведения (объяснение урока, ступеньки) идут через audioUrl")
         self.assertIn("const audioUrl = (path)", app, "объявление помощника адресов")
         self.assertIn("'?v='", app)
 
@@ -268,6 +274,33 @@ class StepAudioWired(unittest.TestCase):
         self.assertIn("+ '-' + VOICE_TAG + '.mp3'", app,
                       "объяснение урока строит имя с меткой голоса")
 
+    def test_no_probe_race_before_play(self):
+        """Запись должна играть СРАЗУ, без предварительной HEAD-пробы.
+
+        Проба на медленной сети не успевала к клику — playStudio
+        возвращал false, и Мэймэй молча переходила на синтез даже там,
+        где запись есть. Теперь играем сразу: ошибку ловит onerror."""
+        app = read("src", "app.js")
+        self.assertNotIn("probeStudio", app,
+                         "HEAD-проба удалена — она создавала гонку")
+        self.assertIn("a.onerror", app, "ошибку записи ловит Audio.onerror")
+
+    def test_teacher_receives_lesson_id(self):
+        """«Объяснить урок» строит имя записи из id урока.
+
+        У объектов LESSONS нет поля id (это ключ объекта): передача
+        l.id давала audio/undefined-v3.mp3 -> 404 -> молча синтез.
+        Самая дорогая ошибка всей истории голоса — проверяем её."""
+        app = read("src", "app.js")
+        self.assertIn("function renderTeacher(l, id)", app,
+                      "renderTeacher должен получать id урока")
+        self.assertIn("playStudio(id, rate)", app,
+                      "имя записи строится из id, а не из l.id")
+        self.assertNotIn("playStudio(l.id", app,
+                         "l.id не существует — это давало undefined в имени файла")
+        self.assertIn("renderTeacher(l, id)", app,
+                      "вызов передаёт id")
+
     def test_synth_fallback_is_visible(self):
         app = read("src", "app.js")
         self.assertIn("studioMissingNote", app,
@@ -275,6 +308,19 @@ class StepAudioWired(unittest.TestCase):
         css = read("src", "styles.css")
         self.assertIn(".pa-synth-note", css)
         self.assertIn(".pa-voice-badge", css, "бейдж источника голоса должен быть стилизован")
+
+
+class StalePageAutoReload(unittest.TestCase):
+    """Устаревшая копия страницы сама перезагружается один раз.
+
+    Дети не жмут кнопку на баннере «Доступна новая версия» — раньше
+    они могли месяцами сидеть на старой странице со старым голосом."""
+
+    def test_auth_reloads_automatically_once(self):
+        auth = read("src", "auth.js")
+        self.assertIn("sessionStorage.setItem(key, '1')", auth)
+        self.assertIn("hardReload()", auth.split("function checkBuildFreshness")[1].split("function hardReload")[0],
+                      "перезагрузка должна идти из проверки свежести")
 
 
 class DockerShipsAudio(unittest.TestCase):
@@ -355,15 +401,13 @@ class TeacherInBrowser(unittest.TestCase):
         self.assertTrue(self.out["hintBubbleOpen"], "клик по «Подсказка» показывает подсказку")
         self.assertIn("nǐ hǎo", self.out["hintText"], "подсказка первого вопроса содержит чтение")
 
-    def test_click_speaks_russian_teacher_text(self):
-        self.assertEqual(self.out["spokenLang"], "ru-RU",
-                         "объяснение начинается русским голосом")
-        self.assertIn("Мэймэй", self.out["firstText"],
-                      "первая фраза — представление учителя")
+    def test_click_plays_studio_recording(self):
+        """Клик по кнопке и по панде играет студийную запись урока."""
+        self.assertGreaterEqual(len(self.out["playedAudio"]), 2,
+                                "кнопка «Объяснить» и клик по панде — оба должны играть запись")
+        self.assertIn("l1-v3.mp3", self.out["playedAudio"][0],
+                      f"первое воспроизведение — запись урока, было: {self.out['playedAudio'][0]}")
         self.assertTrue(self.out["talking"], "во время речи панда получает .talking")
-        self.assertGreater(self.out["spokenAfterAvatarClick"],
-                           self.out["spokenAfterFirst"],
-                           "клик по самой панде тоже запускает объяснение")
 
     def test_chinese_words_go_to_chinese_voice(self):
         """Китайские слова из объяснения читает zh-CN голос, а не русский."""

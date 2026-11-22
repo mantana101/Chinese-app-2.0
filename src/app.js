@@ -326,39 +326,38 @@ function studioMissingNote() {
 /* Версия аудио от сборки: URL с ?v= ломает «вечный» HTTP-кэш и кэш
    service worker'а — после обновления записей браузер играет новое. */
 const audioUrl = (path) => path + (window.AUDIO_VER ? '?v=' + window.AUDIO_VER : '');
-function probeStudio(id) {
-  if (studioProbe[id] || !window.fetch) return;
-  studioProbe[id] = 'checking';
-  fetch(audioUrl('audio/' + id + '-' + VOICE_TAG + '.mp3'), { method: 'HEAD' })
-    .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
-    .catch(() => { studioProbe[id] = 'no'; });
-}
 function playStudio(id, rate) {
-  if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
-  if (studioProbe[id] === 'yes') {
-    if (!studioProbe[id + ':el']) {
-      const a = new Audio(audioUrl('audio/' + id + '-' + VOICE_TAG + '.mp3'));
-      a.preload = 'auto';
-      const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
-      a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
-      a.onended = stop;
-      a.onpause = stop;
-      studioProbe[id + ':el'] = a;
-    }
-    const a = studioProbe[id + ':el'];
-    try { a.currentTime = 0; } catch (e) { /* только что создан */ }
-    const started = a.play();
-    if (started && started.catch) {
-      started.catch(() => {
-      studioProbe[id] = 'no';
+  /* Играем запись СРАЗУ, без предварительной пробы: проба через HEAD
+     на медленной сети не успевала к клику, и Мэймэй молча переходила
+     на синтез — «тот самый один голос». Ошибка 404/сети поймается
+     событием error у самого Audio. */
+  const url = audioUrl('audio/' + id + '-' + VOICE_TAG + '.mp3');
+  if (!studioProbe[url]) {
+    const a = new Audio(url);
+    a.preload = 'auto';
+    const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
+    a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
+    a.onended = stop;
+    a.onpause = stop;
+    a.onerror = () => {
+      studioProbe[url] = 'no';
+      studioMissingNote();
+      speakRu(LESSONS[id] && LESSONS[id].teacher, rate);
+    };
+    studioProbe[url] = a;
+  }
+  const a = studioProbe[url];
+  if (a === 'no') { studioMissingNote(); speakRu(LESSONS[id] && LESSONS[id].teacher, rate); return true; }
+  try { a.currentTime = 0; } catch (e) { /* только что создан */ }
+  const started = a.play();
+  if (started && started.catch) {
+    started.catch(() => {
+      studioProbe[url] = 'no';
       studioMissingNote();
       speakRu(LESSONS[id] && LESSONS[id].teacher, rate);
     });
-    }
-    return true;
   }
-  probeStudio(id);
-  return false;
+  return true;
 }
 
 /* Панда Мэймэй: уши, пятки вокруг глаз, нос. Рот — два элемента:
@@ -382,7 +381,7 @@ function pandaSVG() {
 
 /* Панель учителя: панда слева, объяснение урока текстом (ребёнок читает
    вместе с голосом) и кнопки «объяснить» / «медленнее». */
-function renderTeacher(l) {
+function renderTeacher(l, id) {
   const pan = el('div', 'panel panda-teacher');
   pan.id = 'sec-teacher';
   pan.innerHTML = `
@@ -404,14 +403,15 @@ function renderTeacher(l) {
     </div>`;
   const say = (rate) => {
     try { speechSynthesis.cancel(); } catch (e) { /* нет синтеза — не беда */ }
-    if (playStudio(l.id, rate)) return;
+    /* id — ключ объекта LESSONS, у самого объекта его нет: playStudio
+       строит по нему имя файла записи. */
+    if (playStudio(id, rate)) return;
     speakRu(l.teacher, rate);
   };
   pan.querySelector('.pa-say').onclick = () => say();
   pan.querySelector('.pa-slow').onclick = (e) => { e.preventDefault(); e.stopPropagation(); say(0.72); };
   pan.querySelector('.pa-wrap').onclick = () => say();
-  /* Проверяем студийную запись заранее, чтобы к клику уже знать ответ. */
-  probeStudio(l.id);
+
   return pan;
 }
 
@@ -953,7 +953,7 @@ function renderLesson(root, args) {
   /* --- Мэймэй и её ступеньки: один блок-помощник. Панда и путь урока
      больше не разделены: под объяснением сразу идут ступеньки. --- */
   if (l.teacher) {
-    const mentor = renderTeacher(l);
+    const mentor = renderTeacher(l, id);
     mentor.appendChild(renderSteps(l));
     root.appendChild(mentor);
   } else {
