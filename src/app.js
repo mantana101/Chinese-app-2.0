@@ -131,6 +131,7 @@ window.__lessonTitle = (id) => (LESSONS[id] && LESSONS[id].title) || id;
 window.LESSONS = LESSONS;
 window.ruby = ruby;
 window.homeworkFor = homeworkFor;
+window.pandaTip = pandaTip;
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function touchDay() {
@@ -357,6 +358,7 @@ function pandaSVG() {
    вместе с голосом) и кнопки «объяснить» / «медленнее». */
 function renderTeacher(l) {
   const pan = el('div', 'panel panda-teacher');
+  pan.id = 'sec-teacher';
   pan.innerHTML = `
     <button class="pa-wrap" type="button" title="Объяснить урок голосом" aria-label="Панда-учитель Мэймэй: объяснить урок голосом">${pandaSVG()}</button>
     <div class="pa-body">
@@ -366,6 +368,13 @@ function renderTeacher(l) {
         <button class="btn btn-primary btn-sm pa-say" aria-label="Объяснить урок голосом">🔊 Объяснить урок</button>
         <button class="speak sm pa-slow" title="Медленное объяснение" aria-label="Объяснить медленнее">🐢</button>
       </div>
+      ${l.example ? `<div class="pa-example">
+        <div class="pex-t">✨ Пример от Мэймэй</div>
+        <div class="pex-p">${esc(l.example.p)}</div>
+        <div class="pex-h">${ruby(l.example.h)}</div>
+        <div class="pex-r">${esc(l.example.r)}</div>
+        <button class="speak sm" data-speak="${esc(l.example.h)}" aria-label="Прослушать пример">🔊</button>
+      </div>` : ''}
     </div>`;
   const say = (rate) => {
     try { speechSynthesis.cancel(); } catch (e) { /* нет синтеза — не беда */ }
@@ -378,6 +387,91 @@ function renderTeacher(l) {
   /* Проверяем студийную запись заранее, чтобы к клику уже знать ответ. */
   probeStudio(l.id);
   return pan;
+}
+
+/* ---------- Ступеньки урока ----------
+   Мэймэй ведёт ученика по уроку: показывает путь, подсказывает у каждого
+   раздела и озвучивает шаги студийной записью (audio/step-*.mp3). */
+const PANDA_STEPS = [
+  { id: 'teacher', icon: '🐼', title: 'Учитель', text: 'Начни с меня! Нажми кнопку «Объяснить урок», и я расскажу, о чём этот урок.', audio: 'audio/step-teacher.mp3' },
+  { id: 'pinyin', icon: '🔤', title: 'Читай пиньинь', text: 'Сначала научимся читать! Смотри на пиньинь — это китайские звуки нашими буквами. Слушай и повторяй.', audio: 'audio/step-pinyin.mp3' },
+  { id: 'vocab', icon: '📖', title: 'Слова', text: 'Теперь новые слова! Нажми 🔊 на карточке и повтори вслух. Черепашка произнесёт медленно.', audio: 'audio/step-vocab.mp3' },
+  { id: 'grammar', icon: '📐', title: 'Грамматика', text: 'Разбери грамматику по порядку. В каждом пункте есть пример — прочитай его и составь свой.', audio: 'audio/step-grammar.mp3' },
+  { id: 'dialogue', icon: '💬', title: 'Диалог', text: 'Пора поговорить! Слушай реплики диалога и повторяй по ролям вслух.', audio: 'audio/step-dialogue.mp3' },
+  { id: 'quiz', icon: '✏️', title: 'Практика', text: 'Теперь проверь себя! Если сомневаешься — нажми «Подсказка», я помогу.', audio: 'audio/step-quiz.mp3' },
+  { id: 'hw', icon: '🏠', title: 'Домашка', text: 'Урок пройден — молодец! Осталась домашка: она закрепит то, что ты выучил.', audio: 'audio/step-hw.mp3' }
+];
+window.PANDA_STEPS = PANDA_STEPS;
+
+/* Шаговые записи кэшируются; нет файла — Мэймэй говорит синтезом. */
+const stepAudioEls = {};
+function playStepAudio(step, fallbackText) {
+  try { speechSynthesis.cancel(); } catch (e) { /* нет синтеза */ }
+  const av = document.querySelector('.panda-teacher');
+  const talk = (on) => { if (av) av.classList.toggle('talking', !!on); };
+  if (!stepAudioEls[step.audio]) {
+    const a = new Audio(step.audio);
+    a.preload = 'none';
+    a.onplay = () => talk(true);
+    a.onended = a.onpause = a.onerror = () => talk(false);
+    stepAudioEls[step.audio] = a;
+  }
+  const a = stepAudioEls[step.audio];
+  try { a.currentTime = 0; } catch (e) { /* только что создан */ }
+  const started = a.play();
+  if (started && started.catch) {
+    started.catch(() => {
+      /* Записи нет (или браузер запретил автоплей) — живой синтез. */
+      speakRu(fallbackText);
+    });
+  }
+  return true;
+}
+
+/* Путь урока: кликабельные ступеньки. Клик — плавный скролл к разделу,
+   озвучка шага и подсказка у самого раздела. */
+function stepsForLesson(l) {
+  return PANDA_STEPS.filter(s =>
+    s.id === 'pinyin' ? !!l.kid : s.id === 'dialogue' ? !!(l.dialogue && l.dialogue.length) : true);
+}
+function renderSteps(l) {
+  const pan = el('div', 'panel steps-path');
+  pan.appendChild(el('div', 'sp-title', '🪜 Ступеньки урока'));
+  pan.appendChild(el('p', 'kid-lead', 'Иди по ступенькам сверху вниз — Мэймэй подскажет на каждой. Нажми на ступеньку, чтобы перейти к разделу.'));
+  const row = el('div', 'sp-row');
+  stepsForLesson(l).forEach((s, i) => {
+    const chip = el('button', 'step-chip',
+      `<span class="sc-num">${i + 1}</span><span class="sc-ic">${s.icon}</span><span class="sc-t">${esc(s.title)}</span>`);
+    chip.setAttribute('aria-label', `Ступенька ${i + 1}: ${s.title}. Мэймэй подскажет, что делать`);
+    chip.onclick = () => {
+      playStepAudio(s, s.text);
+      if (s.id === 'hw') {
+        if (lessonDone(l.id)) { location.hash = '#/homework/' + l.id; return; }
+        toast('Сначала пройди практику — и домашка откроется!');
+        const quiz = document.getElementById('quiz');
+        if (quiz) quiz.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      const sec = document.getElementById('sec-' + s.id);
+      if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    chip.dataset.step = s.id;
+    row.appendChild(chip);
+  });
+  pan.appendChild(row);
+  return pan;
+}
+
+/* Подсказка Мэймэй у раздела: видна всегда, озвучивается по клику. */
+function pandaTip(step) {
+  const d = el('div', 'pa-tip',
+    `${pandaSVG()}<span class="pt-text">${esc(step.text)}</span>
+     <button class="speak sm" data-tip="${esc(step.id)}" aria-label="Подсказка Мэймэй: ${esc(step.title)}">🎧</button>`);
+  d.querySelector('[data-tip]').onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    playStepAudio(step, step.text);
+  };
+  return d;
 }
 
 function toneBtn(text, cls = 'speak') {
@@ -721,6 +815,7 @@ function toneCurveSVG(n) {
 /* Панель «как читать пиньинь + тоны»: стоит первой, до словаря. */
 function renderKidIntro(l) {
   const pan = el('div', 'panel kid-intro');
+  pan.id = 'sec-pinyin';
   pan.appendChild(el('h3', '', '🔤 Сначала — как читать пиньинь'));
   pan.appendChild(el('p', 'kid-lead', 'Китайские звуки записаны латинскими буквами — это пиньинь. Читаем по слогам: <b>nǐ hǎo</b> — «ни-хао». Послушайте каждое слово кнопкой 🔊, а потом повторите медленно кнопкой 🐢.'));
   const grid = el('div', 'pg-grid');
@@ -779,7 +874,9 @@ function kidVocabCard(w) {
 /* Диалог по ролям: каждая реплика — с озвучкой и медленным повтором. */
 function renderDialogue(l) {
   const pan = el('div', 'panel dialogue');
+  pan.id = 'sec-dialogue';
   pan.appendChild(el('h3', '', '💬 Диалог: прочитайте по ролям'));
+  pan.appendChild(pandaTip(PANDA_STEPS.find(s => s.id === 'dialogue')));
   pan.appendChild(el('p', 'kid-lead', 'Сначала послушайте каждую реплику, потом прочитайте вслух. Роль А — вы, роль Б — друг.'));
   const list = el('div', 'dlg-list');
   l.dialogue.forEach(line => {
@@ -828,6 +925,9 @@ function renderLesson(root, args) {
   /* --- Учитель-панда: голосовое объяснение материала урока --- */
   if (l.teacher) root.appendChild(renderTeacher(l));
 
+  /* --- Ступеньки урока: Мэймэй ведёт по разделам --- */
+  root.appendChild(renderSteps(l));
+
   const goals = el('div', 'panel goals');
   goals.appendChild(el('h3', '', '🎯 Цели урока'));
   l.goals.forEach(g => goals.appendChild(el('div', 'goal', `• ${esc(g)}`)));
@@ -838,11 +938,13 @@ function renderLesson(root, args) {
 
   /* --- Словарь --- */
   const v = el('div', 'panel');
+  v.id = 'sec-vocab';
   v.appendChild(el('div', 'panel-head', `<h3>📖 Новые слова (${l.vocab.length})</h3>
     <div class="btn-row">
       <button class="btn btn-sm" id="toggleRuby">${state.hideRuby ? 'Показать пиньинь' : 'Скрыть пиньинь'}</button>
       <button class="btn btn-sm" id="playAll">🔊 Прослушать все</button>
     </div>`));
+  v.appendChild(pandaTip(PANDA_STEPS.find(s => s.id === 'vocab')));
   const tbl = el('div', 'vocab' + (l.kid ? ' kid-vocab' : ''));
   l.vocab.forEach(w => {
     tbl.appendChild(l.kid ? kidVocabCard(w) : el('div', 'vcard', `
@@ -865,7 +967,9 @@ function renderLesson(root, args) {
 
   /* --- Грамматика --- */
   const g = el('div', 'panel');
+  g.id = 'sec-grammar';
   g.appendChild(el('h3', '', '📐 Грамматика'));
+  g.appendChild(pandaTip(PANDA_STEPS.find(s => s.id === 'grammar')));
   l.grammar.forEach((gr, i) => {
     const b = el('div', 'gram');
     b.appendChild(el('div', 'gram-t', `${i + 1}. ${esc(gr.t)}`));
@@ -880,6 +984,8 @@ function renderLesson(root, args) {
   /* --- Практика --- */
   quizState = { lesson: id, idx: 0, correct: 0, answers: [], done: false };
   const qz = el('div', 'panel quiz-panel');
+  qz.id = 'sec-quiz';
+  qz.appendChild(pandaTip(PANDA_STEPS.find(s => s.id === 'quiz')));
   qz.id = 'quiz';
   qz.appendChild(el('h3', '', '✏️ Практика'));
   qz.appendChild(el('div', 'quiz-note', 'Выбирайте ответ или расставляйте слова — печатать иероглифы не нужно. В каждом вопросе есть пиньинь, а после ответа — объяснение.'));
@@ -950,6 +1056,25 @@ function renderQuestion(host) {
   // была под списком ответов, и ученик сначала читал иероглифы, а уже
   // потом включал звук — то есть задание не проверяло слух.
   if (q.k === 'listen') body.appendChild(listenRow(q));
+  /* Подсказка Мэймэй до ответа: ребёнок может попросить помощи,
+     а не только прочитать объяснение после ошибки. */
+  if (q.h) {
+    const hb = el('button', 'hint-btn',
+      `🐼 Подсказка <span class="hint-t">нажми, если сомневаешься</span>`);
+    hb.type = 'button';
+    hb.onclick = () => {
+      let bubble = body.querySelector('.q-hint-bubble');
+      if (!bubble) {
+        bubble = el('div', 'q-hint-bubble',
+          `<span class="hb-text">${esc(q.h)}</span>`);
+        body.appendChild(bubble);
+      }
+      bubble.classList.add('open');
+      hb.disabled = true;
+      speakRu(q.h);
+    };
+    body.appendChild(hb);
+  }
   const fb = el('div', 'q-feedback');
   const controls = el('div', 'q-controls');
 

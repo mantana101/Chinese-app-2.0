@@ -1977,3 +1977,76 @@ button { font-family: inherit; cursor: pointer; }
   .panda-teacher { flex-direction: column; align-items: center; text-align: center; }
   .pa-actions { justify-content: center; }
 }
+
+/* ---------- Ступеньки урока: путь, которым Мэймэй ведёт ученика ---------- */
+.steps-path .sp-title { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+.sp-row {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+}
+.step-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px 8px 9px;
+  background: rgba(var(--tint),.05);
+  border: 1.5px solid var(--line);
+  border-radius: 13px 10px 12px 9px;
+  cursor: pointer; font: inherit; color: var(--txt);
+  transition: .15s;
+}
+.step-chip:hover { border-color: var(--gold); background: rgba(var(--tint),.09); transform: translateY(-1px); }
+.step-chip:disabled { opacity: .55; cursor: default; }
+.sc-num {
+  width: 20px; height: 20px; border-radius: 50%; flex: 0 0 20px;
+  background: var(--red); color: var(--on-accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700;
+}
+.sc-ic { font-size: 16px; }
+.sc-t { font-size: 13px; font-weight: 600; }
+.steps-path .kid-lead { margin: 4px 0 0; }
+
+/* ---------- Подсказка Мэймэй у раздела ---------- */
+.pa-tip {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(var(--tint),.05);
+  border: 1px dashed var(--gold);
+  border-radius: 12px 9px 11px 8px;
+  padding: 9px 12px; margin: 10px 0 14px;
+}
+.pa-tip .pa-svg { width: 34px; height: 34px; flex: 0 0 34px; }
+.pt-text { flex: 1 1 auto; font-size: 13px; line-height: 1.5; color: var(--txt2); }
+
+/* ---------- Пример от Мэймэй в панели учителя ---------- */
+.pa-example {
+  margin-top: 10px; padding: 10px 13px;
+  background: rgba(var(--tint),.05);
+  border-left: 3px solid var(--red);
+  border-radius: 4px 10px 4px 10px;
+  position: relative;
+}
+.pex-t { font-size: 11.5px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .5px; }
+.pex-p { font-size: 21px; font-weight: 700; margin-top: 4px; letter-spacing: .3px; }
+.pex-h { font-family: "Noto Serif SC", serif; font-size: 15px; margin-top: 2px; }
+.pex-r { font-size: 12.5px; color: var(--txt3); margin-top: 2px; }
+.pa-example .speak { position: absolute; top: 8px; right: 8px; }
+
+/* ---------- Подсказка в практике ---------- */
+.hint-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 10px; padding: 7px 12px;
+  background: rgba(var(--tint),.05);
+  border: 1.5px dashed var(--gold);
+  border-radius: 11px 9px 11px 9px;
+  cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--txt);
+}
+.hint-btn:hover:not(:disabled) { background: rgba(var(--tint),.09); }
+.hint-btn:disabled { opacity: .75; cursor: default; }
+.hint-btn .hint-t { font-weight: 400; font-size: 11.5px; color: var(--txt3); }
+.q-hint-bubble {
+  display: none; margin-top: 8px; padding: 9px 12px;
+  background: rgba(var(--tint),.06);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px 9px 4px 9px;
+  font-size: 13.5px; line-height: 1.5; color: var(--txt);
+}
+.q-hint-bubble.open { display: block; }
