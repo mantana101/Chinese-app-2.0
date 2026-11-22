@@ -67,11 +67,18 @@ setTimeout(() => {
   out.slowBtn = pan ? !!pan.querySelector('.pa-slow') : false;
   out.name = pan ? (pan.querySelector('.pa-name').textContent.includes('Мэймэй')) : false;
   out.shown = pan ? pan.querySelector('.pa-text').textContent.length : 0;
+  // Модульные проверки речевых помощников (чистые функции).
+  out.segs = w.eval("JSON.stringify(segmentsForSpeech('你好， «ни-хао», и учимся'))");
+  out.toneStrip = w.eval("stripToneMarks('nǐ hǎo má')");
+  out.voicePick = w.eval("VOICES = [{lang:'ru-RU', name:'Elena', localService:true}, {lang:'ru-RU', name:'Google Milena', localService:false}, {lang:'zh-CN', name:'Microsoft Xiaoxiao', localService:false}]; pickVoice('ru').name + '|' + pickVoice('zh').name");
   if (pan) {
     pan.querySelector('.pa-say').click();
   }
+  out.spokenAfterFirst = spoken.length;
   out.spokenLang = spoken.length ? spoken[0].lang : '';
-  out.spokenIsTeacher = spoken.length ? spoken[0].text === w.eval("LESSONS.l1.teacher") : false;
+  out.firstText = spoken.length ? spoken[0].text : '';
+  out.zhTexts = JSON.stringify(spoken.filter(s => s.lang === 'zh-CN').map(s => s.text));
+  out.ruWithHanzi = spoken.filter(s => s.lang === 'ru-RU' && /[一-鿿]/.test(s.text)).length;
   out.talking = pan ? pan.classList.contains('talking') : false;
   // Клик по самой панде тоже запускает объяснение.
   pan.querySelector('.pa-wrap').click();
@@ -144,6 +151,13 @@ class TeacherWiring(unittest.TestCase):
                       "объяснение учителя должно идти русским голосом")
         self.assertIn("u.lang = 'zh-CN'", app,
                       "китайские слова озвучиваются отдельной дорожкой")
+        for name in ("segmentsForSpeech", "stripToneMarks", "pickVoice", "VOICE_PREF"):
+            self.assertIn(name, app, f"в app.js нет {name}")
+        self.assertIn("natural|neural|google", app,
+                      "предпочтение живым голосам (Google/нейро), не «роботам»")
+        self.assertIn("xiaoxiao|yunxi|yunyang|tingting", app,
+                      "для китайского — известные живые голоса")
+        self.assertIn("u.pitch = 1.06", app, "русский голос чуть выше — так дружелюбнее")
 
     def test_speech_stops_on_navigation(self):
         app = read("src", "app.js")
@@ -206,12 +220,35 @@ class TeacherInBrowser(unittest.TestCase):
 
     def test_click_speaks_russian_teacher_text(self):
         self.assertEqual(self.out["spokenLang"], "ru-RU",
-                         "объяснение должно озвучиваться русским голосом")
-        self.assertTrue(self.out["spokenIsTeacher"],
-                        "озвучивается именно текст урока, а не что-то другое")
+                         "объяснение начинается русским голосом")
+        self.assertIn("Мэймэй", self.out["firstText"],
+                      "первая фраза — представление учителя")
         self.assertTrue(self.out["talking"], "во время речи панда получает .talking")
-        self.assertEqual(self.out["spokenAfterAvatarClick"], 2,
-                         "клик по самой панде тоже запускает объяснение")
+        self.assertGreater(self.out["spokenAfterAvatarClick"],
+                           self.out["spokenAfterFirst"],
+                           "клик по самой панде тоже запускает объяснение")
+
+    def test_chinese_words_go_to_chinese_voice(self):
+        """Китайские слова из объяснения читает zh-CN голос, а не русский."""
+        zh = json.loads(self.out["zhTexts"])
+        self.assertTrue(zh, "в речи Мэймэй должны быть китайские фразы")
+        self.assertTrue(all("/[一-鿿]/" and any("\u4e00" <= c <= "\u9fff" for c in s) for s in zh),
+                        f"китайские реплики состоят из иероглифов: {zh}")
+        self.assertIn("你好", "".join(zh), "в l1 Мэймэй произносит 你 по-настоящему")
+        self.assertEqual(self.out["ruWithHanzi"], 0,
+                         "русский голос не должен читать иероглифы")
+
+    def test_speech_helpers(self):
+        """Сегментация, снятие тоновых значков и выбор голоса."""
+        segs = json.loads(self.out["segs"])
+        self.assertEqual(segs, [
+            {"lang": "zh", "text": "你好，"},
+            {"lang": "ru", "text": "«ни-хао», и учимся"}
+        ], f"текст режется на языковые фразы, получено: {segs}")
+        self.assertEqual(self.out["toneStrip"], "ni hao ma",
+                         "значки тонов снимаются: русский голос читает буквы")
+        self.assertEqual(self.out["voicePick"], "Google Milena|Microsoft Xiaoxiao",
+                         "из списка берутся предпочтительные живые голоса")
 
 
 if __name__ == "__main__":

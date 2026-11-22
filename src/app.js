@@ -188,7 +188,7 @@ function speak(text, rate) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-CN';
     u.rate = rate !== undefined ? rate : (PREFS.slow ? 0.62 : 0.88);
-    const v = speechSynthesis.getVoices().find(x => /zh|cmn|Chinese/i.test(x.lang + x.name));
+    const v = pickVoice('zh');
     if (v) u.voice = v;
     speechSynthesis.speak(u);
   } catch (e) { toast('Ошибка озвучки'); }
@@ -197,21 +197,104 @@ function speak(text, rate) {
    Озвучка объяснений на русском: отдельная дорожка (ru-RU), потому что
    speak() всегда говорит по-китайски. Пока Мэймэй говорит, у панды
    анимируется рот (класс .talking на панели учителя). */
+/* Кэш голосов: браузер отдаёт список асинхронно, обновляем по событию. */
+let VOICES = [];
+try {
+  VOICES = speechSynthesis.getVoices() || [];
+  if (speechSynthesis.addEventListener) {
+    speechSynthesis.addEventListener('voiceschanged', () => {
+      VOICES = speechSynthesis.getVoices() || [];
+    });
+  }
+} catch (e) { VOICES = []; }
+
+/* Предпочитаемые движки: онлайн- и нейро-голоса звучат заметно живее
+   системных «роботов». Попадёт в них — берём самый подходящий из списка. */
+const VOICE_PREF = {
+  ru: /natural|neural|google|milena|alena|katya|tatyana|irina|dmitri|pavel/i,
+  zh: /natural|neural|google|xiaoxiao|yunxi|yunyang|tingting|liang|meijia|sinji/i
+};
+function pickVoice(lang) {
+  let vs;
+  try { vs = VOICES.length ? VOICES.slice() : (speechSynthesis.getVoices() || []); }
+  catch (e) { vs = []; }
+  vs = vs.filter(v => v.lang && String(v.lang).toLowerCase().replace('_', '-').startsWith(lang));
+  if (!vs.length) return null;
+  const pref = VOICE_PREF[lang];
+  const score = v => (pref && pref.test(v.name) ? 4 : 0) + (v.localService ? 1 : 0);
+  vs.sort((a, b) => score(b) - score(a));
+  return vs[0];
+}
+
+/* Пиньинь со значками тона (nǐ hǎo) русский голос коверкает — снимаем
+   значки, остаются обычные буквы. Кириллицу не трогаем. */
+const TONE_BASE = {
+  'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
+  'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
+  'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
+  'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
+  'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
+  'ǖ': 'u', 'ǘ': 'u', 'ǚ': 'u', 'ǜ': 'u'
+};
+function stripToneMarks(s) {
+  return String(s).replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, ch => TONE_BASE[ch] || ch);
+}
+const RE_HAN = /[一-鿿。，！？、：；「」『』（）·]/;
+
+/* Текст учителя чередует русский и китайский. Режем его на фразы:
+   китайские слова пойдут китайскому голосу (по-настоящему, с тонами),
+   русские — русскому. Каждая фраза — отдельная реплика, между ними
+   естественные короткие паузы: речь звучит не сплошным монологом. */
+function segmentsForSpeech(text) {
+  const src = stripToneMarks(String(text || ''));
+  const segs = [];
+  let buf = '', zh = false;
+  const push = () => {
+    let s = buf.trim();
+    buf = '';
+    if (!s) return;
+    if (!zh) s = s.replace(/^[—–·，。！？、：；…\s]+/, '');
+    if (s) segs.push({ lang: zh ? 'zh' : 'ru', text: s });
+  };
+  for (const ch of src) {
+    const isHan = RE_HAN.test(ch);
+    if (isHan !== zh) push();
+    zh = isHan;
+    buf += ch;
+  }
+  push();
+  return segs;
+}
+
+let sayGen = 0;
 function speakRu(text, rate) {
   if (!('speechSynthesis' in window)) { toast('Браузер не поддерживает озвучку'); return; }
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU';
-    u.rate = rate !== undefined ? rate : 0.95;
-    const v = speechSynthesis.getVoices().find(x => /\bru\b|Russian|русск/i.test(x.lang + ' ' + x.name));
-    if (v) u.voice = v;
+    const segs = segmentsForSpeech(text);
+    if (!segs.length) return;
+    const gen = ++sayGen;
     const av = document.querySelector('.panda-teacher');
     if (av) av.classList.add('talking');
-    const stop = () => { if (av) av.classList.remove('talking'); };
-    u.onend = stop;
-    u.onerror = stop;
-    speechSynthesis.speak(u);
+    const stop = () => { if (av && gen === sayGen) av.classList.remove('talking'); };
+    segs.forEach((s, i) => {
+      const u = new SpeechSynthesisUtterance(s.text);
+      if (s.lang === 'zh') {
+        /* Китайское слово — китайскому голосу, медленнее: ребёнок слушает. */
+        u.lang = 'zh-CN';
+        u.rate = Math.max(0.55, (rate !== undefined ? rate : 0.95) * 0.8);
+        const v = pickVoice('zh');
+        if (v) u.voice = v;
+      } else {
+        u.lang = 'ru-RU';
+        u.rate = rate !== undefined ? rate : 0.95;
+        u.pitch = 1.06;
+        const v = pickVoice('ru');
+        if (v) u.voice = v;
+      }
+      if (i === segs.length - 1) { u.onend = stop; u.onerror = stop; }
+      speechSynthesis.speak(u);
+    });
   } catch (e) { toast('Ошибка озвучки'); }
 }
 
