@@ -2082,3 +2082,53 @@ button { font-family: inherit; cursor: pointer; }
 .pa-mini { flex: 0 0 32px; width: 32px; height: 32px; margin-right: 8px; margin-top: 2px; }
 .pa-mini .pa-svg { width: 32px; height: 32px; display: block; }
 .t-voice-ru { margin-left: 6px; }
+
+/* ---------- Азбука пиньинь ---------- */
+.pabc-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px; margin-top: 12px;
+}
+.pabc-card {
+  background: rgba(var(--tint),.05);
+  border: 1px solid var(--line);
+  border-radius: 12px 9px 11px 8px;
+  padding: 10px 12px;
+  position: relative;
+}
+.pabc-final .pabc-k { color: var(--jade); }
+.pabc-k { font-size: 26px; font-weight: 700; letter-spacing: .5px; color: var(--gold); line-height: 1.1; }
+.pabc-ru { font-size: 14px; color: var(--txt); margin: 2px 0 6px; }
+.pabc-ex { font-size: 13px; line-height: 1.4; }
+.pabc-syl { color: var(--red); font-size: 15px; }
+.pabc-h { font-family: "Noto Serif SC", serif; margin-left: 4px; }
+.pabc-r { color: var(--txt3); font-size: 12px; margin-left: 4px; }
+.pabc-note { font-size: 12px; color: var(--txt2); line-height: 1.4; margin-top: 6px; }
+.pabc-tools { position: absolute; top: 8px; right: 8px; }
+.pabc-tricky {
+  font-size: 13.5px; color: var(--txt2); line-height: 1.55;
+  background: rgba(var(--tint),.05);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px 9px 4px 9px;
+  padding: 9px 12px; margin: 8px 0;
+}
+.pabc-tricky b { color: var(--txt); }
+.pabc-about .kid-lead { margin: 6px 0; }
+.pabc-demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 12px; padding: 12px;
+  background: rgba(var(--tint),.05);
+  border: 1px dashed var(--line);
+  border-radius: 12px 9px 11px 8px;
+}
+.pd-part {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: var(--panel); border: 1.5px solid var(--line);
+  border-radius: 10px 8px 9px 7px; padding: 6px 12px;
+}
+.pd-part b { font-size: 22px; }
+.pd-syl { border-color: var(--gold); }
+.pd-syl b { color: var(--red); font-family: "Noto Serif SC", serif; }
+.pd-label { font-size: 10px; color: var(--txt3); text-transform: uppercase; letter-spacing: .5px; }
+.pd-plus, .pd-eq, .pd-mid { font-size: 20px; color: var(--txt3); font-weight: 700; }
+.pabc-next .btn-row { margin-top: 8px; }
+.pg-abc { margin-top: 12px; }

@@ -593,6 +593,7 @@ function toast(msg) {
    ============================================================ */
 const ROUTES = {
   home: renderHome,
+  pinyin: renderPinyin,
   plan: renderPlan,
   lesson: renderLesson,
   diag: renderDiagnostic,
@@ -848,6 +849,11 @@ function renderKidIntro(l) {
   pan.id = 'sec-pinyin';
   pan.appendChild(el('h3', '', '🔤 Сначала — как читать пиньинь'));
   pan.appendChild(el('p', 'kid-lead', 'Китайские звуки записаны латинскими буквами — это пиньинь. Читаем по слогам: <b>nǐ hǎo</b> — «ни-хао». Послушайте каждое слово кнопкой 🔊, а потом повторите медленно кнопкой 🐢.'));
+  const abcRow = el('div', 'btn-row pg-abc');
+  const abcBtn = el('a', 'btn btn-primary btn-sm', '📚 Вся азбука пиньинь');
+  abcBtn.href = '#/pinyin';
+  abcRow.appendChild(abcBtn);
+  pan.appendChild(abcRow);
   const grid = el('div', 'pg-grid');
   (l.pinyinGuide || []).forEach(g => {
     const c = el('div', 'pg-cell', `<div class="pg-g">${esc(g.g)}</div><div class="pg-ru">${esc(g.ru)}</div><div class="pg-note">${esc(g.note)}</div>`);
@@ -4240,6 +4246,92 @@ function tutorServerContext() {
   return parts.join('; ').slice(0, 400);
 }
 
+/* ---------- Азбука пиньинь ----------
+   Полное объяснение: что такое пиньинь, все 23 начала слога и все 24
+   конца, хитрые буквы. Каждая карточка — с русской подсказкой и
+   примером, который озвучивает китайский голос (как на уроках). */
+function pinyinCard(entry, kind) {
+  const card = el('div', 'pabc-card' + (kind === 'final' ? ' pabc-final' : ''));
+  card.innerHTML = `
+    <div class="pabc-k">${esc(entry.k)}</div>
+    <div class="pabc-ru">${esc(entry.ru)}</div>
+    <div class="pabc-ex">
+      <b class="pabc-syl">${esc(entry.ex.syl)}</b>
+      <span class="pabc-h">${esc(entry.ex.h)}</span>
+      <span class="pabc-r">${esc(entry.ex.r)}</span>
+    </div>
+    <div class="pabc-note">${esc(entry.note)}</div>
+    <div class="pabc-tools">${toneBtn(entry.ex.h, 'speak sm')}</div>`;
+  return card;
+}
+
+function renderPinyin(root) {
+  const A = PINYIN_ABC;
+  const wrap = el('div', 'pinyin-wrap');
+  wrap.appendChild(el('div', 'lesson-head', `
+    <div class="lh-badge">🔤 Справочник</div>
+    <h1>Азбука пиньинь</h1>
+    <p class="lh-sub">Все буквы китайских звуков — начало и конец слога, с подсказками и озвучкой</p>`));
+
+  /* Что такое пиньинь */
+  const what = el('div', 'panel pabc-about');
+  what.appendChild(el('h3', '', '🧩 Что такое пиньинь?'));
+  A.about.forEach(par => what.appendChild(el('p', 'kid-lead', par)));
+  const demo = el('div', 'pabc-demo');
+  demo.innerHTML = `
+    <div class="pd-part"><span class="pd-label">начало</span><b>m</b></div>
+    <span class="pd-plus">+</span>
+    <div class="pd-part"><span class="pd-label">конец</span><b>a</b></div>
+    <span class="pd-eq">=</span>
+    <div class="pd-part pd-syl"><span class="pd-label">слог</span><b>妈 mā</b> ${toneBtn('妈', 'speak sm')}</div>
+    <span class="pd-mid">·</span>
+    <div class="pd-part"><span class="pd-label">начало</span><b>h</b></div>
+    <span class="pd-plus">+</span>
+    <div class="pd-part"><span class="pd-label">конец</span><b>ao</b></div>
+    <span class="pd-eq">=</span>
+    <div class="pd-part pd-syl"><span class="pd-label">слог</span><b>猫 māo</b> ${toneBtn('猫', 'speak sm')}</div>`;
+  what.appendChild(demo);
+  wrap.appendChild(what);
+
+  /* Начало слога */
+  const ini = el('div', 'panel');
+  ini.appendChild(el('h3', '', `🚀 Начало слога — ${A.initials.length} букв и сочетаний`));
+  ini.appendChild(el('p', 'kid-lead', 'Стоит в самом начале слога. Жми 🔊 — услышишь слово с этой буквой.'));
+  const g1 = el('div', 'pabc-grid');
+  A.initials.forEach(e => g1.appendChild(pinyinCard(e, 'initial')));
+  ini.appendChild(g1);
+  wrap.appendChild(ini);
+
+  /* Конец слога */
+  const fin = el('div', 'panel');
+  fin.appendChild(el('h3', '', `🏁 Конец слога — ${A.finals.length} гласных и сочетаний`));
+  fin.appendChild(el('p', 'kid-lead', 'Гласная или её сочетание — «сердце» слога. Без него слога не бывает!'));
+  const g2 = el('div', 'pabc-grid');
+  A.finals.forEach(e => g2.appendChild(pinyinCard(e, 'final')));
+  fin.appendChild(g2);
+  wrap.appendChild(fin);
+
+  /* Хитрые буквы */
+  const tr = el('div', 'panel');
+  tr.appendChild(el('h3', '', '🧠 Хитрые буквы — запомни'));
+  A.tricky.forEach(par => tr.appendChild(el('div', 'pabc-tricky', par)));
+  wrap.appendChild(tr);
+
+  /* Куда дальше */
+  const next = el('div', 'panel pabc-next');
+  next.appendChild(el('h3', '', '🎓 Теперь потренируйся'));
+  const row = el('div', 'btn-row');
+  const b1 = el('a', 'btn btn-primary', '🎵 Тоны: голос — как рука');
+  b1.href = '#/tones';
+  const b2 = el('a', 'btn btn-ghost', '📖 Урок 1: прочитай слова с пиньиня');
+  b2.href = '#/lesson/l1';
+  row.appendChild(b1); row.appendChild(b2);
+  next.appendChild(row);
+  wrap.appendChild(next);
+
+  root.appendChild(wrap);
+}
+
 function renderTutor(root) {
   const wrap = el('div', 'tutor-wrap');
   wrap.appendChild(el('h1', 'page-title', '🐼 Мэймэй — твой ИИ-помощник'));
@@ -4431,6 +4523,7 @@ function initNav() {
   const items = [
     ['home', '🏠', 'Главная'],
     ['plan', '📚', 'Уроки'],
+    ['pinyin', '🔤', 'Азбука'],
     ['diag', '🎯', 'Уровень'],
     ['cards', '🗂️', 'Карточки'],
     ['videos', '🎬', 'Видео'],
