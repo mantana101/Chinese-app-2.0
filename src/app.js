@@ -298,6 +298,42 @@ function speakRu(text, rate) {
   } catch (e) { toast('Ошибка озвучки'); }
 }
 
+/* ---------- Студийная озвучка объяснений ----------
+   Записанный голос звучит красивее синтеза в браузере, поэтому сначала
+   пробуем audio/lN.mp3; если файла нет (или сеть отдала ошибку) —
+   незаметно говорим синтезом. Ответ запоминаем, чтобы не дёргать сеть. */
+const studioProbe = {};
+function probeStudio(id) {
+  if (studioProbe[id] || !window.fetch) return;
+  studioProbe[id] = 'checking';
+  fetch('audio/' + id + '.mp3', { method: 'HEAD' })
+    .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
+    .catch(() => { studioProbe[id] = 'no'; });
+}
+function playStudio(id, rate) {
+  if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
+  if (studioProbe[id] === 'yes') {
+    if (!studioProbe[id + ':el']) {
+      const a = new Audio('audio/' + id + '.mp3');
+      a.preload = 'auto';
+      const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
+      a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
+      a.onended = stop;
+      a.onpause = stop;
+      studioProbe[id + ':el'] = a;
+    }
+    const a = studioProbe[id + ':el'];
+    try { a.currentTime = 0; } catch (e) { /* только что создан */ }
+    const started = a.play();
+    if (started && started.catch) {
+      started.catch(() => { studioProbe[id] = 'no'; speakRu(LESSONS[id] && LESSONS[id].teacher, rate); });
+    }
+    return true;
+  }
+  probeStudio(id);
+  return false;
+}
+
 /* Панда Мэймэй: уши, пятки вокруг глаз, нос. Рот — два элемента:
    закрытая дуга (idle) и открытый овал (анимация во время речи). */
 function pandaSVG() {
@@ -331,10 +367,16 @@ function renderTeacher(l) {
         <button class="speak sm pa-slow" title="Медленное объяснение" aria-label="Объяснить медленнее">🐢</button>
       </div>
     </div>`;
-  const say = (rate) => speakRu(l.teacher, rate);
+  const say = (rate) => {
+    try { speechSynthesis.cancel(); } catch (e) { /* нет синтеза — не беда */ }
+    if (playStudio(l.id, rate)) return;
+    speakRu(l.teacher, rate);
+  };
   pan.querySelector('.pa-say').onclick = () => say();
   pan.querySelector('.pa-slow').onclick = (e) => { e.preventDefault(); e.stopPropagation(); say(0.72); };
   pan.querySelector('.pa-wrap').onclick = () => say();
+  /* Проверяем студийную запись заранее, чтобы к клику уже знать ответ. */
+  probeStudio(l.id);
   return pan;
 }
 

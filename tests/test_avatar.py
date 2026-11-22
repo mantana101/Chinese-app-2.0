@@ -253,3 +253,56 @@ class TeacherInBrowser(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StudioAudio(unittest.TestCase):
+    """Студийная озвучка объяснений: файл на урок, сервер отдаёт.
+
+    Записанный голос звучит живее браузерного синтеза, поэтому объяснения
+    Мэймэй хранятся файлами audio/lN.mp3. Сценарии — в audio/narration.json,
+    они обязаны покрывать все уроки (без пропусков) и совпадать по смыслу:
+    каждый сценарий объясняет материал своего урока на «ты»."""
+
+    def test_every_lesson_has_audio_file(self):
+        import re
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("нет node — нечем разобрать data.js")
+        res = subprocess.run([node, "-e", READ_SCRIPT, DATA],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(res.returncode, 0, res.stderr[-300:])
+        ids = json.loads(res.stdout) and [l["id"] for l in json.loads(res.stdout)]
+        self.assertTrue(ids)
+        for lid in ids:
+            f = os.path.join(ROOT, "audio", lid + ".mp3")
+            self.assertTrue(os.path.exists(f), f"нет студийной озвучки {f}")
+            size = os.path.getsize(f)
+            self.assertGreater(size, 50_000, f"{lid}: файл слишком короткий ({size} Б)")
+            with open(f, "rb") as fh:
+                head = fh.read(3)
+            self.assertTrue(head == b"ID3" or head[:2] == b"\xff\xfb",
+                            f"{lid}: это не MP3")
+
+    def test_narration_scripts_cover_all_lessons(self):
+        import re
+        with open(os.path.join(ROOT, "audio", "narration.json"), encoding="utf-8") as f:
+            scripts = json.load(f)
+        for key in ("_comment", "_voice"):
+            scripts.pop(key, None)
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("нет node — нечем разобрать data.js")
+        res = subprocess.run([node, "-e", READ_SCRIPT, DATA],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(res.returncode, 0, res.stderr[-300:])
+        ids = [l["id"] for l in json.loads(res.stdout)]
+        self.assertEqual(sorted(scripts), sorted(ids),
+                         "сценарии озвучки должны покрывать все уроки и только их")
+        for lid, text in scripts.items():
+            self.assertGreaterEqual(len(text), 120, f"{lid}: сценарий слишком короткий")
+            self.assertRegex(text.lower(),
+                             r"(ты|теб|тво|посчитай|нарисуй|подумай|расскажи|тренируйся"
+                             r"|попробуй|скажи|опиши|представь|спроси|болей|нажми|закажи"
+                             r"|открой|уверяю|готов|верю|проверю)",
+                             f"{lid}: сценарий обращается к ребёнку")
+

@@ -117,6 +117,23 @@ class Fonts(StaticBase):
             status, headers, body = self.get(path, gzip_ok=False)
             self.assertNotIn(b"def serve_app", body, f"утечка через {path}")
 
+    def test_audio_is_served_with_immutable_cache(self):
+        """Студийная озвучка объяснений: файлы audio/lN.mp3 отдаются сервером."""
+        f = os.path.join(ROOT, "audio", "l1.mp3")
+        if not os.path.exists(f):
+            self.skipTest("аудио ещё не записано")
+        status, headers, body = self.get("/audio/l1.mp3", gzip_ok=False)
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("Content-Type"), "audio/mpeg")
+        self.assertTrue(body.startswith(b"ID3") or body[:2] == b"\xff\xfb", "это не MP3")
+        self.assertIn("immutable", headers.get("Cache-Control", ""))
+
+    def test_audio_folder_cannot_escape(self):
+        """Через /audio/ нельзя вытащить чужой файл с сервера."""
+        for path in ("/audio/../server.py", "/audio/..%2Fserver.py"):
+            status, headers, body = self.get(path, gzip_ok=False)
+            self.assertNotIn(b"def serve_app", body, f"утечка через {path}")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="4d6c7227fe01">
+<meta name="app-build" content="d3d8dac23ff7">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5528,6 +5528,42 @@ function speakRu(text, rate) {
   } catch (e) { toast('Ошибка озвучки'); }
 }
 
+/* ---------- Студийная озвучка объяснений ----------
+   Записанный голос звучит красивее синтеза в браузере, поэтому сначала
+   пробуем audio/lN.mp3; если файла нет (или сеть отдала ошибку) —
+   незаметно говорим синтезом. Ответ запоминаем, чтобы не дёргать сеть. */
+const studioProbe = {};
+function probeStudio(id) {
+  if (studioProbe[id] || !window.fetch) return;
+  studioProbe[id] = 'checking';
+  fetch('audio/' + id + '.mp3', { method: 'HEAD' })
+    .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
+    .catch(() => { studioProbe[id] = 'no'; });
+}
+function playStudio(id, rate) {
+  if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
+  if (studioProbe[id] === 'yes') {
+    if (!studioProbe[id + ':el']) {
+      const a = new Audio('audio/' + id + '.mp3');
+      a.preload = 'auto';
+      const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
+      a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
+      a.onended = stop;
+      a.onpause = stop;
+      studioProbe[id + ':el'] = a;
+    }
+    const a = studioProbe[id + ':el'];
+    try { a.currentTime = 0; } catch (e) { /* только что создан */ }
+    const started = a.play();
+    if (started && started.catch) {
+      started.catch(() => { studioProbe[id] = 'no'; speakRu(LESSONS[id] && LESSONS[id].teacher, rate); });
+    }
+    return true;
+  }
+  probeStudio(id);
+  return false;
+}
+
 /* Панда Мэймэй: уши, пятки вокруг глаз, нос. Рот — два элемента:
    закрытая дуга (idle) и открытый овал (анимация во время речи). */
 function pandaSVG() {
@@ -5561,10 +5597,16 @@ function renderTeacher(l) {
         <button class="speak sm pa-slow" title="Медленное объяснение" aria-label="Объяснить медленнее">🐢</button>
       </div>
     </div>`;
-  const say = (rate) => speakRu(l.teacher, rate);
+  const say = (rate) => {
+    try { speechSynthesis.cancel(); } catch (e) { /* нет синтеза — не беда */ }
+    if (playStudio(l.id, rate)) return;
+    speakRu(l.teacher, rate);
+  };
   pan.querySelector('.pa-say').onclick = () => say();
   pan.querySelector('.pa-slow').onclick = (e) => { e.preventDefault(); e.stopPropagation(); say(0.72); };
   pan.querySelector('.pa-wrap').onclick = () => say();
+  /* Проверяем студийную запись заранее, чтобы к клику уже знать ответ. */
+  probeStudio(l.id);
   return pan;
 }
 

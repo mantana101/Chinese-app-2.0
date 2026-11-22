@@ -1160,6 +1160,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def serve_static(self, name: str) -> bool:
         """Отдаёт манифест, service worker, иконки и шрифты. True, если отдал."""
         # Шрифты лежат в отдельной папке и меняются только со сборкой.
+        if name.startswith("/audio/") and name.endswith(".mp3"):
+            fname = os.path.basename(name)
+            if not fname or "/" in fname or ".." in fname:
+                return False
+            path = os.path.join(BASE, "audio", fname)
+            try:
+                with open(path, "rb") as f:
+                    body = f.read()
+            except OSError:
+                return False
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/mpeg")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            send_common_headers(self)
+            self.end_headers()
+            _safe_write(self, body)
+            return True
         if name.startswith("/fonts/") and name.endswith(".woff2"):
             fname = os.path.basename(name)
             if not fname or "/" in fname or ".." in fname:
