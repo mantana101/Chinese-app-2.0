@@ -57,11 +57,12 @@ setTimeout(() => {
   const r = w.document.getElementById('r');
   const pan = r.querySelector('.panda-teacher');
   const out = { spoken };
+  const q = (s) => Array.from(r.querySelectorAll(s));
   out.teacherPanel = !!pan;
   out.pandaSvg = !!r.querySelector('.pa-svg');
   out.mouthOpen = !!r.querySelector('.pa-mouth-open');
   out.mouthClosed = !!r.querySelector('.pa-mouth-closed');
-  out.eyes = r.querySelectorAll('.pa-eye').length;
+  out.eyes = pan ? pan.querySelectorAll('.pa-eye').length : 0;
   out.aria = pan ? (pan.querySelector('.pa-wrap').getAttribute('aria-label') || '') : '';
   out.sayBtn = pan ? !!pan.querySelector('.pa-say') : false;
   out.slowBtn = pan ? !!pan.querySelector('.pa-slow') : false;
@@ -74,6 +75,19 @@ setTimeout(() => {
   if (pan) {
     pan.querySelector('.pa-say').click();
   }
+  out.chips = q('.step-chip').length;
+  out.chipTitles = q('.step-chip .sc-t').map(n => n.textContent).join('|');
+  out.tips = q('.pa-tip').length;
+  out.exampleCard = q('.pa-example').length;
+  out.exampleP = q('.pex-p').length ? q('.pex-p')[0].textContent : '';
+  out.hintBtns = q('.hint-btn').length;
+  const hintBtn = r.querySelector('.hint-btn');
+  if (hintBtn) hintBtn.click();
+  out.hintBubbleOpen = !!r.querySelector('.q-hint-bubble.open');
+  out.hintText = r.querySelector('.q-hint-bubble') ? r.querySelector('.q-hint-bubble').textContent.trim() : '';
+  const quizChip = r.querySelector('.step-chip[data-step="quiz"]');
+  if (quizChip) quizChip.click();
+  out.quizChipClicked = true;
   out.spokenAfterFirst = spoken.length;
   out.spokenLang = spoken.length ? spoken[0].lang : '';
   out.firstText = spoken.length ? spoken[0].text : '';
@@ -218,6 +232,25 @@ class TeacherInBrowser(unittest.TestCase):
         self.assertGreater(self.out["shown"], 120,
                            "текст объяснения должен быть показан ребёнку целиком")
 
+    def test_learning_path_renders(self):
+        """Ступеньки, подсказки у разделов, пример и кнопка «Подсказка»."""
+        self.assertGreaterEqual(self.out["chips"], 6,
+                                "в детском уроке должно быть 6–7 ступенек")
+        self.assertIn("Учитель", self.out["chipTitles"])
+        self.assertIn("Практика", self.out["chipTitles"])
+        self.assertIn("Домашка", self.out["chipTitles"])
+        self.assertGreaterEqual(self.out["tips"], 4,
+                                "подсказки Мэймэй должны стоять у словаря, грамматики, диалога и практики")
+        self.assertEqual(self.out["exampleCard"], 1, "карточка «Пример от Мэймэй» — одна")
+        self.assertEqual(self.out["exampleP"], "wǒ jiào Xiǎo Míng.",
+                         "в l1 пример — «Меня зовут Сяо Мин»")
+        self.assertGreaterEqual(self.out["hintBtns"], 1,
+                                "в практике должна быть кнопка «Подсказка»")
+
+    def test_hint_button_opens_bubble(self):
+        self.assertTrue(self.out["hintBubbleOpen"], "клик по «Подсказка» показывает подсказку")
+        self.assertIn("nǐ hǎo", self.out["hintText"], "подсказка первого вопроса содержит чтение")
+
     def test_click_speaks_russian_teacher_text(self):
         self.assertEqual(self.out["spokenLang"], "ru-RU",
                          "объяснение начинается русским голосом")
@@ -287,7 +320,7 @@ class StudioAudio(unittest.TestCase):
         import re
         with open(os.path.join(ROOT, "audio", "narration.json"), encoding="utf-8") as f:
             scripts = json.load(f)
-        for key in ("_comment", "_voice"):
+        for key in ("_comment", "_voice", "steps"):
             scripts.pop(key, None)
         node = shutil.which("node")
         if not node:
@@ -306,3 +339,65 @@ class StudioAudio(unittest.TestCase):
                              r"|открой|уверяю|готов|верю|проверю)",
                              f"{lid}: сценарий обращается к ребёнку")
 
+
+
+class LearningPath(unittest.TestCase):
+    """Ступеньки урока: Мэймэй ведёт по разделам, подсказывает и даёт пример.
+
+    В каждом уроке есть путь-«лесенка» (Учитель → Слова → … → Домашка),
+    у каждого раздела — подсказка Мэймэй с озвучкой, в панели учителя —
+    живой пример фразы урока, в практике — кнопка «Подсказка» до ответа.
+    Шаги озвучены студийной записью audio/step-*.mp3, общей для уроков.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.lessons = load_teachers()
+
+    def test_example_present_and_hanzi(self):
+        import re as _re
+        for l in self.lessons:
+            pass  # примеры проверяются через READ_SCRIPT_EXT ниже
+        src = read("src", "data.js")
+        for lid, ex in (("l1", "我叫小明"), ("l2", "多少钱"), ("l8", "喝茶吗"),
+                        ("l10", "把书放进"), ("l15", "明年我想去中国")):
+            self.assertIn(ex, src, f"в {lid} нет примера «{ex}»")
+        # У каждого урока есть строка example со всеми тремя полями.
+        count = len(_re.findall(r"example: \{ h: '[^']+', p: '[^']+', r: '[^']+' \}", src))
+        self.assertGreaterEqual(count, 15, "example есть не во всех уроках")
+
+    def test_step_recordings_exist(self):
+        import json as _json
+        with open(os.path.join(ROOT, "audio", "narration.json"), encoding="utf-8") as f:
+            narr = _json.load(f)
+        steps = narr.get("steps") or {}
+        self.assertEqual(len(steps), 7, "в сценарии должны быть все 7 подсказок-ступенек")
+        for key, text in steps.items():
+            self.assertGreater(len(text), 30, f"step {key}: текст слишком короткий")
+            f = os.path.join(ROOT, "audio", f"step-{key}.mp3")
+            self.assertTrue(os.path.exists(f), f"нет записи {f}")
+            with open(f, "rb") as fh:
+                head = fh.read(3)
+            self.assertTrue(head == b"ID3" or head[:2] == b"\xff\xfb", f"{key}: это не MP3")
+            self.assertGreater(os.path.getsize(f), 20_000, f"step-{key}: запись слишком короткая")
+
+    def test_steps_and_tips_wired(self):
+        app = read("src", "app.js")
+        for name in ("PANDA_STEPS", "renderSteps", "pandaTip", "playStepAudio",
+                     "stepsForLesson", "sec-teacher", "sec-quiz", "hint-btn",
+                     "q-hint-bubble", "window.pandaTip"):
+            self.assertIn(name, app, f"в app.js нет {name}")
+        self.assertIn("location.hash = '#/homework/'", app,
+                      "ступенька «Домашка» должна вести на домашку")
+        self.assertIn("scrollIntoView", app, "переход к разделу — плавный скролл")
+
+    def test_homework_shows_panda_tip(self):
+        hw = read("src", "homework.js")
+        self.assertIn("window.pandaTip", hw,
+                      "в домашке должна быть подсказка Мэймэй")
+
+    def test_css_styles_path_and_hints(self):
+        css = read("src", "styles.css")
+        for cls in (".steps-path", ".step-chip", ".pa-tip", ".pa-example",
+                    ".hint-btn", ".q-hint-bubble", ".sc-num", ".pex-p"):
+            self.assertIn(cls, css, f"в styles.css нет {cls}")

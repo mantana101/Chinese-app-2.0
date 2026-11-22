@@ -212,6 +212,15 @@
             : '<span class="hw-badge">не начата</span>';
     panel.appendChild(el('div', 'panel-head',
       `<h3>🏠 Домашка</h3><div class="hw-head-right">${badge}</div>`));
+    /* Подсказка Мэймэй: у домашки она объясняет, зачем это и как делать. */
+    if (typeof window.pandaTip === 'function') {
+      const hwTip = window.pandaTip({
+        id: 'hw', icon: '🏠', title: 'Домашка',
+        text: 'Это домашка по уроку! Делай задания по одному, не спеша. Написал — проверь и исправь сам, а я проверю ещё раз.',
+        audio: 'audio/step-hw.mp3'
+      });
+      panel.appendChild(hwTip);
+    }
 
     /* Закрытая домашка: вместо заданий — объяснение и кнопка на практику.
        Пока урок не пройден, задания не показываем: иначе ребёнок берётся
