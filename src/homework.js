@@ -216,7 +216,7 @@
     if (typeof window.pandaTip === 'function') {
       const hwTip = window.pandaTip({
         id: 'hw', icon: '🏠', title: 'Домашка',
-        text: 'Это домашка по уроку! Делай задания по одному, не спеша. Написал — проверь и исправь сам, а я проверю ещё раз.',
+        text: 'Ай да, урок пройден! Теперь домашка — она закрепит мастерство. Делай задания по одному, не спеша, а я проверю!',
         audio: 'audio/step-hw.mp3'
       });
       panel.appendChild(hwTip);
