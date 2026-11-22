@@ -304,10 +304,13 @@ function speakRu(text, rate) {
    пробуем audio/lN.mp3; если файла нет (или сеть отдала ошибку) —
    незаметно говорим синтезом. Ответ запоминаем, чтобы не дёргать сеть. */
 const studioProbe = {};
+/* Версия аудио от сборки: URL с ?v= ломает «вечный» HTTP-кэш и кэш
+   service worker'а — после обновления записей браузер играет новое. */
+const audioUrl = (path) => path + (window.AUDIO_VER ? '?v=' + window.AUDIO_VER : '');
 function probeStudio(id) {
   if (studioProbe[id] || !window.fetch) return;
   studioProbe[id] = 'checking';
-  fetch('audio/' + id + '.mp3', { method: 'HEAD' })
+  fetch(audioUrl('audio/' + id + '.mp3'), { method: 'HEAD' })
     .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
     .catch(() => { studioProbe[id] = 'no'; });
 }
@@ -315,7 +318,7 @@ function playStudio(id, rate) {
   if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
   if (studioProbe[id] === 'yes') {
     if (!studioProbe[id + ':el']) {
-      const a = new Audio('audio/' + id + '.mp3');
+      const a = new Audio(audioUrl('audio/' + id + '.mp3'));
       a.preload = 'auto';
       const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
       a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
@@ -410,7 +413,7 @@ function playStepAudio(step, fallbackText) {
   const av = document.querySelector('.panda-teacher');
   const talk = (on) => { if (av) av.classList.toggle('talking', !!on); };
   if (!stepAudioEls[step.audio]) {
-    const a = new Audio(step.audio);
+    const a = new Audio(audioUrl(step.audio));
     a.preload = 'none';
     a.onplay = () => talk(true);
     a.onended = a.onpause = a.onerror = () => talk(false);
@@ -435,7 +438,7 @@ function stepsForLesson(l) {
     s.id === 'pinyin' ? !!l.kid : s.id === 'dialogue' ? !!(l.dialogue && l.dialogue.length) : true);
 }
 function renderSteps(l) {
-  const pan = el('div', 'panel steps-path');
+  const pan = el('div', 'steps-path steps-block');
   pan.appendChild(el('div', 'sp-title', '🪜 Ступеньки урока'));
   pan.appendChild(el('p', 'kid-lead', 'Иди по ступенькам сверху вниз — Мэймэй подскажет на каждой. Нажми на ступеньку, чтобы перейти к разделу.'));
   const row = el('div', 'sp-row');
@@ -922,11 +925,15 @@ function renderLesson(root, args) {
     <h1>${esc(l.title)}</h1>
     <p class="lh-sub">${esc(l.subtitle)}</p>`));
 
-  /* --- Учитель-панда: голосовое объяснение материала урока --- */
-  if (l.teacher) root.appendChild(renderTeacher(l));
-
-  /* --- Ступеньки урока: Мэймэй ведёт по разделам --- */
-  root.appendChild(renderSteps(l));
+  /* --- Мэймэй и её ступеньки: один блок-помощник. Панда и путь урока
+     больше не разделены: под объяснением сразу идут ступеньки. --- */
+  if (l.teacher) {
+    const mentor = renderTeacher(l);
+    mentor.appendChild(renderSteps(l));
+    root.appendChild(mentor);
+  } else {
+    root.appendChild(renderSteps(l));
+  }
 
   const goals = el('div', 'panel goals');
   goals.appendChild(el('h3', '', '🎯 Цели урока'));

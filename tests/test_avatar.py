@@ -199,6 +199,46 @@ class TeacherWiring(unittest.TestCase):
                         "учитель должен стоять после заголовка и до целей")
 
 
+class CacheBustingAndMentor(unittest.TestCase):
+    """Обновление записей должно доходить до браузера пользователя.
+
+    Аудио отдаётся с «вечным» кэшем (immutable), поэтому при замене
+    записей URL обязан меняться: сборка считает AUDIO_VER из хэшей всех
+    mp3 и подставляет ?v=... в каждый адрес. Плюс панель Мэймэй и её
+    ступеньки — один блок-помощник, а не две отдельные панели."""
+
+    def test_app_urls_have_version(self):
+        app = read("src", "app.js")
+        self.assertIn("audioUrl", app, "нет помощника адресов аудио")
+        self.assertEqual(app.count("audioUrl("), 3,
+                         "все три места воспроизведения (проба, объяснение, ступеньки) должны идти через audioUrl")
+        self.assertIn("const audioUrl = (path)", app, "объявление помощника адресов")
+        self.assertIn("'?v='", app)
+
+    def test_build_injects_audio_version(self):
+        html_path = os.path.join(ROOT, "index.html")
+        if not os.path.exists(html_path):
+            self.skipTest("нет index.html — сначала сборка")
+        html = read("index.html")
+        import re
+        m = re.search(r"window\.AUDIO_VER = \"([0-9a-f]{10})\"", html)
+        self.assertIsNotNone(m, "сборка не инжектит window.AUDIO_VER")
+        self.assertNotEqual(m.group(1), "0" * 10, "AUDIO_VER должен считаться из mp3")
+
+    def test_mentor_is_one_block(self):
+        app = read("src", "app.js")
+        self.assertIn("mentor.appendChild(renderSteps(l))",
+                      app, "ступеньки должны жить внутри панели Мэймэй")
+        self.assertIn("steps-path steps-block", app, "класс объединённого блока")
+        # Панель ступенек больше не отдельная
+        self.assertNotIn("const pan = el('div', 'panel steps-path');", app)
+
+    def test_css_wraps_mentor(self):
+        css = read("src", "styles.css")
+        self.assertIn(".steps-block", css)
+        self.assertIn("flex-wrap: wrap", css, "панель должна переносить ступеньки на новую строку")
+
+
 class TeacherInBrowser(unittest.TestCase):
     """Панда рисуется и говорит по-русски — проверяем настоящий DOM."""
 

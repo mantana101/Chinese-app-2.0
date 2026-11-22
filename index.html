@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="559f57709523">
+<meta name="app-build" content="5de3e4d6b715">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2312,6 +2312,16 @@ button { font-family: inherit; cursor: pointer; }
 }
 .q-hint-bubble.open { display: block; }
 
+/* Мэймэй и ступеньки — один блок-помощник: аватар и объяснение сверху,
+   путь урока ниже, на всю ширину панели. */
+.panda-teacher { flex-wrap: wrap; }
+.steps-block {
+  flex: 1 1 100%;
+  border-top: 1px dashed var(--line);
+  margin-top: 6px;
+  padding-top: 14px;
+}
+
 </style>
 </head>
 <body>
@@ -2351,6 +2361,7 @@ button { font-family: inherit; cursor: pointer; }
 </div>
 <nav id="mnav" class="mnav"></nav>
 
+<script>window.AUDIO_VER = "b1d2161b96";</script>
 <script>
 /* ============================================================
    СОДЕРЖАНИЕ КУРСА: модули, уроки, словарь, тексты, фразы
@@ -5637,10 +5648,13 @@ function speakRu(text, rate) {
    пробуем audio/lN.mp3; если файла нет (или сеть отдала ошибку) —
    незаметно говорим синтезом. Ответ запоминаем, чтобы не дёргать сеть. */
 const studioProbe = {};
+/* Версия аудио от сборки: URL с ?v= ломает «вечный» HTTP-кэш и кэш
+   service worker'а — после обновления записей браузер играет новое. */
+const audioUrl = (path) => path + (window.AUDIO_VER ? '?v=' + window.AUDIO_VER : '');
 function probeStudio(id) {
   if (studioProbe[id] || !window.fetch) return;
   studioProbe[id] = 'checking';
-  fetch('audio/' + id + '.mp3', { method: 'HEAD' })
+  fetch(audioUrl('audio/' + id + '.mp3'), { method: 'HEAD' })
     .then(r => { studioProbe[id] = r.ok ? 'yes' : 'no'; })
     .catch(() => { studioProbe[id] = 'no'; });
 }
@@ -5648,7 +5662,7 @@ function playStudio(id, rate) {
   if (studioProbe[id] === 'checking' || studioProbe[id] === 'no') return false;
   if (studioProbe[id] === 'yes') {
     if (!studioProbe[id + ':el']) {
-      const a = new Audio('audio/' + id + '.mp3');
+      const a = new Audio(audioUrl('audio/' + id + '.mp3'));
       a.preload = 'auto';
       const stop = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.remove('talking'); };
       a.onplay = () => { const av = document.querySelector('.panda-teacher'); if (av) av.classList.add('talking'); };
@@ -5743,7 +5757,7 @@ function playStepAudio(step, fallbackText) {
   const av = document.querySelector('.panda-teacher');
   const talk = (on) => { if (av) av.classList.toggle('talking', !!on); };
   if (!stepAudioEls[step.audio]) {
-    const a = new Audio(step.audio);
+    const a = new Audio(audioUrl(step.audio));
     a.preload = 'none';
     a.onplay = () => talk(true);
     a.onended = a.onpause = a.onerror = () => talk(false);
@@ -5768,7 +5782,7 @@ function stepsForLesson(l) {
     s.id === 'pinyin' ? !!l.kid : s.id === 'dialogue' ? !!(l.dialogue && l.dialogue.length) : true);
 }
 function renderSteps(l) {
-  const pan = el('div', 'panel steps-path');
+  const pan = el('div', 'steps-path steps-block');
   pan.appendChild(el('div', 'sp-title', '🪜 Ступеньки урока'));
   pan.appendChild(el('p', 'kid-lead', 'Иди по ступенькам сверху вниз — Мэймэй подскажет на каждой. Нажми на ступеньку, чтобы перейти к разделу.'));
   const row = el('div', 'sp-row');
@@ -6255,11 +6269,15 @@ function renderLesson(root, args) {
     <h1>${esc(l.title)}</h1>
     <p class="lh-sub">${esc(l.subtitle)}</p>`));
 
-  /* --- Учитель-панда: голосовое объяснение материала урока --- */
-  if (l.teacher) root.appendChild(renderTeacher(l));
-
-  /* --- Ступеньки урока: Мэймэй ведёт по разделам --- */
-  root.appendChild(renderSteps(l));
+  /* --- Мэймэй и её ступеньки: один блок-помощник. Панда и путь урока
+     больше не разделены: под объяснением сразу идут ступеньки. --- */
+  if (l.teacher) {
+    const mentor = renderTeacher(l);
+    mentor.appendChild(renderSteps(l));
+    root.appendChild(mentor);
+  } else {
+    root.appendChild(renderSteps(l));
+  }
 
   const goals = el('div', 'panel goals');
   goals.appendChild(el('h3', '', '🎯 Цели урока'));

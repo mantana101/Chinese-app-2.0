@@ -43,6 +43,16 @@ for name in SOURCE_FILES:
     digest.update(b"\0")
 BUILD_ID = digest.hexdigest()[:12]
 
+# Версия аудио: хэш содержимого всех записей. Инжектится в страницу как
+# window.AUDIO_VER и подставляется в URL (?v=...): когда запись меняется,
+# меняется и адрес — браузер не играет старый файл из «вечного» кэша.
+_audio_dir = base / "audio"
+_aud_digest = hashlib.md5()
+for _af in sorted(_audio_dir.glob("*.mp3")) if _audio_dir.is_dir() else []:
+    _aud_digest.update(_af.name.encode("utf-8"))
+    _aud_digest.update(_af.read_bytes())
+AUDIO_VER = _aud_digest.hexdigest()[:10] if _aud_digest.digest() else "0"
+
 # Время сборки берём из SOURCE_DATE_EPOCH, если он задан. Так сборка
 # воспроизводима: CI может собрать тот же index.html байт в байт, и
 # проверка «index.html не расходится с src/» не падает из-за минут.
@@ -58,6 +68,7 @@ else:
 
 out = (
     tpl.replace("{{BUILD_ID}}", BUILD_ID)
+    .replace("{{AUDIO_VER}}", AUDIO_VER)
     .replace("{{STYLES}}", fonts_css + "\n" + styles)
     .replace("{{DATA}}", safe(data))
     .replace("{{PINYIN}}", safe(pinyin_src))
@@ -68,7 +79,7 @@ out = (
 
 # Незаполненный плейсхолдер означает, что сборка «успешна», но приложение сломано.
 leftovers = [
-    p for p in ("{{BUILD_ID}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
+    p for p in ("{{BUILD_ID}}", "{{AUDIO_VER}}", "{{STYLES}}", "{{DATA}}", "{{PINYIN}}", "{{HOMEWORK}}", "{{AUTH}}", "{{APP}}")
     if p in out
 ]
 if leftovers:
