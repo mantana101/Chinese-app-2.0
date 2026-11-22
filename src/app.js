@@ -4684,8 +4684,37 @@ function renderTutor(root) {
   function micAskPermission(then) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       micSay('🎙 Микрофон работает только на защищённом сайте (адрес начинается с https://) и в современных браузерах. Пиши вопросы текстом — Мэймэй ответит так же.');
+      mic.classList.remove('t-mic-live');
       return;
     }
+    /* Состояние микрофона узнаём заранее: если сайт уже был запрещён,
+       браузер НЕ показывает диалог вовсе (молчаливый отказ) — честно
+       объясняем это и даём путь включения, а не ждём диалога зря. */
+    let perms = null;
+    try {
+      perms = navigator.permissions && navigator.permissions.query;
+    } catch (e) { perms = null; }
+    if (perms) {
+      navigator.permissions.query({ name: 'microphone' }).then((st) => {
+        if (st && st.state === 'denied') {
+          mic.classList.remove('t-mic-live');
+          micSay('🎙 Диалога разрешения нет, потому что этому сайту микрофон уже запрещён — браузер молчит вместо запроса. Вернуть можно за 15 секунд:<br>' +
+            '1) нажми <b>🔒 или ⓘ</b> слева от адреса сайта;<br>' +
+            '2) <b>Разрешения → Микрофон → Разрешить</b>;<br>' +
+            '3) обнови страницу (⟳) и снова нажми 🎙.<br>' +
+            'Второй путь: меню браузера (⋮) → Настройки → Настройки сайтов → Микрофон. Пока можно писать вопросы текстом.');
+          return;
+        }
+        if (st && st.state === 'granted') { then(); return; }
+        micSay('🎙 Сейчас появится запрос браузера — нажми <b>«Разрешить»</b>.');
+        requestMic(then);
+      }).catch(() => requestMic(then));
+      return;
+    }
+    requestMic(then);
+  }
+
+  function requestMic(then) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       (stream.getTracks() || []).forEach((tr) => { try { tr.stop(); } catch (e) { } });
       then();

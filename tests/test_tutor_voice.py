@@ -85,6 +85,9 @@ class TutorVoiceWiring(unittest.TestCase):
         self.assertIn("'no-speech'", app, "нет сообщения, когда речи не услышали")
         self.assertIn("micAborted", app, "ручной стоп должен отменять отправку")
         self.assertIn("micAskPermission", app, "нет предварительного запроса микрофона")
+        self.assertIn("navigator.permissions.query", app, "нет проверки состояния микрофона")
+        self.assertIn("Диалога разрешения нет", app, "нет объяснения молчаливого запрета")
+        self.assertIn("Сейчас появится запрос", app, "нет предупреждения перед диалогом")
         self.assertIn("getUserMedia({ audio: true })", app, "нет запроса разрешения через getUserMedia")
         self.assertIn("Настройки сайтов", app, "нет мобильного пути настройки")
         self.assertIn("service-not-allowed", app, "нет подсказки для телефонов без сервисов Google")
@@ -131,6 +134,11 @@ const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
       }
       stop() { setTimeout(() => { this.onend && this.onend(); }, 10); }
     };
+    /* Стаб Permissions API: состояние задаётся w.__permState. */
+    Object.defineProperty(w.navigator, 'permissions', {
+      value: { query: () => Promise.resolve({ state: w.__permState || 'prompt' }) },
+      configurable: true
+    });
     /* Стаб запроса микрофона: поведение задаётся w.__micMode. */
     Object.defineProperty(w.navigator, 'mediaDevices', {
       value: {
@@ -160,13 +168,13 @@ setTimeout(() => {
   const out = {};
   const mic = q('.t-mic');
 
-  /* A. Отказ доступа: честная инструкция, а не тишина */
-  w.__micMode = 'deny';
-  w.__srMode = 'deny';
+  /* A. Сайт запрещён навсегда: браузер молчит — приложение объясняет само */
+  w.__permState = 'denied';
   mic.click();
   setTimeout(() => {
     out.deny = { note: note().slice(0, 400) };
     /* B2. Микрофона нет вовсе */
+    w.__permState = 'prompt';
     w.__micMode = 'nodev';
     mic.click();
     setTimeout(() => {
@@ -185,6 +193,7 @@ setTimeout(() => {
             userText: q('.t-msg.t-user') ? q('.t-msg.t-user').textContent.slice(0, 40) : '',
             gotReply: host.querySelectorAll('.t-msg.t-bot').length > 1 };
           /* D. Ручной стоп: недосказанное не уходит в чат */
+          w.__permState = 'granted'; /* разрешение уже есть */
           w.__srMode = 'hold'; /* слушает молча */
           mic.click();
           setTimeout(() => {
@@ -226,10 +235,12 @@ class TutorVoiceMic(unittest.TestCase):
         cls.out = json.loads(res.stdout)
 
     def test_denied_mic_gets_instruction(self):
-        self.assertIn("Микрофон запрещён", self.out["deny"]["note"],
-                      "при отказе доступа была тишина: " + self.out["deny"]["note"])
+        self.assertIn("Диалога разрешения нет", self.out["deny"]["note"],
+                      "почему нет диалога — не объяснено: " + self.out["deny"]["note"])
         self.assertIn("Разрешения", self.out["deny"]["note"],
                       "в инструкции нет пути включения через разрешения сайта")
+        self.assertIn("Настройки сайтов", self.out["deny"]["note"],
+                      "нет второго пути через настройки браузера")
         self.assertIn("текстом", self.out["deny"]["note"],
                       "нет запасного пути — писать текстом")
 
