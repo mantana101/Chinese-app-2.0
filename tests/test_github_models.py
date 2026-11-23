@@ -134,12 +134,15 @@ class GitHubModelsPreset(PresetCase):
         self.assertEqual(captured["payload"]["model"], "gpt-4o-mini")
         self.assertEqual(data["mode"], "ai", data)
 
-    def test_without_tokens_stays_local(self):
+    def test_without_tokens_stays_local_when_free_disabled(self):
+        """FREE_AI=0: ни токенов, ни бесплатного ИИ — встроенный движок."""
+        os.environ["FREE_AI"] = "0"
+        self.addCleanup(os.environ.pop, "FREE_AI", None)
         self.boot()
         captured = {}
         data = self.post_chat(captured)
         self.assertEqual(data["mode"], "local",
-                         "без токенов должен работать встроенный движок")
+                         "без токенов и без бесплатного ИИ работает встроенный движок")
         self.assertNotIn("url", captured, "внешний вызов к модели не должен случаться")
 
     def test_explicit_base_url_wins_over_preset(self):
