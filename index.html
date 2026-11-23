@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="app-build" content="829baa6bf4f8">
+<meta name="app-build" content="7df62b1bdcc0">
 <meta name="author" content="Шамсиддин">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'><rect%20width='64'%20height='64'%20rx='14'%20fill='%2312100e'/><rect%20x='3'%20y='3'%20width='58'%20height='58'%20rx='11'%20fill='none'%20stroke='%23e0b354'%20stroke-width='2'/><text%20x='32'%20y='45'%20font-size='38'%20text-anchor='middle'%20fill='%23e0b354'%20font-family='Noto%20Sans%20SC,%20PingFang%20SC,%20Microsoft%20YaHei,%20sans-serif'>学</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10191,7 +10191,7 @@ function renderTutor(root) {
   /* Честный ответ: какой «мозг» работает. ai — облачная модель (ключ
      настроен), sources — только словари приложения, local — встроенные
      правила (ключ не настроен или офлайн). Состояние живёт за сессию. */
-  function setBrain(mode) {
+  function setBrain(mode, modelName) {
     if (mode) {
       tutorBrain = mode;
       try { sessionStorage.setItem('zh_tutor_brain', tutorBrain); } catch (e) { }
@@ -10199,7 +10199,7 @@ function renderTutor(root) {
     const st = document.getElementById('t-brain-state');
     if (!st) return;
     if (tutorBrain === 'ai') {
-      st.textContent = '🧠 умный ИИ включён — отвечает облачная модель';
+      st.textContent = '🧠 умный ИИ включён — отвечает ' + (modelName || 'облачная модель');
       st.className = 't-brain-state on';
     } else if (tutorBrain === 'sources') {
       st.textContent = '📖 словари приложения — ключ ИИ не настроен';
@@ -10546,6 +10546,7 @@ function renderTutor(root) {
     const localSure = !/не уверен, что понял|^\s*$/i.test(
       String(localReply.html || '').replace(/<[^>]+>/g, ' ').trim());
     let lastMode = 'local';
+    let aiModel = '';
 
     let replyObj = null;
     if (window.Auth && Auth.online) {
@@ -10564,6 +10565,7 @@ function renderTutor(root) {
         });
         const d = await res.json();
         lastMode = String(d.mode || 'local');
+        if (d.model) aiModel = String(d.model);
         if (d && d.mode === 'ai' && d.reply) {
           const text = esc(d.reply).replace(/\n/g, '<br>');
           replyObj = {
@@ -10594,7 +10596,7 @@ function renderTutor(root) {
       if (!replyObj.sayRu) replyObj.sayRu = sayRuOf(replyObj.html || '');
       if (replyObj.sayRu) speakRu(replyObj.sayRu, 0.95);
     }
-    setBrain(lastMode);
+    setBrain(lastMode, aiModel);
     send.disabled = false;
     paintFeed();
     /* Разговор сохраняем: перезагрузка страницы (новая сборка, вход)
