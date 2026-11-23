@@ -164,7 +164,11 @@ const PREFS = {
     if (meta) meta.setAttribute('content', v === 'dark' ? '#171327' : '#ffffff');
   },
   get sfx() { return Store.get('zh_sfx') !== 'off'; },
-  set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); }
+  set sfx(v) { Store.set('zh_sfx', v ? 'on' : 'off'); },
+  // Автопроизношение слова при показе карточки: дети слышат слово,
+  // пока учат его. Выключается в Профиле (для занятий в классе).
+  get autoSpeak() { return Store.get('zh_autospeak') !== 'off'; },
+  set autoSpeak(v) { Store.set('zh_autospeak', v ? 'on' : 'off'); }
 };
 // Тему ставим до первой отрисовки, иначе страница мигнёт тёмным фоном.
 if (typeof document !== 'undefined') {
@@ -469,11 +473,18 @@ function renderSteps(l) {
   pan.appendChild(el('div', 'sp-title', '🪜 Ступеньки урока'));
   pan.appendChild(el('p', 'kid-lead', 'Иди по ступенькам сверху вниз — Мэймэй подскажет на каждой. Нажми на ступеньку, чтобы перейти к разделу.'));
   const row = el('div', 'sp-row');
+  /* Текущая ступенька подсвечена: последняя, куда ребёнок нажал
+     (по умолчанию — первая, «Учитель»). Видно, где он в уроке. */
+  let curStep = 'teacher';
+  try { curStep = Store.get('zh_step:' + l.id) || 'teacher'; } catch (e) { }
   stepsForLesson(l).forEach((s, i) => {
-    const chip = el('button', 'step-chip',
+    const chip = el('button', 'step-chip' + (s.id === curStep ? ' step-now' : ''),
       `<span class="sc-num">${i + 1}</span><span class="sc-ic">${s.icon}</span><span class="sc-t">${esc(s.title)}</span>`);
     chip.setAttribute('aria-label', `Ступенька ${i + 1}: ${s.title}. Мэймэй подскажет, что делать`);
     chip.onclick = () => {
+      try { Store.set('zh_step:' + l.id, s.id); } catch (e) { }
+      row.querySelectorAll('.step-chip').forEach(b => b.classList.remove('step-now'));
+      chip.classList.add('step-now');
       playStepAudio(s, s.text);
       if (s.id === 'hw') {
         if (lessonDone(l.id)) { location.hash = '#/homework/' + l.id; return; }
@@ -1271,6 +1282,10 @@ function finishQuiz(host) {
         <a class="btn btn-ghost" href="#/plan">К плану →</a>
       </div>
     </div>`;
+  if (score >= 0.8) {
+    /* Победа — голосом: «Молодец!» звучит тем же голосом Мэймэй. */
+    speakRu('太棒了! Молодец! Отличная работа — урок засчитан!', 1);
+  }
 
   /* Через несколько секунд сами переходим к домашке, но только если
      ученик ещё не ушёл со страницы итогов и не нажал свою кнопку. */
@@ -1528,6 +1543,9 @@ function renderCard(host) {
   const showBtn = el('button', 'btn btn-primary fc-show', 'Показать перевод');
   front.appendChild(showBtn);
   front.appendChild(el('div', 'fc-speak-row', `${toneBtn(c.h, 'speak big')}<span>произношение · нажмите карточку</span>`));
+  /* Автопроизношение: слово звучит само, пока ученик смотрит на него.
+     Отключается в Профиле → «Автопроизношение». */
+  if (PREFS.autoSpeak) setTimeout(() => { if (!s.revealed) speak(c.h); }, 350);
 
   back.appendChild(el('div', 'fc-progress', `Карточка ${s.idx + 1} / ${s.pool.length}`));
   back.appendChild(el('div', 'fc-hanzi sm', esc(c.h)));
@@ -4641,6 +4659,12 @@ function renderTutor(root) {
             const ok = opt.h === m.quiz.target.h;
             ob.classList.remove('btn-ghost');
             ob.classList.add(ok ? 'btn-primary' : 'btn-danger');
+            if (ok) {
+              /* Похвала голосом: короткая и живая, как от учителя. */
+              const PRAISE = ['太棒了! Молодец, так держать!', 'Отлично! 好极了 — hǎo jí le!',
+                'Правильно! 很棒 — hěn bàng!', 'Круто! 你真棒 — nǐ zhēn bàng!'];
+              speakRu(PRAISE[(TUTOR_MEMORY.turns || 0) % PRAISE.length], 1);
+            }
             playSfx(ok ? 'ok' : 'bad');
             toast(ok ? 'Верно! 🎉' : `Правильно: ${m.quiz.target.r}`);
           };
@@ -5222,7 +5246,9 @@ function renderAccount(root) {
   bThm.onclick = () => { PREFS.theme = PREFS.theme === 'light' ? 'dark' : 'light'; paintAccountFoot(); route(); };
   const bSfx = el('button', 'btn btn-ghost', PREFS.sfx ? '🔔 Звуки эффектов: вкл' : '🔇 Звуки эффектов: выкл');
   bSfx.onclick = () => { PREFS.sfx = !PREFS.sfx; route(); };
-  pr.appendChild(bSpd); pr.appendChild(bThm); pr.appendChild(bSfx);
+  const bAuto = el('button', 'btn btn-ghost', PREFS.autoSpeak ? '🗣 Автопроизношение: вкл' : '🤐 Автопроизношение: выкл');
+  bAuto.onclick = () => { PREFS.autoSpeak = !PREFS.autoSpeak; paintAccountFoot(); toast(PREFS.autoSpeak ? 'Слова будут звучать сами' : 'Автопроизношение выключено'); };
+  pr.appendChild(bSpd); pr.appendChild(bThm); pr.appendChild(bSfx); pr.appendChild(bAuto);
   prefsPanel.appendChild(pr);
   wrap.appendChild(prefsPanel);
 
