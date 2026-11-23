@@ -4603,7 +4603,7 @@ function renderTutor(root) {
   /* Честный ответ: какой «мозг» работает. ai — облачная модель (ключ
      настроен), sources — только словари приложения, local — встроенные
      правила (ключ не настроен или офлайн). Состояние живёт за сессию. */
-  function setBrain(mode) {
+  function setBrain(mode, modelName) {
     if (mode) {
       tutorBrain = mode;
       try { sessionStorage.setItem('zh_tutor_brain', tutorBrain); } catch (e) { }
@@ -4611,7 +4611,7 @@ function renderTutor(root) {
     const st = document.getElementById('t-brain-state');
     if (!st) return;
     if (tutorBrain === 'ai') {
-      st.textContent = '🧠 умный ИИ включён — отвечает облачная модель';
+      st.textContent = '🧠 умный ИИ включён — отвечает ' + (modelName || 'облачная модель');
       st.className = 't-brain-state on';
     } else if (tutorBrain === 'sources') {
       st.textContent = '📖 словари приложения — ключ ИИ не настроен';
@@ -4958,6 +4958,7 @@ function renderTutor(root) {
     const localSure = !/не уверен, что понял|^\s*$/i.test(
       String(localReply.html || '').replace(/<[^>]+>/g, ' ').trim());
     let lastMode = 'local';
+    let aiModel = '';
 
     let replyObj = null;
     if (window.Auth && Auth.online) {
@@ -4976,6 +4977,7 @@ function renderTutor(root) {
         });
         const d = await res.json();
         lastMode = String(d.mode || 'local');
+        if (d.model) aiModel = String(d.model);
         if (d && d.mode === 'ai' && d.reply) {
           const text = esc(d.reply).replace(/\n/g, '<br>');
           replyObj = {
@@ -5006,7 +5008,7 @@ function renderTutor(root) {
       if (!replyObj.sayRu) replyObj.sayRu = sayRuOf(replyObj.html || '');
       if (replyObj.sayRu) speakRu(replyObj.sayRu, 0.95);
     }
-    setBrain(lastMode);
+    setBrain(lastMode, aiModel);
     send.disabled = false;
     paintFeed();
     /* Разговор сохраняем: перезагрузка страницы (новая сборка, вход)

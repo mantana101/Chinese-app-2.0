@@ -94,6 +94,10 @@ class TutorBrainWiring(unittest.TestCase):
         self.assertIn("'📚 правила'", app, "нет бейджа встроенных правил")
         self.assertIn("mode: 'ai'", app, "ответ облачной модели не помечен")
         self.assertIn("{ mode: lastMode }", app, "офлайн-ответ не помечен")
+        self.assertIn("if (d.model) aiModel = String(d.model);", app,
+                      "имя модели из ответа сервера не сохраняется")
+        self.assertIn("(modelName || 'облачная модель')", app,
+                      "статус не показывает, какая модель ответила")
 
     def test_readme_excludes_old_name_and_has_setup(self):
         readme = read("README.md")

@@ -2111,7 +2111,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as exc:
                 record_error("sources", f"research: {exc}")
 
-            api_key = os.environ.get("AI_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+            # GitHub Models — бесплатный настоящий ИИ по токену GitHub:
+            # https://models.github.ai/inference, OpenAI-совместимый,
+            # 15 запросов/мин и до 150/день на моделях низкого тарифа
+            # (gpt-4o-mini и др.). Достаточно одного токена без карты.
+            gh_token = os.environ.get("GITHUB_MODELS_TOKEN") or ""
+            api_key = (os.environ.get("AI_API_KEY")
+                       or os.environ.get("OPENAI_API_KEY") or gh_token)
             if not api_key:
                 # Без ключа отдаём то, что нашли: помощник в браузере оформит это сам
                 return send_json(self, 200, {
@@ -2119,8 +2125,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "sources": research,
                 })
 
-            base_url = (os.environ.get("AI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
-            model = os.environ.get("AI_MODEL") or "gpt-4o-mini"
+            via_github = not (os.environ.get("AI_API_KEY") or os.environ.get("OPENAI_API_KEY")) and bool(gh_token)
+            default_base = "https://models.github.ai/inference" if via_github else "https://api.openai.com/v1"
+            base_url = (os.environ.get("AI_BASE_URL") or default_base).rstrip("/")
+            model = os.environ.get("AI_MODEL") or ("openai/gpt-4o-mini" if via_github else "gpt-4o-mini")
             sys_prompt = (
                 "Ты — панда Мэймэй (美美), добрая и энергичная учительница китайского на русскоязычной платформе. "
                 "Ученик читает с пиньинем и ещё учится, поэтому каждое китайское слово давай в виде "
@@ -2156,7 +2164,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     res_data = json.loads(resp.read().decode("utf-8"))
                 reply = res_data["choices"][0]["message"]["content"].strip()
                 return send_json(self, 200, {
-                    "ok": True, "mode": "ai", "reply": reply,
+                    "ok": True, "mode": "ai", "reply": reply, "model": model,
                     "sources": {"notes": research["notes"][:4], "links": research["links"][:5],
                                 "used": research["used"]},
                 })
