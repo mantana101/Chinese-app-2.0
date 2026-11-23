@@ -2119,7 +2119,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
             api_key = (os.environ.get("AI_API_KEY")
                        or os.environ.get("OPENAI_API_KEY") or gh_token)
             if not api_key:
-                # Без ключа отдаём то, что нашли: помощник в браузере оформит это сам
+                # Ключа нет — пробуем бесплатный публичный ИИ (Pollinations.ai,
+                # открытый проект с GitHub, работает без регистрации и ключа).
+                # Включено по умолчанию; FREE_AI=0 выключает.
+                if os.environ.get("FREE_AI", "1") == "1":
+                    try:
+                        free_req = urllib.request.Request(
+                            "https://text.pollinations.ai/openai",
+                            data=json.dumps({
+                                "model": "openai",
+                                "messages": self._tutor_messages(msg, history, ctx, research),
+                                "temperature": 0.4, "max_tokens": 600,
+                                "private": True,
+                            }).encode("utf-8"),
+                            headers={"Content-Type": "application/json"},
+                            method="POST",
+                        )
+                        with urllib.request.urlopen(free_req, timeout=20) as free_resp:
+                            free_data = json.loads(free_resp.read().decode("utf-8"))
+                        free_reply = free_data["choices"][0]["message"]["content"].strip()
+                        if free_reply:
+                            return send_json(self, 200, {
+                                "ok": True, "mode": "ai", "reply": free_reply,
+                                "model": "pollinations/openai",
+                                "sources": {"notes": research["notes"][:4],
+                                            "links": research["links"][:5],
+                                            "used": research["used"]},
+                            })
+                    except Exception as exc:
+                        record_error("server", f"free AI fallback: {exc}")
+                # Бесплатный ИИ недоступен или выключен: отдаём то, что нашли
                 return send_json(self, 200, {
                     "ok": True, "mode": "sources" if research["notes"] else "local",
                     "sources": research,
@@ -2129,29 +2158,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             default_base = "https://models.github.ai/inference" if via_github else "https://api.openai.com/v1"
             base_url = (os.environ.get("AI_BASE_URL") or default_base).rstrip("/")
             model = os.environ.get("AI_MODEL") or ("openai/gpt-4o-mini" if via_github else "gpt-4o-mini")
-            sys_prompt = (
-                "Ты — панда Мэймэй (美美), добрая и энергичная учительница китайского на русскоязычной платформе. "
-                "Ученик читает с пиньинем и ещё учится, поэтому каждое китайское слово давай в виде "
-                "「иероглифы (пиньинь с тонами) — перевод», а не голыми иероглифами. "
-                "Отвечай кратко и по делу: сначала прямой ответ на вопрос, потом 1–2 примера. "
-                "Если объясняешь правило — дай схему и один пример с переводом. "
-                "Если просят разобрать фразу — разбери по словам с пиньинем. "
-                "Если вопрос не про китайский язык и учёбу — мягко верни разговор к теме. "
-                "Тебе может быть дан СПРАВОЧНЫЙ МАТЕРИАЛ из словарей и корпусов. "
-                "Опирайся на него, если он по теме, и называй источник (CC-CEDICT, Викисловарь, Tatoeba). "
-                "Если материал не относится к вопросу — не используй его. "
-                "Никогда не выдумывай иероглифы, чтения и переводы: если не уверен — скажи, что не уверен. "
-                "Пиши простым русским языком, без markdown-разметки и без длинных списков. "
-                "Контекст ученика: " + str(ctx)[:400]
-            )
-            messages = [{"role": "system", "content": sys_prompt}]
-            block = sources_prompt_block(research)
-            if block:
-                messages.append({"role": "system", "content": block[:2000]})
-            for h in history[-6:]:
-                if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
-                    messages.append({"role": h["role"], "content": str(h["content"])[:600]})
-            messages.append({"role": "user", "content": msg})
+            messages = self._tutor_messages(msg, history, ctx, research)
             ai_limiter.fail(quota_key)
             try:
                 req = urllib.request.Request(
@@ -2179,6 +2186,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return send_json(self, 404, {"error": "not_found"})
 
     # ---------- сессия ----------
+
+    def _tutor_messages(self, msg, history, ctx, research):
+        """Сообщения для языковой модели (общие для GitHub/OpenAI/Pollinations)."""
+        sys_prompt = (
+            "Ты — панда Мэймэй (美美), добрая и энергичная учительница китайского на русскоязычной платформе. "
+            "Ученик читает с пиньинем и ещё учится, поэтому каждое китайское слово давай в виде "
+            "「иероглифы (пиньинь с тонами) — перевод», а не голыми иероглифами. "
+            "Отвечай кратко и по делу: сначала прямой ответ на вопрос, потом 1–2 примера. "
+            "Если объясняешь правило — дай схему и один пример с переводом. "
+            "Если просят разобрать фразу — разбери по словам с пиньинем. "
+            "Если вопрос не про китайский язык и учёбу — мягко верни разговор к теме. "
+            "Тебе может быть дан СПРАВОЧНЫЙ МАТЕРИАЛ из словарей и корпусов. "
+            "Опирайся на него, если он по теме, и называй источник (CC-CEDICT, Викисловарь, Tatoeba). "
+            "Если материал не относится к вопросу — не используй его. "
+            "Никогда не выдумывай иероглифы, чтения и переводы: если не уверен — скажи, что не уверен. "
+            "Пиши простым русским языком, без markdown-разметки и без длинных списков. "
+            "Контекст ученика: " + str(ctx)[:400]
+        )
+        messages = [{"role": "system", "content": sys_prompt}]
+        block = sources_prompt_block(research)
+        if block:
+            messages.append({"role": "system", "content": block[:2000]})
+        for h in history[-6:]:
+            if isinstance(h, dict) and h.get("role") in ("user", "assistant") and h.get("content"):
+                messages.append({"role": h["role"], "content": str(h["content"])[:600]})
+        messages.append({"role": "user", "content": msg})
+        return messages
 
     def start_session(self, user_id):
         token = secrets.token_urlsafe(32)

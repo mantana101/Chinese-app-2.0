@@ -4611,7 +4611,9 @@ function renderTutor(root) {
     const st = document.getElementById('t-brain-state');
     if (!st) return;
     if (tutorBrain === 'ai') {
-      st.textContent = '🧠 умный ИИ включён — отвечает ' + (modelName || 'облачная модель');
+      const pretty = modelName === 'pollinations/openai' ? 'бесплатный облачный ИИ (Pollinations)'
+        : (modelName || 'облачная модель');
+      st.textContent = '🧠 умный ИИ включён — отвечает ' + pretty;
       st.className = 't-brain-state on';
     } else if (tutorBrain === 'sources') {
       st.textContent = '📖 словари приложения — ключ ИИ не настроен';
